@@ -10,17 +10,14 @@ jobs:
   lint-python:
     name: Lint Python
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: nomos-cli
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
           python-version: "3.12"
       - run: uv tool install ruff
-      - run: ruff check .
-      - run: ruff format --check .
+      - run: ruff check nomos-cli nomos-api
+      - run: ruff format --check nomos-cli nomos-api
 
   test-cli:
     name: Test CLI
@@ -36,3 +33,18 @@ jobs:
           python-version: "3.12"
       - run: uv sync
       - run: uv run pytest -v --tb=short
+
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    needs: lint-python
+    defaults:
+      run:
+        working-directory: nomos-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+      - run: uv sync --extra dev
+      - run: PYTHONPATH="../nomos-cli" uv run pytest -v --tb=short

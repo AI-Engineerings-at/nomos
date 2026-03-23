@@ -1,4 +1,4 @@
-# NomOS Roadmap — 6 Pläne, Bottom-Up
+# NomOS Roadmap — 7 Plaene, Bottom-Up
 
 > Stand: 23.03.2026
 > Prinzip: Wie ein Senior Software Developer. Qualitaet first, keine Kompromisse.
@@ -6,7 +6,7 @@
 
 ---
 
-## Warum 6 Plaene statt 1?
+## Warum 7 Plaene statt 1?
 
 NomOS hat 7 unabhaengige Subsysteme. Ein Senior Dev baut nicht alles parallel,
 sondern Schicht fuer Schicht — jede getestet bevor die naechste beginnt.
@@ -23,6 +23,7 @@ sondern Schicht fuer Schicht — jede getestet bevor die naechste beginnt.
 | **4** | nomos-cli | Plan 1 + 2 | backend, qa |
 | **5** | NomOS Console | Plan 2 | + frontend |
 | **6** | NomOS Plugin | Plan 1 | + architect |
+| **7** | Production-Ready Stack | Plan 1+2 | devops |
 
 ---
 
@@ -120,6 +121,22 @@ sondern Schicht fuer Schicht — jede getestet bevor die naechste beginnt.
 - v3 Python Hooks → TypeScript portieren
 
 **Ergebnis:** NomOS integriert sich nativ in OpenClaw Gateway.
+
+---
+
+## Plan 7: Production-Ready Stack (DONE)
+
+**Status:** Abgeschlossen
+**Datei:** `docs/plans/2026-03-23-plan-07-production-ready.md`
+
+**Was passiert:**
+1. Master docker-compose.yml am Repo-Root
+2. Dockerfiles gefixt (non-root, curl, standalone)
+3. E2E Test Script (scripts/e2e-test.sh)
+4. .dockerignore
+5. CI Docker-Build Job
+
+**Ergebnis:** `docker compose up -d` startet den kompletten Stack.
 
 ---
 

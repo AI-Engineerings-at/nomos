@@ -42,6 +42,7 @@ Jedes Design enthaelt:
 - Ist es das EINFACHSTE Design das funktioniert?
 
 ## Referenzen
-- NomOS Spec: docs/specs/2026-03-23-nomos-final-spec.md (in harness-verify)
-- Plan 1: docs/plans/2026-03-23-plan-01-cleanup-foundation.md
+- Plan 1 (Foundation): docs/plans/2026-03-23-plan-01-cleanup-foundation.md
+- Plan 2 (API): docs/plans/2026-03-23-plan-02-nomos-api.md
+- Plan 7 (Production): docs/plans/2026-03-23-plan-07-production-ready.md
 - Manifest Schema: nomos-cli/nomos/core/manifest.py

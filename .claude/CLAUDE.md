@@ -50,21 +50,28 @@ Keine Datei wird committed die:
 - Interne Infra ist NUR die Dev-Umgebung
 
 ## Tech Stack
-- Python 3.11+ (Backend: FastAPI, CLI: Click, Models: Pydantic v2)
+- Python 3.12 (Backend: FastAPI, CLI: Click, Models: Pydantic v2)
 - TypeScript strict (Console: Next.js 15, Plugin: OpenClaw)
 - PostgreSQL + pgvector (Datenbank)
 - Docker Compose (Deployment)
 - pytest + ruff (Testing + Linting)
 - GitHub Actions (CI/CD)
 
-## Repo-Struktur (aktuell, nach Cleanup)
+## Repo-Struktur (aktuell)
 ```
 nomos/
-├── nomos-cli/nomos/core/    # Manifest, Validator, HashChain, Events, Compliance, Forge
-├── nomos-cli/tests/          # Tests fuer alles in core/
+├── nomos-cli/nomos/core/    # manifest, validator, hash_chain, events, compliance, gate, forge
+├── nomos-cli/nomos/cli.py   # CLI: hire, verify, fleet, audit, gate
+├── nomos-cli/tests/          # 84 Tests
+├── nomos-api/nomos_api/     # FastAPI: config, database, models, schemas, services, routers
+├── nomos-api/tests/          # 14 Tests
+├── nomos-console/src/        # Next.js Dashboard
+├── nomos-plugin/src/         # TypeScript OpenClaw Plugin
 ├── schemas/                  # YAML Schema Templates
-├── templates/                # Agent Templates (external-secretary, etc.)
-├── docs/plans/               # Implementation Plans (Plan 1-6)
+├── templates/                # Agent Templates
+├── scripts/e2e-test.sh       # E2E Test Script
+├── docker-compose.yml        # Master Stack (API + Console + Postgres)
+├── docs/plans/               # Implementation Plans (1, 2, 7)
 └── .claude/agents/           # Dev-Team Agent Definitionen
 ```
 

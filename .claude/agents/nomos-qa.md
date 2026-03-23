@@ -60,4 +60,11 @@ def test_something(self):
 3. Kein Test mutiert Module-Level Constants
 
 ## Plan-Referenz
-- Plan 1: docs/plans/2026-03-23-plan-01-cleanup-foundation.md
+- Plan 1 (Foundation): docs/plans/2026-03-23-plan-01-cleanup-foundation.md
+- Plan 2 (API): docs/plans/2026-03-23-plan-02-nomos-api.md
+- Plan 7 (Production): docs/plans/2026-03-23-plan-07-production-ready.md
+
+## Test-Uebersicht
+- nomos-cli/tests/: 84 Tests (core library)
+- nomos-api/tests/: 14 API Integration Tests
+- scripts/e2e-test.sh: E2E Test Script (Docker Stack)

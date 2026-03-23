@@ -22,7 +22,7 @@ von NomOS. Qualitaet first, keine Kompromisse.
 6. **R8 Scope Gate**: Vor jeder Datei fragen — loest das ein Kunden-Problem? Hat es einen Test?
 
 ## Tech Stack
-- Python 3.11+, Pydantic v2 (strict, extra="forbid")
+- Python 3.12, Pydantic v2 (strict, extra="forbid")
 - PyYAML (safe_load only), hashlib (SHA-256)
 - pytest (testing), ruff (lint + format)
 - uv (package management)
@@ -34,6 +34,7 @@ von NomOS. Qualitaet first, keine Kompromisse.
 - `events.py` — Event Types Contract (Plan 1 Task 4)
 - `compliance_engine.py` — Blocking Gate (Plan 1 Task 5)
 - `forge.py` — Agent-Erstellung (Plan 1 Task 6)
+- `gate.py` — Compliance Gate (Plan 3)
 
 ## Code Pattern
 ```python
@@ -55,4 +56,6 @@ def verify_chain(path):  # TODO: implement
 5. `grep -r "coming soon\|TODO\|FIXME\|placeholder" nomos/` — kein S9
 
 ## Plan-Referenz
-- Plan 1: docs/plans/2026-03-23-plan-01-cleanup-foundation.md
+- Plan 1 (Foundation): docs/plans/2026-03-23-plan-01-cleanup-foundation.md
+- Plan 2 (API): docs/plans/2026-03-23-plan-02-nomos-api.md
+- Plan 7 (Production): docs/plans/2026-03-23-plan-07-production-ready.md

@@ -63,20 +63,14 @@ def check_compliance(manifest: AgentManifest, docs_dir: Path) -> ComplianceResul
         if not check_document_exists(doc_name, docs_dir):
             missing_docs.append(doc_name)
 
-    if (
-        manifest.agent.risk_class.value == "high"
-        and not manifest.governance.kill_switch_authority
-    ):
+    if manifest.agent.risk_class.value == "high" and not manifest.governance.kill_switch_authority:
         errors.append(
             "High-risk agent requires kill_switch_authority — "
             "at least one person must be able to stop this agent (Art. 14)."
         )
 
     if "safety-gate" not in manifest.governance.hooks_enabled:
-        errors.append(
-            "safety-gate hook must be enabled — "
-            "agents need protection against destructive commands."
-        )
+        errors.append("safety-gate hook must be enabled — agents need protection against destructive commands.")
 
     if errors:
         return ComplianceResult(
@@ -91,19 +85,13 @@ def check_compliance(manifest: AgentManifest, docs_dir: Path) -> ComplianceResul
             return ComplianceResult(
                 status=ComplianceStatus.BLOCKED,
                 missing_documents=missing_docs,
-                errors=[
-                    f"Missing {len(missing_docs)} required document(s): "
-                    + ", ".join(missing_docs)
-                ],
+                errors=[f"Missing {len(missing_docs)} required document(s): " + ", ".join(missing_docs)],
                 warnings=warnings,
             )
         return ComplianceResult(
             status=ComplianceStatus.WARNING,
             missing_documents=missing_docs,
-            warnings=[
-                f"Missing {len(missing_docs)} document(s) (non-blocking): "
-                + ", ".join(missing_docs)
-            ],
+            warnings=[f"Missing {len(missing_docs)} document(s) (non-blocking): " + ", ".join(missing_docs)],
         )
 
     return ComplianceResult(

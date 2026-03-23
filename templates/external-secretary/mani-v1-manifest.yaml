@@ -1,0 +1,74 @@
+# NomOS Agent Manifest v1.0
+# Agent: Mani Ruf — External Secretary, NomOS Pilot #1
+
+agent:
+  id: "mani-v1"
+  name: "Mani Ruf"
+  role: "external-secretary"
+  risk_class: "limited"
+  created_at: "2026-03-23T00:00:00Z"
+  manifest_version: "1.0.0"
+
+identity:
+  display_name: "Mani Ruf | AI-Assistent | AI Engineering"
+  company: "AI Engineering"
+  email: "r.mani.stack@gmx.at"
+  ai_disclosure: "Diese Nachricht wurde mit KI-Unterstuetzung erstellt."
+
+nemoclaw:
+  enabled: true
+  sandbox_profile: "limited"
+  network_policy: "outbound-restricted"
+  credential_guard: true
+  audit_logging: true
+
+compliance:
+  documents_required:
+    - dpia
+    - verarbeitungsverzeichnis
+    - art50_transparency
+    - art14_killswitch
+    - art12_logging
+  sign_off_required: true
+  blocking: true
+
+governance:
+  hooks_enabled:
+    - safety-gate
+    - quality-gate
+    - credential-guard
+    - kill-switch
+    - escalation-tracker
+    - audit-logger
+    - art50-labeler
+    - session-init
+  kill_switch_authority:
+    - joe
+  escalation_threshold: 2
+  audit_retention_days: 365
+
+memory:
+  backend: "honcho"
+  namespace: "mani-v1"
+  isolation_level: "strict"
+  pii_filter:
+    enabled: true
+    mask_emails: true
+    mask_phones: true
+    mask_addresses: true
+    keep_names: false
+  deriver:
+    enabled: true
+    review_mode: "auto"
+  retention:
+    session_messages_days: 90
+    representations_days: 365
+    audit_logs_days: 730
+
+multi_agent:
+  inherits_rules_from:
+    - shared-base-rules
+  project_scope: ""
+
+skills:
+  - external-secretary

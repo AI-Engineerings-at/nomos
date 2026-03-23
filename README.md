@@ -2,93 +2,122 @@
 
 > The agentic framework that enforces EU AI Act compliance — not by recommendation, but by design.
 
-```mermaid
-graph TB
-    subgraph Console["NomOS Console :3000"]
-        UI[Agent Dashboard]
-    end
+## Quick Start
 
-    subgraph Lifecycle["Lifecycle Manager"]
-        LM[Agent Hiring / Termination]
-    end
+**API (Docker):**
+```bash
+cd nomos-api
+docker compose up -d
+# API on http://localhost:8060, PostgreSQL + Redis included
+```
 
-    subgraph Governance["Governance Engine"]
-        GOV[Risk Classification & Policy]
-    end
+**CLI:**
+```bash
+cd nomos-cli
+pip install -e .
 
-    subgraph Gate["Compliance Gate :8100"]
-        CG[Pre-Action Validation]
-    end
+nomos hire --name "Mani Ruf" --role external-secretary \
+  --company "Acme GmbH" --email mani@acme.at \
+  --output-dir ./data/agents/mani-ruf
 
-    subgraph NemoClaw["NemoClaw Runtime"]
-        NC[Guardrails Enforcement]
-    end
-
-    subgraph OpenClaw["OpenClaw Agent SDK"]
-        OC[Agent Definition & Execution]
-    end
-
-    UI --> LM
-    LM --> GOV
-    GOV --> CG
-    CG --> NC
-    NC --> OC
+nomos gate --agent-dir ./data/agents/mani-ruf
+nomos verify --agent-dir ./data/agents/mani-ruf
 ```
 
 ## What is NomOS?
 
-NomOS is a compliance-first runtime for AI agents that maps every requirement of the EU AI Act to an enforceable software control. It intercepts agent actions before execution, classifies risk in real time, and maintains the audit trail regulators expect. Built for organizations that deploy autonomous AI agents and need to prove compliance — not just claim it.
+NomOS maps every requirement of the EU AI Act to an enforceable software control. It generates the compliance documents regulators expect, blocks deployment until those documents exist, and maintains a cryptographically verifiable audit trail. Built for organizations that deploy AI agents and need to prove compliance.
 
-## Quick Start
+## Features
 
-```bash
-git clone https://github.com/ai-engineering-at/nomos.git
-cd nomos
-docker compose up -d
-```
-
-Open `http://localhost:3000` — hire your first agent.
+| Feature | What it does | Legal basis |
+|---------|-------------|-------------|
+| `nomos hire` | Creates compliant AI agent from Name + Role + Company | Art. 26 EU AI Act (Deployer obligations) |
+| Compliance Gate | Generates 5 required documents (DPIA, Art. 30, Art. 50, Art. 14, Art. 12) | Art. 35 DSGVO, Art. 30 DSGVO, Art. 50/14/12 EU AI Act |
+| Blocking Gate | Agent cannot deploy without signed compliance docs | Art. 9 EU AI Act (Risk management) |
+| Hash Chain Audit | SHA-256 tamper-evident trail, cryptographically verifiable | Art. 12 EU AI Act (Record-keeping) |
+| `nomos verify` | Full compliance check: schema + docs + hash + chain integrity | Art. 11 EU AI Act (Technical documentation) |
+| Fleet API | REST endpoints for agent management and compliance status | Art. 13 EU AI Act (Transparency) |
+| Dashboard | Visual fleet management with agent detail and audit trail | Art. 14 EU AI Act (Human oversight) |
 
 ## Architecture
 
-```mermaid
-graph LR
-    A[OpenClaw SDK] -->|Agent actions| B[NemoClaw Runtime]
-    B -->|Guardrail check| C[Compliance Gate]
-    C -->|Risk classification| D[Governance Engine]
-    D -->|Policy enforcement| E[Lifecycle Manager]
-    E -->|Observability| F[NomOS Console]
+```
+nomos/
+├── nomos-cli        Python CLI — 5 commands, 6 core modules, 83 tests
+├── nomos-api        FastAPI — 7 REST endpoints, Docker Compose (API + PostgreSQL + Redis), 14 tests
+├── nomos-console    Next.js 15 — Fleet overview, agent detail, compliance check, audit trail
+├── nomos-plugin     TypeScript — OpenClaw gateway plugin with /nomos commands
+├── schemas/         YAML schema templates for agent manifests
+└── templates/       Agent role templates (external-secretary, etc.)
 ```
 
-| Layer | Responsibility |
-|-------|---------------|
-| **OpenClaw** | Agent definition, tool binding, execution |
-| **NemoClaw** | Guardrails, input/output filtering |
-| **Compliance Gate** | Pre-action validation against EU AI Act |
-| **Governance Engine** | Risk classification, policy management |
-| **Lifecycle Manager** | Agent hiring, monitoring, termination |
-| **NomOS Console** | Dashboard, audit logs, reporting |
+**Data flow:**
+```
+nomos hire → Manifest + Hash → nomos gate → 5 Compliance Docs → nomos verify → PASS/FAIL
+                                   ↓
+                            Audit Trail (SHA-256 hash chain)
+                                   ↓
+                         Fleet API → Dashboard
+```
 
-## Components
+## CLI
 
-| Component | Description | Port |
-|-----------|-------------|------|
-| `nomos-console` | Web dashboard for agent management and audit | 3000 |
-| `nomos-api` | REST API for governance and lifecycle | 8000 |
-| `nomos-gate` | Compliance gate — validates actions pre-execution | 8100 |
-| `nomos-cli` | CLI for local development and agent management | — |
+```bash
+# Create a new agent
+nomos hire --name "Mani Ruf" --role external-secretary \
+  --company "Acme GmbH" --email mani@acme.at \
+  --output-dir ./data/agents/mani-ruf
 
-## Compliance Coverage
+# Generate required compliance documents
+nomos gate --agent-dir ./data/agents/mani-ruf
 
-| EU AI Act Article | NomOS Component | Enforcement Type |
-|-------------------|-----------------|-----------------|
-| Art. 6 — Risk Classification | Governance Engine | Automatic classification on agent registration |
-| Art. 9 — Risk Management System | Lifecycle Manager | Continuous monitoring with kill switch |
-| Art. 11 — Technical Documentation | NomOS Console | Auto-generated audit trail |
-| Art. 13 — Transparency | Compliance Gate | Action logging with human-readable explanations |
-| Art. 14 — Human Oversight | NomOS Console | Approval workflows, escalation paths |
-| Art. 15 — Accuracy & Robustness | NemoClaw Runtime | Input/output validation, guardrails |
-| Art. 26 — Deployer Obligations | Governance Engine | Policy templates, compliance checklists |
+# Verify full compliance (schema + docs + hash + chain)
+nomos verify --agent-dir ./data/agents/mani-ruf
+
+# List all agents
+nomos fleet --agents-dir ./data/agents
+
+# Show audit trail
+nomos audit --agent-dir ./data/agents/mani-ruf
+
+# Verify audit chain integrity
+nomos audit --agent-dir ./data/agents/mani-ruf --verify
+```
+
+## API
+
+Base URL: `http://localhost:8060`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Service health check |
+| `POST` | `/api/agents` | Create new agent |
+| `GET` | `/api/fleet` | List all agents |
+| `GET` | `/api/fleet/{agent_id}` | Get agent details |
+| `GET` | `/api/agents/{agent_id}/compliance` | Check agent compliance |
+| `GET` | `/api/agents/{agent_id}/audit` | Get agent audit trail |
+| `GET` | `/api/audit/verify/{agent_id}` | Verify audit chain integrity |
+
+## Installation
+
+**CLI (Python 3.11+):**
+```bash
+cd nomos-cli
+pip install -e .
+nomos --version
+```
+
+**API (Docker):**
+```bash
+cd nomos-api
+docker compose up -d
+```
+
+This starts three services:
+- **nomos-api** on port 8060 (FastAPI)
+- **PostgreSQL 16** with pgvector
+- **Redis 8**
 
 ## Pricing
 
@@ -103,14 +132,6 @@ graph LR
 
 Fair Source License v1.0 — free for up to 3 AI Agents.
 Commercial license required for 4+. See [LICENSE](LICENSE) for details.
-
-## Documentation
-
-Full documentation is available in [`docs/en/`](docs/en/).
-
-## Contributing
-
-We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Built by
 

@@ -1,0 +1,62 @@
+"""Audit trail endpoints."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from nomos_api.database import get_db
+from nomos_api.models import AuditLog
+from nomos_api.schemas import AuditEntryResponse, AuditResponse, AuditVerifyResponse
+from nomos_api.services.fleet_service import get_agent
+from nomos.core.hash_chain import verify_chain
+
+router = APIRouter(prefix="/api", tags=["audit"])
+
+
+@router.get("/agents/{agent_id}/audit", response_model=AuditResponse)
+async def get_agent_audit(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> AuditResponse:
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    result = await db.execute(select(AuditLog).where(AuditLog.agent_id == agent_id).order_by(AuditLog.sequence))
+    entries = result.scalars().all()
+    return AuditResponse(
+        agent_id=agent_id,
+        entries=[
+            AuditEntryResponse(
+                sequence=e.sequence,
+                event_type=e.event_type,
+                agent_id=e.agent_id,
+                data=e.data or {},
+                chain_hash=e.chain_hash,
+                timestamp=e.timestamp,
+            )
+            for e in entries
+        ],
+        total=len(entries),
+    )
+
+
+@router.get("/audit/verify/{agent_id}", response_model=AuditVerifyResponse)
+async def verify_agent_audit(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> AuditVerifyResponse:
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    agent_dir = Path(agent.agents_dir)
+    result = verify_chain(agent_dir / "audit")
+    return AuditVerifyResponse(
+        agent_id=agent_id,
+        valid=result.valid,
+        entries_checked=result.entries_checked,
+        errors=result.errors,
+    )

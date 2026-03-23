@@ -20,6 +20,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["nomos"]
 
+[project.scripts]
+nomos = "nomos.cli:main"
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120

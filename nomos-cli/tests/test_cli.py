@@ -118,6 +118,24 @@ class TestAudit:
         assert "valid" in result.output.lower() or "pass" in result.output.lower()
 
 
+class TestGate:
+    def test_gate_generates_docs(self, runner, agents_dir: Path) -> None:
+        agent_dir = agents_dir / "test-agent"
+        result = runner.invoke(main, ["gate", "--agent-dir", str(agent_dir)])
+        assert result.exit_code == 0
+        assert "generated" in result.output.lower() or "passed" in result.output.lower()
+        # Verify docs exist
+        assert (agent_dir / "compliance" / "dpia.md").exists()
+
+    def test_gate_already_complete(self, runner, agents_dir: Path) -> None:
+        agent_dir = agents_dir / "test-agent"
+        # Run gate twice
+        runner.invoke(main, ["gate", "--agent-dir", str(agent_dir)])
+        result = runner.invoke(main, ["gate", "--agent-dir", str(agent_dir)])
+        assert result.exit_code == 0
+        assert "already exist" in result.output.lower()
+
+
 class TestVersion:
     def test_version(self, runner) -> None:
         result = runner.invoke(main, ["--version"])

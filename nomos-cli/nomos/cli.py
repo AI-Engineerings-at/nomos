@@ -178,6 +178,50 @@ def fleet(agents_dir: str) -> None:
 
 @main.command()
 @click.option("--agent-dir", required=True, type=click.Path(exists=True), help="Agent directory")
+def gate(agent_dir: str) -> None:
+    """Generate compliance documents for an agent (Compliance Gate)."""
+    agent_path = Path(agent_dir)
+    manifest_file = agent_path / "manifest.yaml"
+
+    if not manifest_file.exists():
+        console.print(f"[red]Error:[/red] No manifest.yaml found in {agent_path}")
+        raise SystemExit(1)
+
+    manifest = load_manifest(manifest_file)
+
+    from nomos.core.gate import generate_compliance_docs, load_compliance_status
+
+    # Check status before
+    status_before = load_compliance_status(agent_path)
+    if status_before["complete"]:
+        console.print("[green]All compliance documents already exist.[/green]")
+        return
+
+    # Generate
+    docs = generate_compliance_docs(manifest, agent_path / "compliance")
+
+    console.print(
+        Panel(
+            f"[bold green]Compliance Gate: {len(docs)} documents generated[/bold green]\n\n"
+            + "\n".join(f"  [green]V[/green] {d.title} ({d.path.name})" for d in docs)
+            + f"\n\nAgent: {manifest.agent.name}\n"
+            f"Directory: {agent_path / 'compliance'}",
+            title="nomos gate",
+        )
+    )
+
+    # Verify compliance now passes
+    compliance = check_compliance(manifest, agent_path / "compliance")
+    if compliance.status.value == "passed":
+        console.print("\n[bold green]Compliance Status: PASSED[/bold green] — Agent is ready for deployment.")
+    else:
+        console.print(f"\n[yellow]Compliance Status: {compliance.status.value}[/yellow]")
+        if compliance.missing_documents:
+            console.print(f"Still missing: {', '.join(compliance.missing_documents)}")
+
+
+@main.command()
+@click.option("--agent-dir", required=True, type=click.Path(exists=True), help="Agent directory")
 @click.option("--verify", "do_verify", is_flag=True, default=False, help="Verify chain integrity")
 def audit(agent_dir: str, do_verify: bool) -> None:
     """Show or verify audit trail for an agent."""

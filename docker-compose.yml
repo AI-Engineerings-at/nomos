@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  nomos-api:
+    build: ./nomos-api
+    ports:
+      - "8060:8000"
+    environment:
+      - DATABASE_URL=postgresql://nomos:nomos@postgres:5432/nomos
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  nomos-console:
+    build: ./nomos-console
+    ports:
+      - "3040:3000"
+    restart: unless-stopped
+
+  nomos-gate:
+    build: ./nomos-gate
+    ports:
+      - "8502:8502"
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_DB=nomos
+      - POSTGRES_USER=nomos
+      - POSTGRES_PASSWORD=nomos
+    volumes:
+      - nomos-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nomos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nomos-pgdata:

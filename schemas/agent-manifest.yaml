@@ -1,0 +1,73 @@
+# NomOS Agent Manifest v1.0
+# This file defines your AI agent's identity, permissions, and compliance requirements.
+
+agent:
+  id: ""                          # Unique ID (lowercase, alphanumeric + hyphens)
+  name: ""                        # Human-readable name (e.g., "Mani Ruf")
+  role: ""                        # Role: external-secretary, customer-support, research-agent
+  risk_class: "limited"           # minimal | limited | high
+  created_at: ""                  # ISO 8601 timestamp
+  manifest_version: "1.0.0"
+
+identity:
+  display_name: ""                # External name (e.g., "Mani Ruf | AI-Assistent")
+  company: ""                     # Company name
+  email: ""                       # Agent's email address
+  ai_disclosure: "Diese Nachricht wurde mit KI-Unterstuetzung erstellt."
+
+nemoclaw:
+  enabled: true
+  sandbox_profile: "limited"      # minimal | limited | high-risk
+  network_policy: "outbound-restricted"
+  credential_guard: true
+  audit_logging: true
+
+compliance:
+  documents_required:
+    - dpia
+    - verarbeitungsverzeichnis
+    - art50_transparency
+    - art14_killswitch
+    - art12_logging
+  sign_off_required: true
+  blocking: true                  # Agent cannot start without signed docs
+
+governance:
+  hooks_enabled:
+    - safety-gate
+    - quality-gate
+    - credential-guard
+    - kill-switch
+    - escalation-tracker
+    - audit-logger
+    - art50-labeler
+    - session-init
+  kill_switch_authority: []       # List of usernames who can trigger kill switch
+  escalation_threshold: 2
+  audit_retention_days: 365
+
+memory:
+  backend: "honcho"               # honcho | local | none
+  namespace: ""                   # Auto-generated from agent.id if empty
+  isolation_level: "strict"       # strict | project | shared
+  pii_filter:
+    enabled: true
+    mask_emails: true
+    mask_phones: true
+    mask_addresses: true
+    keep_names: false
+  deriver:
+    enabled: true
+    review_mode: "auto"           # auto | manual | hybrid
+  retention:
+    session_messages_days: 90
+    representations_days: 365
+    audit_logs_days: 730
+
+multi_agent:
+  inherits_rules_from:
+    - shared-base-rules
+  project_scope: ""               # Shared memory scope for multi-agent collaboration
+
+skills:
+  - external-secretary            # Skill template to install

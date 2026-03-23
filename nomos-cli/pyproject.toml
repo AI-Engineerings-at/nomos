@@ -3,7 +3,7 @@ name = "nomos-cli"
 version = "0.1.0"
 description = "NomOS CLI — Agent Lifecycle Management"
 requires-python = ">=3.11"
-license = "Fair Source"
+license = {text = "Fair Source"}
 authors = [{name = "AI Engineering", email = "kontakt@ai-engineering.at"}]
 dependencies = [
     "click>=8.1",
@@ -19,6 +19,9 @@ nomos = "nomos.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["nomos"]
 
 [tool.ruff]
 target-version = "py311"

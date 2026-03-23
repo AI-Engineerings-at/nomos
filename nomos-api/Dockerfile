@@ -13,6 +13,9 @@ ENV PYTHONPATH="/app/nomos-cli:${PYTHONPATH}"
 
 RUN uv pip install --system "."
 
+RUN adduser --disabled-password --no-create-home --gecos "" nomos
+USER nomos
+
 EXPOSE 8000
 
 CMD ["uvicorn", "nomos_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

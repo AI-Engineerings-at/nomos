@@ -77,15 +77,22 @@ class TestHire:
 
 
 class TestVerify:
-    def test_verify_agent(self, runner, agents_dir: Path) -> None:
+    def test_verify_agent_noncompliant_exits_nonzero(self, runner, agents_dir: Path) -> None:
+        """A freshly forged agent without gate docs is non-compliant; verify exits 1."""
         agent_dir = agents_dir / "test-agent"
         result = runner.invoke(main, ["verify", "--agent-dir", str(agent_dir)])
+        assert result.exit_code == 1
+        assert "blocked" in result.output.lower()
+
+    def test_verify_agent_compliant_exits_zero(self, runner, agents_dir: Path) -> None:
+        """After running gate, verify should exit 0."""
+        agent_dir = agents_dir / "test-agent"
+        # Run gate first to generate compliance docs
+        gate_result = runner.invoke(main, ["gate", "--agent-dir", str(agent_dir)])
+        assert gate_result.exit_code == 0
+        result = runner.invoke(main, ["verify", "--agent-dir", str(agent_dir)])
         assert result.exit_code == 0
-        assert (
-            "compliance" in result.output.lower()
-            or "blocked" in result.output.lower()
-            or "passed" in result.output.lower()
-        )
+        assert "passed" in result.output.lower()
 
     def test_verify_nonexistent_dir(self, runner, tmp_path: Path) -> None:
         result = runner.invoke(main, ["verify", "--agent-dir", str(tmp_path / "nonexistent")])

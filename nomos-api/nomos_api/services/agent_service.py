@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.config import settings
 from nomos_api.models import Agent, AuditLog
-from nomos.core.forge import forge_agent
+from nomos.core.forge import forge_agent, _slugify
 from nomos.core.hash_chain import HashChain
 from nomos.core.compliance_engine import check_compliance
 from nomos.core.manifest_validator import load_manifest
@@ -35,12 +35,16 @@ async def create_agent(
     agents_dir = settings.agents_dir
     agents_dir.mkdir(parents=True, exist_ok=True)
 
+    safe_name = _slugify(name)
+    if not safe_name:
+        return CreateAgentResult(success=False, error=f"Cannot create safe directory name from: {name!r}")
+
     forge_result = forge_agent(
         agent_name=name,
         agent_role=role,
         company=company,
         email=email,
-        output_dir=agents_dir / name.lower().replace(" ", "-"),
+        output_dir=agents_dir / safe_name,
         risk_class=risk_class,
     )
 
@@ -66,7 +70,7 @@ async def create_agent(
     db.add(agent)
 
     chain = HashChain(storage_dir=forge_result.output_dir / "audit")
-    for entry in chain._entries:
+    for entry in chain.entries:
         audit_log = AuditLog(
             agent_id=entry.agent_id,
             sequence=entry.sequence,

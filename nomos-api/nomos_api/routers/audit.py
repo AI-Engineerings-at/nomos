@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.config import settings
 from nomos_api.database import get_db
 from nomos_api.models import AuditLog
 from nomos_api.schemas import AuditEntryResponse, AuditResponse, AuditVerifyResponse
@@ -52,7 +53,10 @@ async def verify_agent_audit(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
-    agent_dir = Path(agent.agents_dir)
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = Path(settings.agents_dir).resolve()
+    if not str(agent_dir).startswith(str(safe_base)):
+        raise HTTPException(status_code=400, detail="Invalid agent directory")
     result = verify_chain(agent_dir / "audit")
     return AuditVerifyResponse(
         agent_id=agent_id,

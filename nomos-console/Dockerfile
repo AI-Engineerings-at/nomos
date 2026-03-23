@@ -15,5 +15,8 @@ ENV HOSTNAME="0.0.0.0"
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+RUN adduser --disabled-password --no-create-home --gecos "" nomos
+USER nomos
+
 EXPOSE 3040
 CMD ["node", "server.js"]

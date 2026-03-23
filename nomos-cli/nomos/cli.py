@@ -135,6 +135,9 @@ def verify(agent_dir: str) -> None:
     if compliance.missing_documents:
         console.print(f"\n[yellow]Missing:[/yellow] {', '.join(compliance.missing_documents)}")
 
+    if compliance.status.value == "blocked" or not hash_ok or not chain_result.valid:
+        raise SystemExit(1)
+
 
 @main.command()
 @click.option("--agents-dir", default="./data/agents", type=click.Path(), help="Agents directory")
@@ -254,7 +257,7 @@ def audit(agent_dir: str, do_verify: bool) -> None:
         table.add_column("Timestamp")
         table.add_column("Hash", style="dim")
 
-        for entry in chain._entries:
+        for entry in chain.entries:
             table.add_row(
                 str(entry.sequence),
                 entry.event_type,

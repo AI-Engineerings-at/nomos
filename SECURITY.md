@@ -25,6 +25,5 @@ If you discover a security vulnerability in NomOS, please report it responsibly.
 
 This policy covers all components of NomOS:
 - `nomos-api`
-- `nomos-gate`
 - `nomos-console`
 - `nomos-cli`

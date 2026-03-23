@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.config import settings
 from nomos_api.database import get_db
 from nomos_api.schemas import ComplianceResponse
 from nomos_api.services.fleet_service import get_agent
@@ -24,7 +25,10 @@ async def check_agent_compliance(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
-    agent_dir = Path(agent.agents_dir)
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = Path(settings.agents_dir).resolve()
+    if not str(agent_dir).startswith(str(safe_base)):
+        raise HTTPException(status_code=400, detail="Invalid agent directory")
     manifest = load_manifest(agent_dir / "manifest.yaml")
     result = check_compliance(manifest, agent_dir / "compliance")
     return ComplianceResponse(

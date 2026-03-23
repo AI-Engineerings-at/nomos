@@ -83,7 +83,7 @@ async function handleVerify(
   try {
     const [complianceResp, auditResp] = await Promise.all([
       fetch(`${config.apiUrl}/api/agents/${agentId}/compliance`),
-      fetch(`${config.apiUrl}/audit/verify/${agentId}`),
+      fetch(`${config.apiUrl}/api/audit/verify/${agentId}`),
     ]);
 
     if (!complianceResp.ok) {

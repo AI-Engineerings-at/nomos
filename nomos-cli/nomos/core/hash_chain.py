@@ -101,6 +101,11 @@ class HashChain:
             )
             self._entries.append(entry)
 
+    @property
+    def entries(self) -> list[HashChainEntry]:
+        """Public read-only access to chain entries."""
+        return list(self._entries)
+
     def __len__(self) -> int:
         return len(self._entries)
 

@@ -1,0 +1,22 @@
+{
+  "id": "nomos",
+  "name": "NomOS",
+  "version": "0.1.0",
+  "description": "EU AI Act compliance enforcement — not by recommendation, but by design",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "apiUrl": {
+        "type": "string",
+        "description": "NomOS API URL",
+        "default": "http://localhost:8060"
+      },
+      "agentsDir": {
+        "type": "string",
+        "description": "Local agents directory",
+        "default": "./data/agents"
+      }
+    },
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "nomos",
+  "version": "0.1.0",
+  "description": "NomOS — EU AI Act compliance enforcement for OpenClaw agents",
+  "license": "Fair-Source",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "openclaw": {
+    "extensions": ["./dist/index.js"]
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist/"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "yaml": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": ["dist/", "openclaw.plugin.json"]
+}

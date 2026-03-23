@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import copy
-import textwrap
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 import pytest
 import yaml
@@ -14,7 +12,6 @@ from nomos.core.manifest import AgentManifest
 from nomos.core.manifest_validator import (
     compute_manifest_hash,
     load_manifest,
-    validate_manifest,
 )
 
 # ---------------------------------------------------------------------------

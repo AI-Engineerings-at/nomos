@@ -9,13 +9,13 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class RiskClass(str, Enum):
     minimal = "minimal"
@@ -58,6 +58,7 @@ _AGENT_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 # Sub-models
 # ---------------------------------------------------------------------------
 
+
 class AgentIdentity(BaseModel):
     """Core agent metadata."""
 
@@ -74,9 +75,7 @@ class AgentIdentity(BaseModel):
     @classmethod
     def validate_id(cls, v: str) -> str:
         if not _AGENT_ID_RE.match(v):
-            raise ValueError(
-                f"Agent id must be lowercase alphanumeric with hyphens only, got: {v!r}"
-            )
+            raise ValueError(f"Agent id must be lowercase alphanumeric with hyphens only, got: {v!r}")
         return v
 
 
@@ -209,6 +208,7 @@ class MultiAgentConfig(BaseModel):
 # ---------------------------------------------------------------------------
 # Root model
 # ---------------------------------------------------------------------------
+
 
 class AgentManifest(BaseModel):
     """Root model for a NomOS agent manifest file."""

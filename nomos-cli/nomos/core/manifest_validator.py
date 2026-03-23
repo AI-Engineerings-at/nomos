@@ -43,31 +43,20 @@ def validate_manifest(manifest: AgentManifest) -> list[str]:
     errors: list[str] = []
 
     # Kill-switch authority must not be empty for high-risk agents
-    if (
-        manifest.agent.risk_class.value == "high"
-        and not manifest.governance.kill_switch_authority
-    ):
-        errors.append(
-            "High-risk agents require at least one kill_switch_authority entry."
-        )
+    if manifest.agent.risk_class.value == "high" and not manifest.governance.kill_switch_authority:
+        errors.append("High-risk agents require at least one kill_switch_authority entry.")
 
     # Namespace should be set (or will be auto-generated — warn)
     if not manifest.memory.namespace:
-        errors.append(
-            "memory.namespace is empty; it will be auto-generated from agent.id at runtime."
-        )
+        errors.append("memory.namespace is empty; it will be auto-generated from agent.id at runtime.")
 
     # Compliance docs must not be empty when blocking is enabled
     if manifest.compliance.blocking and not manifest.compliance.documents_required:
-        errors.append(
-            "compliance.blocking is true but documents_required is empty."
-        )
+        errors.append("compliance.blocking is true but documents_required is empty.")
 
     # Governance hooks should include safety-gate at minimum
     if "safety-gate" not in manifest.governance.hooks_enabled:
-        errors.append(
-            "governance.hooks_enabled should include 'safety-gate'."
-        )
+        errors.append("governance.hooks_enabled should include 'safety-gate'.")
 
     return errors
 

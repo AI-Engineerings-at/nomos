@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +43,35 @@ async def get_agent_audit(
             for e in entries
         ],
         total=len(entries),
+    )
+
+
+@router.get("/agents/{agent_id}/audit/export")
+async def export_agent_audit(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> PlainTextResponse:
+    """Export audit trail as downloadable JSONL file."""
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
+        raise HTTPException(status_code=400, detail="Invalid agent directory")
+
+    chain_file = agent_dir / "audit" / "chain.jsonl"
+    if not chain_file.exists():
+        return PlainTextResponse("", media_type="application/jsonl")
+
+    content = chain_file.read_text(encoding="utf-8")
+    return PlainTextResponse(
+        content,
+        media_type="application/jsonl",
+        headers={
+            "Content-Disposition": f'attachment; filename="{agent_id}-audit-chain.jsonl"'
+        },
     )
 
 

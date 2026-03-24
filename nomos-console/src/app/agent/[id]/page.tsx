@@ -1,5 +1,6 @@
 import { fetchAgent, fetchCompliance, fetchAudit, fetchAuditVerify } from "@/lib/api";
 import Link from "next/link";
+import DownloadAudit from "./download-audit";
 import GateButton from "./gate-button";
 
 function StatusBadge({ status }: { status: string }) {
@@ -116,11 +117,14 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
             <h2 className="font-semibold">Audit Trail</h2>
-            {verify && (
-              <span className={`text-xs font-medium ${verify.valid ? "text-green-600" : "text-red-600"}`}>
-                Chain: {verify.valid ? "VALID" : "INVALID"} ({verify.entries_checked} entries)
-              </span>
-            )}
+            <div className="flex items-center gap-4">
+              <DownloadAudit agentId={id} />
+              {verify && (
+                <span className={`text-xs font-medium ${verify.valid ? "text-green-600" : "text-red-600"}`}>
+                  Chain: {verify.valid ? "VALID" : "INVALID"} ({verify.entries_checked} entries)
+                </span>
+              )}
+            </div>
           </div>
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">

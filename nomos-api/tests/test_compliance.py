@@ -55,3 +55,16 @@ class TestGate:
     async def test_gate_nonexistent_agent(self, client) -> None:
         resp = await client.post("/api/agents/nonexistent/gate")
         assert resp.status_code == 404
+
+    async def test_gate_creates_audit_entry(self, client) -> None:
+        create_resp = await client.post("/api/agents", json={
+            "name": "Audit Gate Test", "role": "test", "company": "Co", "email": "t@t.com",
+        })
+        agent_id = create_resp.json()["id"]
+        await client.post(f"/api/agents/{agent_id}/gate")
+        audit_resp = await client.get(f"/api/agents/{agent_id}/audit")
+        entries = audit_resp.json()["entries"]
+        assert len(entries) >= 2
+        event_types = [e["event_type"] for e in entries]
+        assert "agent.created" in event_types
+        assert "compliance.check.passed" in event_types

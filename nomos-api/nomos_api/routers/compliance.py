@@ -9,9 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.config import settings
 from nomos_api.database import get_db
+from nomos_api.models import AuditLog
 from nomos_api.schemas import ComplianceResponse
 from nomos_api.services.fleet_service import get_agent
 from nomos.core.compliance_engine import check_compliance
+from nomos.core.events import EventType
+from nomos.core.hash_chain import HashChain
 from nomos.core.manifest_validator import load_manifest
 
 router = APIRouter(prefix="/api", tags=["compliance"])
@@ -63,6 +66,31 @@ async def run_compliance_gate(
 
     # Re-check compliance (should now pass)
     result = check_compliance(manifest, agent_dir / "compliance")
+
+    # Log compliance event to hash chain
+    chain = HashChain(storage_dir=agent_dir / "audit")
+    event_type = EventType.COMPLIANCE_CHECK_PASSED if result.status.value == "passed" else EventType.COMPLIANCE_CHECK_FAILED
+    chain.append(
+        event_type=event_type,
+        agent_id=agent_id,
+        data={
+            "status": result.status.value,
+            "documents_generated": len(manifest.compliance.documents_required),
+            "missing": result.missing_documents,
+        },
+    )
+
+    # Index new entry in DB
+    new_entry = chain.entries[-1]
+    audit_log = AuditLog(
+        agent_id=new_entry.agent_id,
+        sequence=new_entry.sequence,
+        event_type=new_entry.event_type,
+        data=new_entry.data,
+        chain_hash=new_entry.hash,
+        timestamp=new_entry.timestamp,
+    )
+    db.add(audit_log)
 
     # Update compliance status in DB
     agent.compliance_status = result.status.value

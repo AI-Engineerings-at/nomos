@@ -43,3 +43,18 @@ class TestAudit:
     async def test_verify_nonexistent_agent(self, client) -> None:
         response = await client.get("/api/audit/verify/nonexistent")
         assert response.status_code == 404
+
+
+class TestAuditExport:
+    async def test_export_returns_jsonl(self, client) -> None:
+        create_resp = await client.post("/api/agents", json={
+            "name": "Export Test", "role": "test", "company": "Co", "email": "t@t.com",
+        })
+        agent_id = create_resp.json()["id"]
+        resp = await client.get(f"/api/agents/{agent_id}/audit/export")
+        assert resp.status_code == 200
+        assert "agent.created" in resp.text
+
+    async def test_export_nonexistent(self, client) -> None:
+        resp = await client.get("/api/agents/nonexistent/audit/export")
+        assert resp.status_code == 404

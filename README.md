@@ -128,6 +128,26 @@ This starts three services:
 | Business | EUR 149/mo | Up to 50 | SSO, custom policies, SLA |
 | Enterprise | EUR 29/agent/mo | Unlimited | Dedicated support, on-prem, custom integrations |
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Quickstart](docs/quickstart.md) | Get running in 5 minutes |
+| [API Reference](docs/api-reference.md) | Complete REST API documentation |
+| [CLI Reference](docs/cli-reference.md) | All 5 CLI commands with flags and examples |
+| [Architecture](docs/architecture.md) | System design, data flow, database schema, security model |
+| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage — what's implemented, what's not |
+
+**Deutsch:**
+
+| Dokument | Beschreibung |
+|----------|-------------|
+| [Schnellstart](docs/de/schnellstart.md) | In 5 Minuten starten |
+| [API-Referenz](docs/de/api-referenz.md) | Vollstaendige REST API Dokumentation |
+| [CLI-Referenz](docs/de/cli-referenz.md) | Alle 5 CLI-Befehle mit Flags und Beispielen |
+| [Architektur](docs/de/architektur.md) | System-Design, Datenfluss, Datenbank-Schema, Sicherheitsmodell |
+| [Compliance-Leitfaden](docs/de/compliance-leitfaden.md) | EU AI Act + DSGVO Abdeckung |
+
 ## License
 
 Fair Source License v1.0 — free for up to 3 AI Agents.

@@ -128,6 +128,26 @@ Das startet drei Services:
 | Business | EUR 149/Monat | Bis zu 50 | SSO, benutzerdefinierte Policies, SLA |
 | Enterprise | EUR 29/Agent/Monat | Unbegrenzt | Dedizierter Support, On-Prem, individuelle Integrationen |
 
+## Dokumentation
+
+| Dokument | Beschreibung |
+|----------|-------------|
+| [Schnellstart](docs/de/schnellstart.md) | In 5 Minuten starten |
+| [API-Referenz](docs/de/api-referenz.md) | Vollstaendige REST API Dokumentation |
+| [CLI-Referenz](docs/de/cli-referenz.md) | Alle 5 CLI-Befehle mit Flags und Beispielen |
+| [Architektur](docs/de/architektur.md) | System-Design, Datenfluss, Datenbank-Schema, Sicherheitsmodell |
+| [Compliance-Leitfaden](docs/de/compliance-leitfaden.md) | EU AI Act + DSGVO Abdeckung |
+
+**English:**
+
+| Document | Description |
+|----------|-------------|
+| [Quickstart](docs/quickstart.md) | Get running in 5 minutes |
+| [API Reference](docs/api-reference.md) | Complete REST API documentation |
+| [CLI Reference](docs/cli-reference.md) | All 5 CLI commands with flags and examples |
+| [Architecture](docs/architecture.md) | System design, data flow, database schema, security model |
+| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage |
+
 ## Lizenz
 
 Fair Source License v1.0 — kostenlos fuer bis zu 3 AI Agents.

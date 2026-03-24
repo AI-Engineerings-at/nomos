@@ -999,7 +999,7 @@ Rollback:
 
 | # | Sub-Projekt | Abhaengig von | Ergebnis |
 |---|-------------|---------------|----------|
-| **A** | NomOS Plugin Core | — | Plugin laedt in Gateway, 10 Hooks registriert, Bootstrap Extension |
+| **A** | NomOS Plugin Core | — | Plugin laedt in Gateway, 11 Hooks registriert, Bootstrap Extension |
 | **B** | Control Plane | A | Heartbeat, Task Dispatch, Approval Gates, Budget Enforcement |
 | **C** | Compliance Runtime | A | PII Filter, Kill Switch, Art.50 Label, Blocking Gate, 9 Docs |
 | **D** | Honcho Integration | A, C | Memory Mgmt, Firmenwissen, Retention, DSGVO Forget/Export |

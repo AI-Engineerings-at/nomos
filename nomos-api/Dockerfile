@@ -13,7 +13,9 @@ ENV PYTHONPATH="/app/nomos-cli:${PYTHONPATH}"
 
 RUN uv pip install --system "."
 
-RUN adduser --disabled-password --no-create-home --gecos "" nomos
+RUN adduser --disabled-password --no-create-home --gecos "" nomos \
+    && mkdir -p /data/agents \
+    && chown nomos:nomos /data/agents
 USER nomos
 
 EXPOSE 8000

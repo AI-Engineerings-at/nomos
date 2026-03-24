@@ -54,8 +54,8 @@ async def verify_agent_audit(
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
     agent_dir = Path(agent.agents_dir).resolve()
-    safe_base = Path(settings.agents_dir).resolve()
-    if not str(agent_dir).startswith(str(safe_base)):
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
         raise HTTPException(status_code=400, detail="Invalid agent directory")
     result = verify_chain(agent_dir / "audit")
     return AuditVerifyResponse(

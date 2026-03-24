@@ -26,8 +26,8 @@ async def check_agent_compliance(
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
     agent_dir = Path(agent.agents_dir).resolve()
-    safe_base = Path(settings.agents_dir).resolve()
-    if not str(agent_dir).startswith(str(safe_base)):
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
         raise HTTPException(status_code=400, detail="Invalid agent directory")
     manifest = load_manifest(agent_dir / "manifest.yaml")
     result = check_compliance(manifest, agent_dir / "compliance")

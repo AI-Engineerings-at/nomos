@@ -1,8 +1,15 @@
-# NomOS Roadmap — 7 Plaene, Bottom-Up
+# NomOS Roadmap — KORRIGIERT 24.03.2026
 
-> Stand: 23.03.2026
-> Prinzip: Wie ein Senior Software Developer. Qualitaet first, keine Kompromisse.
-> Jeder Plan erst wenn der vorherige GRUEN ist.
+> Stand: 24.03.2026
+> WARNUNG: Plan 1-8 haben eine Library + UI gebaut, NICHT das Produkt.
+> Die richtige Reihenfolge beginnt bei NemoClaw + Agent Deploy.
+> Alles davor ist Vorarbeit (Library), nicht Produkt.
+
+## EHRLICHER STAND (24.03.2026)
+
+**Was existiert:** Core Library (84 Tests), API (19 Tests), Console (rendert), Plugin (kompiliert)
+**Was FEHLT:** NemoClaw Container, Agent Deploy, Governance Runtime, Kill Switch, PII-Filter, Branding
+**Bewertung:** 1/10 vom Produkt. Library funktioniert, Produkt existiert nicht.
 
 ---
 

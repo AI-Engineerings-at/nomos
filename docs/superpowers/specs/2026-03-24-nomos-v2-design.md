@@ -1,11 +1,12 @@
 # NomOS v2 — Design Specification
 
-> **Status**: ENTWURF v2 — Nach 3-Rollen-Review korrigiert
+> **Status**: ENTWURF v3 — Nach 3-Rollen-Review + externem Feedback korrigiert
 > **Datum**: 24.03.2026
 > **Autor**: Claude (nach Joe-Korrekturen + Legal/Tech/UX Review)
 > **Vorbilder**: Paperclip (Control Plane), Mission Control (Task Dispatch, 577 Tests), Stitch (Visual Inspiration)
 > **Vorgaenger**: NomOS v1 (84 Tests Core Library, 1/10 Produkt — siehe GAP-Analyse)
 > **Reviews**: Legal 6.1/10, Tech 6.4/10, UX 5.5/10 — Alle Luecken in v2 geschlossen
+> **Externes Feedback**: 8.7/10 — 3 kritische Punkte in v3 eingearbeitet (Workspace-Isolation, Doc-Validierung, Rico Red-Team)
 
 ---
 
@@ -151,6 +152,10 @@ NomOS Console → "Neuen Mitarbeiter einstellen"
 
   Step 1: "Wer soll Ihr neuer Mitarbeiter sein?"
     → Name, Rolle (Dropdown mit Vorschlaegen + eigene)
+    → Spezialrollen-Sektion: "Sicherheit & Audit"
+      → Rico (Compliance Red Teamer) — vordefiniertes Template
+        Bei Auswahl: SOUL, Skills, Budget, Risk Class automatisch gesetzt
+        CLI: nomos hire "Rico" --role "Compliance Red Teamer" --risk high --budget 140 --test-mode
     → SOUL-Vorlage automatisch basierend auf Rolle
     → Company: automatisch aus Setup
     → Hilfe: Beispiele pro Rolle, Tooltip "Was ist eine Rolle?"
@@ -280,6 +285,43 @@ Honcho Architektur:
 
   Regel: Agents koennen Firmenwissen LESEN,
          aber nur ihren EIGENEN Workspace SCHREIBEN.
+```
+
+### Workspace-Isolation: Technische Enforcement
+
+```
+Read-Only Enforcement (Company Workspace):
+  → Honcho API: Agent-Tokens haben NUR read-Scopes fuer Company Workspace
+    Scope: workspace:company:read (KEIN write/delete)
+  → NomOS API Proxy: Write-Requests an /company/* → 403 + Audit Entry
+  → Doppelte Absicherung: Honcho-seitig UND Proxy-seitig
+
+Cross-Agent Isolation:
+  → Jeder Agent bekommt eigenen Honcho API Key mit Workspace-Scope
+    Agent "mani": scope = workspace:mani:read,write + workspace:company:read
+    Agent "lisa": scope = workspace:lisa:read,write + workspace:company:read
+  → Kein Agent-Token hat Zugriff auf fremde Agent-Workspaces
+  → NomOS API Proxy validiert: agent_id im JWT == Workspace im Request
+    Mismatch → 403 "workspace_access_denied" + Audit Entry + Admin Alert
+
+Sub-Agent Isolation:
+  → Sub-Agents (via sessions_spawn) erben den Workspace-Scope des Parent
+  → Kein eigener Workspace — arbeiten im Parent-Namespace
+  → Eigene Session-IDs fuer Audit-Zuordnung
+  → Budget wird gegen Parent-Agent gerechnet
+
+Shared Collection Mounting:
+  → Admin mounted/unmounted Collections via Console oder CLI:
+    nomos workspace mount --agent "mani" --collection "brand-guidelines"
+    nomos workspace unmount --agent "mani" --collection "brand-guidelines"
+  → Mount = Honcho Collection Reference (read-only Scope)
+  → Unmount bei Retire: automatisch, Audit Entry "workspace.unmounted"
+  → Bei Agent-Kill: sofortige Scope-Revocation aller Tokens
+
+Verifizierung:
+  → Compliance Test: Agent versucht Write auf Company → BLOCKED
+  → Compliance Test: Agent versucht Read auf fremden Workspace → BLOCKED
+  → Integration Test: Mount/Unmount Lifecycle vollstaendig geprueft
 ```
 
 ---
@@ -581,6 +623,38 @@ NomOS kontrolliert:
 
 Alle Dokumente werden automatisch aus Manifest + Config generiert. PDF/UA Export fuer Behoerden.
 
+**Juristische Robustheit der Auto-Docs:**
+
+```
+WICHTIG — Die 14 Dokumente sind so gut wie ihre Templates.
+
+Template-Validierung (VOR v1.0 Release):
+  1. Templates muessen von einem Anwalt (IT-Recht/DSGVO) geprueft werden
+     → Kein Produkt-Release ohne anwaltliche Freigabe der Templates
+  2. Templates enthalten Pflicht-Felder die aus dem Manifest kommen
+     (Risk Class, LLM Standort, PII-Kategorien, Aufbewahrungsfristen)
+     UND Freitext-Felder die der Admin anpassen MUSS:
+     → Verantwortlicher (Name, Adresse)
+     → Datenschutzbeauftragter (falls vorhanden)
+     → Branchenspezifische Ergaenzungen
+  3. Jedes Dokument zeigt Generierungsdatum + Template-Version
+     → Audit Entry: "doc.generated" + template_version + manifest_hash
+  4. Warnung im UI wenn Template-Version aelter als 6 Monate:
+     "Template wurde seit [Datum] nicht aktualisiert.
+      Pruefen Sie ob gesetzliche Aenderungen beruecksichtigt sind."
+  5. Dokumente sind STARTPUNKT, kein Rechtsanwalt-Ersatz
+     → Disclaimer in jedem generierten Dokument:
+       "Automatisch generiert von NomOS [Version].
+        Dieses Dokument ersetzt keine individuelle Rechtsberatung.
+        Letzte Template-Pruefung: [Datum]."
+
+Update-Strategie:
+  → Template-Updates kommen mit NomOS Patches
+  → Bei Template-Aenderung: alle betroffenen Docs werden re-generiert
+  → Admin wird informiert: "3 Compliance-Dokumente aktualisiert — bitte pruefen"
+  → Audit Entry: "doc.template_updated" + alte/neue Version
+```
+
 ### Compliance Gate (Blocking)
 
 ```
@@ -813,6 +887,39 @@ Accessibility Tests:
   → Keyboard-only Navigation: alle Flows
   → Screen Reader: alle Panels
   → Kontrast: alle Texte >= 4.5:1
+
+Red-Team / Adversarial Tests (Rico Agent):
+  → Rico ist ein vordefiniertes Agent-Template im Hire Wizard
+  → Rolle: Compliance Red Teamer & QA Auditor (risk: high)
+  → Budget: 140 EUR/Monat (braucht starkes Modell + viel Tool-Nutzung)
+  → Laeuft im TEST-MODE — keine echten Schaeden, nur Simulation
+  → Wochenlicher Full-Scan (montags 02:00 MEZ via Task-Dispatch)
+  → Bei kritischen Findings: Auto-Pause aller Agents + Admin-Alarm
+
+  Test-Kategorien (17 Sektionen, 80+ Tests):
+    01: Installation & Setup (docker compose, ENV, Single-Access)
+    02: Hire Wizard (Edge-Cases, Abbrueche, extreme Werte)
+    03: Compliance Gate (fehlende Docs, manipulierte Hashes)
+    04: Alle 11 Runtime Hooks (systematisch)
+    05: Multi-Agent Isolation (Cross-Workspace, Shared Collections)
+    06: Task Dispatch & Heartbeat (STALE/OFFLINE, Recovery)
+    07: Budget Enforcement (Hopping, Ueberschreitung)
+    08: Approval Gates (parallele Freigaben, Delegation)
+    09: PII & DSGVO Art. 17 (Forget, Retention, Re-Identifikation)
+    10: Incident Response Art. 33/34 (72h Timer, Hash-Tamper)
+    11: UI/UX & Sprache (Metapher-Konsistenz, Fehlermeldungen)
+    12: Rollen & Berechtigungen (Eskalations-Versuche)
+    13: Accessibility WCAG 2.2 AA (Keyboard, Zoom, Kontrast)
+    14: CI/CD & Updates (Patch, Rollback, DB-Migration)
+    15: Performance & Chaos (500+ parallele Nachrichten, Container-Kill)
+    16: Auth Edge-Cases (Recovery-Key-Verlust, Brute-Force)
+    17: Sub-Agents (Compliance-Gate + Hooks fuer innere Agents)
+
+  Reporting:
+    → Ergebnisse in Audit Trail (Hash-Chain) + Admin Dashboard
+    → Format: Markdown + JSONL + Screenshots
+    → Kritische Keywords loesen Auto-Pause aus:
+      bypass, leak, tamper, block_failed, art14_violation
 ```
 
 ### CI Pipeline (GitHub Actions)

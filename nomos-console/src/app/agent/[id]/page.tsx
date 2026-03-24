@@ -1,5 +1,6 @@
 import { fetchAgent, fetchCompliance, fetchAudit, fetchAuditVerify } from "@/lib/api";
 import Link from "next/link";
+import GateButton from "./gate-button";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -58,6 +59,9 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-500 mb-1">Compliance</p>
           <StatusBadge status={agent.compliance_status} />
+          <div className="mt-3">
+            <GateButton agentId={agent.id} complianceStatus={agent.compliance_status} />
+          </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-500 mb-1">Audit Chain</p>

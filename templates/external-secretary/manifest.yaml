@@ -48,7 +48,7 @@ governance:
   audit_retention_days: 365
 
 memory:
-  backend: "honcho"
+  backend: "local"
   namespace: "mani-ruf-01"
   isolation_level: "strict"
   pii_filter:

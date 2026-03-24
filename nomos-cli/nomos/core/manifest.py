@@ -186,7 +186,7 @@ class MemoryConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    backend: MemoryBackend = Field(default=MemoryBackend.honcho)
+    backend: MemoryBackend = Field(default=MemoryBackend.local)
     namespace: str = Field(default="", description="Auto-generated from agent.id if empty")
     isolation_level: IsolationLevel = Field(default=IsolationLevel.strict)
     pii_filter: PIIFilterConfig = Field(default_factory=PIIFilterConfig)

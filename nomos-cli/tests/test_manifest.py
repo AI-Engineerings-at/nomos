@@ -198,7 +198,7 @@ class TestDefaults:
         assert manifest.nemoclaw.sandbox_profile.value == "limited"
         assert manifest.compliance.blocking is True
         assert manifest.governance.escalation_threshold == 2
-        assert manifest.memory.backend.value == "honcho"
+        assert manifest.memory.backend.value == "local"
         assert manifest.memory.isolation_level.value == "strict"
         assert manifest.memory.pii_filter.enabled is True
         assert manifest.memory.retention.audit_logs_days == 730

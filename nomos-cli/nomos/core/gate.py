@@ -56,7 +56,7 @@ fuer {manifest.identity.company}.
 - **Art der Daten:** Geschaeftskommunikation, Aufgabenverwaltung
 - **Betroffene:** Mitarbeiter, Kunden, Geschaeftspartner
 - **Speicherdauer:** {manifest.memory.retention.session_messages_days} Tage (Sessions), {manifest.memory.retention.audit_logs_days} Tage (Audit)
-- **PII-Filter:** {"Aktiviert" if manifest.memory.pii_filter.enabled else "Deaktiviert"}
+- **PII-Filter:** {"Aktiviert (Honcho)" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "Konfiguriert, erfordert Honcho-Backend" if manifest.memory.pii_filter.enabled else "Deaktiviert"}
 
 ## 3. Risikobewertung
 
@@ -64,7 +64,7 @@ fuer {manifest.identity.company}.
 |--------|-----------|-----------|
 | Datenverlust | Mittel | Verschluesselte Speicherung, Backup-Policy |
 | Unbefugter Zugriff | Niedrig | NemoClaw Sandbox, Credential Guard |
-| PII-Exposition | {"Niedrig" if manifest.memory.pii_filter.enabled else "Hoch"} | PII-Filter {"aktiv" if manifest.memory.pii_filter.enabled else "NICHT aktiv — Massnahmen erforderlich"} |
+| PII-Exposition | {"Niedrig" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "Mittel — PII-Filter erfordert Honcho-Backend" if manifest.memory.pii_filter.enabled else "Hoch"} | PII-Filter {"aktiv (Honcho)" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "konfiguriert, Honcho erforderlich" if manifest.memory.pii_filter.enabled else "NICHT aktiv — Massnahmen erforderlich"} |
 | Unkontrollierte Aktionen | Niedrig | Safety Gate + Kill Switch |
 
 ## 4. Technische und organisatorische Massnahmen

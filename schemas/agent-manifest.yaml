@@ -47,7 +47,7 @@ governance:
   audit_retention_days: 365
 
 memory:
-  backend: "honcho"               # honcho | local | none
+  backend: "local"                # honcho | local | none
   namespace: ""                   # Auto-generated from agent.id if empty
   isolation_level: "strict"       # strict | project | shared
   pii_filter:

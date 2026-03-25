@@ -3,7 +3,11 @@
  * API URL configurable via NEXT_PUBLIC_API_URL env var.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8060";
+// Server-side: use internal Docker URL if available, otherwise public URL
+// Client-side: always uses NEXT_PUBLIC_API_URL (baked into browser bundle)
+const API_URL = typeof window === "undefined"
+  ? (process.env.NOMOS_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8060")
+  : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8060");
 
 export interface Agent {
   id: string;

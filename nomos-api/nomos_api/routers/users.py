@@ -78,7 +78,7 @@ async def bootstrap_admin(
 
     return UserCreateResponse(
         id=user.id, email=user.email, role="admin",
-        recovery_key=recovery_words,
+        recovery_key=" ".join(recovery_words),
         totp_enabled=False, session_timeout_hours=8, is_active=True,
     )
 

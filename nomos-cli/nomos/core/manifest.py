@@ -205,6 +205,33 @@ class MultiAgentConfig(BaseModel):
     project_scope: str = Field(default="", description="Shared memory scope")
 
 
+class BudgetConfig(BaseModel):
+    """Per-agent budget enforcement configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    monthly_limit_eur: float = Field(default=50.0, description="Monthly cost cap in EUR")
+    warn_at_percent: int = Field(default=80, ge=1, le=100, description="Warning threshold percentage")
+    auto_pause: bool = Field(default=True, description="Auto-pause agent when budget exceeded")
+
+
+class ApprovalConfig(BaseModel):
+    """Approval gate configuration — actions that require human sign-off."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    required_for: list[str] = Field(
+        default_factory=lambda: [
+            "external_api_calls",
+            "file_deletion",
+            "data_export",
+            "budget_over_threshold",
+        ],
+        description="Actions that require approval before execution",
+    )
+    timeout_minutes: int = Field(default=60, ge=1, description="Auto-expire pending approvals after N minutes")
+
+
 # ---------------------------------------------------------------------------
 # Root model
 # ---------------------------------------------------------------------------
@@ -222,4 +249,6 @@ class AgentManifest(BaseModel):
     governance: GovernanceConfig = Field(default_factory=GovernanceConfig)
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     multi_agent: MultiAgentConfig = Field(default_factory=MultiAgentConfig)
+    budget: BudgetConfig = Field(default_factory=BudgetConfig)
+    approval: ApprovalConfig = Field(default_factory=ApprovalConfig)
     skills: list[str] = Field(default_factory=list)

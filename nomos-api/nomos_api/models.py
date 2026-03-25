@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, JSON, DateTime, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Float, JSON, DateTime, Index, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -30,6 +30,9 @@ class Agent(Base):
     manifest_data: Mapped[dict] = mapped_column(JSON, nullable=False)
     compliance_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     agents_dir: Mapped[str] = mapped_column(Text, nullable=False)
+    budget_used_eur: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    budget_limit_eur: Mapped[float] = mapped_column(Float, nullable=False, default=50.0)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -84,4 +87,68 @@ class User(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+
+class Task(Base):
+    """A task assigned to an AI agent."""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[str] = mapped_column(String(32), nullable=False, default="normal")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="queued")
+    created_by: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    timeout_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    cost_eur: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class Approval(Base):
+    """An approval request for a gated action."""
+
+    __tablename__ = "approvals"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(256), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    timeout_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+
+
+class ConfigRevision(Base):
+    """A versioned snapshot of an agent's configuration."""
+
+    __tablename__ = "config_revisions"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    config_json: Mapped[str] = mapped_column(Text, nullable=False)
+    change_description: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )

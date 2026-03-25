@@ -147,3 +147,101 @@ class UserUpdateRequest(BaseModel):
     role: str | None = Field(default=None, pattern="^(admin|user|officer)$")
     session_timeout_hours: int | None = Field(default=None, ge=1, le=168)
     is_active: bool | None = None
+
+
+# --- Task Schemas ---
+
+
+class TaskCreateRequest(BaseModel):
+    agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
+    description: str = Field(..., min_length=1, examples=["Write blog post"])
+    priority: str = Field(default="normal", pattern="^(low|normal|high|urgent)$")
+    timeout_minutes: int = Field(default=60, ge=1)
+
+
+class TaskUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(queued|assigned|running|review|done|failed)$")
+
+
+class TaskResponse(BaseModel):
+    id: str
+    agent_id: str
+    description: str
+    priority: str
+    status: str
+    created_by: str | None
+    timeout_minutes: int
+    cost_eur: float
+    created_at: str
+    updated_at: str
+
+
+class TaskListResponse(BaseModel):
+    tasks: list[TaskResponse]
+    total: int
+
+
+# --- Approval Schemas ---
+
+
+class ApprovalRequestCreate(BaseModel):
+    agent_id: str = Field(..., min_length=1)
+    action: str = Field(..., min_length=1, examples=["external_api_call"])
+    description: str = Field(..., min_length=1, examples=["Call CRM API"])
+    timeout_minutes: int = Field(default=60, ge=1)
+
+
+class ApprovalResolveRequest(BaseModel):
+    resolved_by: str = Field(..., min_length=1, examples=["admin@nomos.local"])
+
+
+class ApprovalResponse(BaseModel):
+    id: str
+    agent_id: str
+    action: str
+    description: str
+    status: str
+    requested_at: str
+    resolved_at: str | None
+    resolved_by: str | None
+    timeout_minutes: int
+
+
+class ApprovalListResponse(BaseModel):
+    approvals: list[ApprovalResponse]
+    total: int
+
+
+# --- Heartbeat Schemas ---
+
+
+class HeartbeatRequest(BaseModel):
+    metrics: dict = Field(default_factory=dict)
+
+
+class HeartbeatResponse(BaseModel):
+    agent_id: str
+    status: str
+
+
+# --- Cost Schemas ---
+
+
+class CostResponse(BaseModel):
+    agent_id: str
+    total_cost_eur: float
+    budget_limit_eur: float
+    budget_status: str
+    percent_used: float
+
+
+class CostOverviewResponse(BaseModel):
+    costs: list[CostResponse]
+    total: int
+
+
+# --- Agent PATCH Schema ---
+
+
+class AgentPatchRequest(BaseModel):
+    status: str | None = Field(default=None, pattern="^(paused|running|killed)$")

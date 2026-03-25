@@ -15,7 +15,7 @@ from starlette.responses import Response
 from nomos_api.config import settings
 from nomos_api.database import engine
 from nomos_api.models import Base
-from nomos_api.routers import agents, audit, auth, compliance, fleet, health, users
+from nomos_api.routers import agents, approvals, audit, auth, compliance, costs, fleet, health, tasks, users
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,3 +68,6 @@ app.include_router(compliance.router)
 app.include_router(audit.router)
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(tasks.router)
+app.include_router(approvals.router)
+app.include_router(costs.router)

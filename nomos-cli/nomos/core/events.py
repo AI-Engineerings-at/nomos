@@ -37,6 +37,23 @@ class EventType(str, Enum):
     AUDIT_CHAIN_VERIFIED = "audit.chain.verified"
     AUDIT_EXPORTED = "audit.exported"
 
+    # Incident (Art. 33/34 DSGVO)
+    INCIDENT_DETECTED = "incident.detected"
+    INCIDENT_REPORTED = "incident.reported"
+    INCIDENT_RESOLVED = "incident.resolved"
+
+    # PII
+    PII_FILTERED = "pii.filtered"
+    PII_LEAK_DETECTED = "pii.leak_detected"
+
+    # Kill Switch
+    KILL_SWITCH_ACTIVATED = "kill_switch.activated"
+    KILL_SWITCH_USER_PAUSE = "kill_switch.user_pause"
+
+    # Data Lifecycle
+    DATA_RETENTION_ENFORCED = "data.retention_enforced"
+    DATA_ERASED = "data.erased"
+
 
 _VALID_EVENT_TYPES = {e.value for e in EventType}
 

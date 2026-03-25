@@ -61,6 +61,32 @@ class AuditLog(Base):
     timestamp: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
+class IncidentRecord(Base):
+    """A detected security or privacy incident (Art. 33/34 DSGVO)."""
+
+    __tablename__ = "incidents"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    incident_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="detected")
+    detected_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    report_deadline: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class User(Base):
     """NomOS user with role-based access, optional 2FA, and recovery key."""
 

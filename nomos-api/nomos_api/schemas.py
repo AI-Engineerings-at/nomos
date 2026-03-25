@@ -245,3 +245,52 @@ class CostOverviewResponse(BaseModel):
 
 class AgentPatchRequest(BaseModel):
     status: str | None = Field(default=None, pattern="^(paused|running|killed)$")
+
+
+# --- PII Schemas ---
+
+
+class PIIFilterRequest(BaseModel):
+    text: str = Field(..., min_length=1, examples=["Email: max@example.com"])
+
+
+class PIIMatchResponse(BaseModel):
+    type: str
+    start: int
+    end: int
+
+
+class PIIFilterResponse(BaseModel):
+    filtered: str
+    pii_count: int
+    matches: list[PIIMatchResponse]
+
+
+# --- Incident Schemas ---
+
+
+class IncidentCreateRequest(BaseModel):
+    log_entry: str = Field(..., min_length=1)
+    agent_id: str = Field(..., min_length=1)
+    context: dict | None = None
+
+
+class IncidentResponse(BaseModel):
+    id: int
+    agent_id: str
+    incident_type: str
+    description: str
+    severity: str
+    status: str
+    detected_at: str
+    report_deadline: str
+    model_config = {"from_attributes": True}
+
+
+class IncidentListResponse(BaseModel):
+    incidents: list[IncidentResponse]
+    total: int
+
+
+class IncidentUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(detected|reported|resolved)$")

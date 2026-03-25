@@ -27,10 +27,10 @@ def agent_dir(tmp_path: Path) -> Path:
 
 
 class TestGenerateComplianceDocs:
-    def test_generates_all_5_documents(self, agent_dir: Path) -> None:
+    def test_generates_all_9_documents_for_limited_risk(self, agent_dir: Path) -> None:
         manifest = load_manifest(agent_dir / "manifest.yaml")
         docs = generate_compliance_docs(manifest, agent_dir / "compliance")
-        assert len(docs) == 5
+        assert len(docs) == 9  # limited risk gets 9 docs in Gate v2
         for doc in docs:
             assert doc.path.exists()
             assert doc.path.stat().st_size > 0
@@ -60,7 +60,12 @@ class TestGenerateComplianceDocs:
         manifest = load_manifest(agent_dir / "manifest.yaml")
         docs = generate_compliance_docs(manifest, agent_dir / "compliance")
         names = {d.name for d in docs}
-        assert names == {"dpia", "verarbeitungsverzeichnis", "art50_transparency", "art14_killswitch", "art12_logging"}
+        expected = {
+            "dpia", "verarbeitungsverzeichnis", "art50_transparency",
+            "art14_killswitch", "art12_logging",
+            "avv", "risk_management", "betroffenenrechte", "ai_literacy",
+        }
+        assert names == expected
 
     def test_documents_are_markdown(self, agent_dir: Path) -> None:
         manifest = load_manifest(agent_dir / "manifest.yaml")
@@ -99,7 +104,7 @@ class TestLoadComplianceStatus:
     def test_status_before_docs(self, agent_dir: Path) -> None:
         status = load_compliance_status(agent_dir)
         assert status["complete"] is False
-        assert status["total"] == 5
+        assert status["total"] == 9  # limited risk has 9 docs in Gate v2
         assert status["generated"] == 0
 
     def test_status_after_docs(self, agent_dir: Path) -> None:
@@ -107,4 +112,4 @@ class TestLoadComplianceStatus:
         generate_compliance_docs(manifest, agent_dir / "compliance")
         status = load_compliance_status(agent_dir)
         assert status["complete"] is True
-        assert status["generated"] == 5
+        assert status["generated"] == 9  # limited risk has 9 docs in Gate v2

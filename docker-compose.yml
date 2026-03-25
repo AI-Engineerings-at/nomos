@@ -1,9 +1,33 @@
 # NomOS v2 — Complete Docker Compose Stack
 # docker compose up -d → alles laeuft
-# Ports: API 8060, Console 3040, Postgres 5432, Valkey 6380
+# Ports: Console 3040, API 8060, Gateway 3050, Postgres 5432, Valkey 6380
 
 services:
-  # ─── Core ───────────────────────────────────────────
+  # ─── OpenClaw Gateway (headless, NomOS Plugin) ─────────
+
+  openclaw-gateway:
+    image: ghcr.io/openclaw/openclaw:latest
+    ports:
+      - "${NOMOS_GATEWAY_PORT:-3050}:3000"
+    environment:
+      - OPENCLAW_PLUGINS_DIR=/plugins
+      - OPENCLAW_AGENTS_DIR=/data/agents
+      - OPENCLAW_HEADLESS=true
+    volumes:
+      - nomos-agents:/data/agents
+      - ./nomos-plugin/dist:/plugins/nomos:ro
+    depends_on:
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ─── NomOS Control Plane ───────────────────────────────
 
   nomos-api:
     build:
@@ -15,7 +39,7 @@ services:
       - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:-nomos}@postgres:5432/nomos
       - NOMOS_AGENTS_DIR=/data/agents
       - NOMOS_CORS_ORIGINS=["http://localhost:3040","http://localhost:3045"]
-      - NOMOS_GATEWAY_URL=${NOMOS_GATEWAY_URL:-http://openclaw-gateway:3000}
+      - NOMOS_GATEWAY_URL=http://openclaw-gateway:3000
       - NOMOS_VALKEY_URL=redis://valkey:6379
       - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:-change-me-in-production}
     volumes:
@@ -47,7 +71,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ─── Data ───────────────────────────────────────────
+  # ─── Data ──────────────────────────────────────────────
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -77,7 +101,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ─── TTS/STT (optional, fuer lokale Sprach-Services) ───
+  # ─── TTS/STT (optional) ───────────────────────────────
 
   piper-tts:
     image: rhasspy/wyoming-piper:latest

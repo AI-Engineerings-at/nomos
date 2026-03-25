@@ -294,3 +294,50 @@ class IncidentListResponse(BaseModel):
 
 class IncidentUpdateRequest(BaseModel):
     status: str = Field(..., pattern="^(detected|reported|resolved)$")
+
+
+# --- Workspace Schemas ---
+
+
+class WorkspaceInfoResponse(BaseModel):
+    agent_id: str
+    workspace_id: str | None
+    mounted_collections: list[str]
+    is_active: bool
+
+
+class WorkspaceMountRequest(BaseModel):
+    agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
+    collection_name: str = Field(..., min_length=1, examples=["brand-guidelines"])
+
+
+class WorkspaceMountResponse(BaseModel):
+    agent_id: str
+    collection_name: str
+    mounted: bool
+
+
+# --- DSGVO Schemas ---
+
+
+class DSGVOForgetRequest(BaseModel):
+    email: str = Field(..., min_length=1, examples=["max@example.com"])
+
+
+class DSGVOForgetResponse(BaseModel):
+    deleted_messages: int
+    search_term: str
+    audit_event: str
+    audit_preserved: bool
+    timestamp: str
+
+
+class DSGVOExportRequest(BaseModel):
+    email: str = Field(..., min_length=1, examples=["max@example.com"])
+
+
+class DSGVOExportResponse(BaseModel):
+    email: str
+    messages: list[dict]
+    total: int
+    timestamp: str

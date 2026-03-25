@@ -3,7 +3,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   async rewrites() {
-    const apiUrl = process.env.NOMOS_API_URL || 'http://localhost:8060';
+    const apiUrl = process.env.NOMOS_API_URL || 'http://nomos-api:8000';
     return [
       {
         source: '/api/:path*',

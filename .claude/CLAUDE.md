@@ -47,15 +47,20 @@ Keine Datei wird committed die:
 - Max 1 Produkt-Komponente pro Session
 - Review-Checkpoint nach jedem Task
 
-### R13: Post-Phase Analyse (GATE — nach JEDER Phase)
-Nach Abschluss jeder Phase MUSS ein Analyse-Agent laufen bevor die naechste Phase startet:
-1. **IST/SOLL Vergleich:** Jeden geplanten Endpoint, Service, Datei gegen die Realitaet pruefen
-2. **Test-Verifizierung:** Alle Tests auf main ausfuehren (CLI + API + Plugin)
-3. **Luecken-Report:** Was fehlt? Was weicht ab? Was blockiert die naechste Phase?
-4. **Gap-Fix:** Luecken schliessen BEVOR die naechste Phase startet
-5. **Plan-Update:** Master Plan aktualisieren mit tatsaechlichem Stand
+### R13: Post-Phase Zyklus (GATE — nach JEDER Phase)
+Planung → Ausfuehrung → Pruefung → Korrektur → Rescope/Plan ausrichten → Weiter
 
-Kein Phasen-Uebergang ohne gruenen Analyse-Report.
+Nach Abschluss jeder Phase MUSS dieser Zyklus komplett durchlaufen werden:
+1. **Pruefung:** IST/SOLL Vergleich — jeden Endpoint, Service, Datei gegen Plan pruefen
+2. **Pruefung:** Alle Tests auf main ausfuehren (CLI + API + Plugin)
+3. **Korrektur:** Luecken identifizieren und schliessen (Gap-Fix Sprint)
+4. **Rescope:** Restlichen Plan anpassen — was hat sich durch die Erkenntnisse geaendert?
+   - Sind Annahmen fuer spaetere Phasen noch gueltig?
+   - Muessen Abhaengigkeiten neu bewertet werden?
+   - Hat sich der Scope verschoben?
+5. **Plan ausrichten:** Master Plan aktualisieren mit tatsaechlichem Stand + Anpassungen
+
+Kein Phasen-Uebergang ohne abgeschlossenen Zyklus.
 
 ### R14: Agent-Fuehrung durch Plan (PFLICHT fuer Worktree-Agents)
 Jeder Agent der einen Sub-Plan ausfuehrt MUSS:

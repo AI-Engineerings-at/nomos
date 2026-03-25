@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // output: 'standalone', // disabled for rewrite proxy support in Docker
   async rewrites() {
     const apiUrl = process.env.NOMOS_API_URL || 'http://nomos-api:8000';
     return [

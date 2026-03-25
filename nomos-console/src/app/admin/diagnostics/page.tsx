@@ -216,7 +216,7 @@ function DiagnosticsContent() {
         <h2 className="text-lg font-bold text-[var(--color-text)] mb-3 font-[family-name:var(--font-headline)]">
           {t('diagnostics.services', language)}
         </h2>
-        {healthData && healthData.services.length > 0 ? (
+        {healthData && healthData.services && healthData.services.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" aria-label={t('a11y.systemHealth', language)}>
             {healthData.services.map((service) => (
               <ServiceCard key={service.service} service={service} lang={language} />

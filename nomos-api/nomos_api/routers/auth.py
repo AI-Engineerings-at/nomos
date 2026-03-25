@@ -52,6 +52,19 @@ async def _get_current_user(
     return user
 
 
+@router.get("/me")
+async def get_current_user_info(
+    user: User = Depends(_get_current_user),
+) -> dict:
+    """Return current user info from JWT cookie."""
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "name": getattr(user, "name", user.email.split("@")[0]),
+    }
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(
     body: LoginRequest,

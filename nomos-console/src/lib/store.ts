@@ -48,6 +48,12 @@ interface NomosState {
   // Sidebar
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+
+  // Speech (TTS/STT)
+  speechRate: number;
+  setSpeechRate: (rate: number) => void;
+  speechEnabled: boolean;
+  setSpeechEnabled: (enabled: boolean) => void;
 }
 
 let toastCounter = 0;
@@ -116,4 +122,21 @@ export const useNomosStore = create<NomosState>()((set) => ({
   // Sidebar
   sidebarCollapsed: false,
   setSidebarCollapsed: (collapsed: boolean) => set({ sidebarCollapsed: collapsed }),
+
+  // Speech — defaults loaded from localStorage on hydration
+  speechRate: 1.0,
+  setSpeechRate: (rate: number) => {
+    const clamped = Math.max(0.5, Math.min(2.0, rate));
+    set({ speechRate: clamped });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nomos-speech-rate', String(clamped));
+    }
+  },
+  speechEnabled: true,
+  setSpeechEnabled: (enabled: boolean) => {
+    set({ speechEnabled: enabled });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nomos-speech-enabled', enabled ? 'true' : 'false');
+    }
+  },
 }));

@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { MicButton } from '@/components/ui/mic-button';
 import type { FleetResponse, Agent } from '@/lib/types';
 import type { TranslationKey } from '@/lib/i18n';
 
@@ -252,14 +253,23 @@ function HireWizardContent() {
             {t('hire.step1.title', language)}
           </h2>
 
-          <Input
-            label={t('hire.step1.nameLabel', language)}
-            placeholder={t('hire.step1.namePlaceholder', language)}
-            value={formData.name}
-            onChange={(e) => updateField('name', e.target.value)}
-            error={formErrors.name}
-            required
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label={t('hire.step1.nameLabel', language)}
+                placeholder={t('hire.step1.namePlaceholder', language)}
+                value={formData.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                error={formErrors.name}
+                required
+              />
+            </div>
+            <MicButton
+              onResult={(text) => updateField('name', text.trim())}
+              size="md"
+              className="mb-0.5"
+            />
+          </div>
 
           <div className="space-y-2">
             <p className="text-sm font-semibold text-[var(--color-text)] font-[family-name:var(--font-headline)]">

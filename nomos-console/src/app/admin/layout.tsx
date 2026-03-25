@@ -13,6 +13,7 @@ import { t } from '@/lib/i18n';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { OnboardingTour } from '@/components/onboarding/tour';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -49,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </main>
         </ErrorBoundary>
       </div>
+      <OnboardingTour />
     </div>
   );
 }

@@ -151,8 +151,8 @@ export const de = {
   'a11y.filterByStatus': 'Nach Status filtern',
   'a11y.sortBy': 'Sortieren nach',
   'a11y.pauseAgent': 'Mitarbeiter pausieren',
-  'a11y.microphonePlaceholder': 'Spracheingabe (bald verfuegbar)',
-  'a11y.speakerPlaceholder': 'Vorlesen (bald verfuegbar)',
+  'a11y.microphonePlaceholder': 'Spracheingabe',
+  'a11y.speakerPlaceholder': 'Vorlesen',
 
   // Dashboard
   'dashboard.greeting.morning': 'Guten Morgen',
@@ -290,6 +290,41 @@ export const de = {
   'approvals.rejected': 'Abgelehnt',
   'approvals.confirmApprove': 'Moechten Sie diese Aktion genehmigen?',
   'approvals.confirmReject': 'Moechten Sie diese Aktion ablehnen?',
+
+  // Speech (TTS/STT)
+  'speech.readAloud': 'Text vorlesen',
+  'speech.stopReading': 'Vorlesen stoppen',
+  'speech.voiceInput': 'Spracheingabe',
+  'speech.stopVoiceInput': 'Spracheingabe stoppen',
+  'speech.settings.title': 'Spracheinstellungen',
+  'speech.settings.description': 'Text-to-Speech und Spracheingabe konfigurieren',
+  'speech.settings.enabled': 'Sprachfunktionen aktiviert',
+  'speech.settings.enabledDescription': 'Vorlesen und Spracheingabe in der gesamten Anwendung aktivieren.',
+  'speech.settings.source': 'Quelle',
+  'speech.settings.sourceBrowser': 'Browser-native Sprachsynthese und Spracherkennung.',
+  'speech.settings.notSupported': 'Ihr Browser unterstuetzt keine Sprachfunktionen.',
+  'speech.settings.speed': 'Geschwindigkeit',
+  'speech.settings.speed.slow': 'Langsam',
+  'speech.settings.speed.normal': 'Normal',
+  'speech.settings.speed.fast': 'Schnell',
+  'speech.settings.language': 'Sprache',
+  'speech.settings.languageFollows': 'Die Sprache folgt automatisch der App-Sprache.',
+  'speech.settings.test': 'Testen',
+
+  // Onboarding Tour
+  'tour.step1.title': 'Willkommen bei NomOS!',
+  'tour.step1.description': 'Hier sehen Sie Ihr Team auf einen Blick. Compliance-Status, Kosten und Aktivitaeten — alles an einem Ort.',
+  'tour.step2.title': 'Ihr Team',
+  'tour.step2.description': 'Alle Ihre KI-Mitarbeiter auf einer Seite. Filtern, sortieren und verwalten Sie Ihr Team.',
+  'tour.step3.title': 'Neuen Mitarbeiter einstellen',
+  'tour.step3.description': 'In 4 Schritten ist Ihr neuer Mitarbeiter bereit. Rolle waehlen, Faehigkeiten festlegen, Budget setzen — fertig.',
+  'tour.step4.title': 'Mit Ihrem Mitarbeiter sprechen',
+  'tour.step4.description': 'Sprechen Sie direkt mit Ihrem KI-Mitarbeiter. Jede Antwort wird automatisch als KI-generiert gekennzeichnet.',
+  'tour.step5.title': 'Alles im Griff',
+  'tour.step5.description': 'NomOS ueberwacht automatisch alle rechtlichen Anforderungen. EU AI Act und DSGVO Konformitaet — ohne Ihr Zutun.',
+  'tour.skip': 'Ueberspringen',
+  'tour.finish': 'Los geht\'s',
+  'tour.restart': 'Tour neu starten',
 
   // Deploy Steps
   'deploy.step.validateManifest': 'Manifest wird validiert',

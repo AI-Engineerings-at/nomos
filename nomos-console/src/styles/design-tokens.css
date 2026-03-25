@@ -1,0 +1,68 @@
+/* NomOS Design Tokens — "Trusted Control" Design System */
+/* Serioes wie Online-Banking, warm wie ein Buero */
+
+:root {
+  /* NomOS Brand */
+  --color-primary: #4262FF;
+  --color-primary-hover: #3451DB;
+  --color-primary-light: #EEF1FF;
+  --color-accent: #31F1A8;
+  --color-accent-hover: #28D494;
+  --color-secondary: #15066A;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-success-light: #ECFDF5;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FFFBEB;
+  --color-error: #EF4444;
+  --color-error-light: #FEF2F2;
+
+  /* Light Mode (Default) */
+  --color-bg: #FAFAFA;
+  --color-card: #FFFFFF;
+  --color-hover: #F0F0F5;
+  --color-text: #1A1A2E;
+  --color-text-secondary: #4B5563;
+  --color-muted: #6B7280;
+  --color-border: #E5E7EB;
+  --color-focus-ring: #4262FF;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+  /* Typography */
+  --font-headline: 'Montserrat', sans-serif;
+  --font-body: 'Geist Sans', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  /* Spacing & Shape */
+  --radius: 8px;
+  --radius-sm: 4px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  --transition: 150ms ease;
+
+  /* Sidebar */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+}
+
+[data-theme="dark"] {
+  --color-bg: #0B0C0F;
+  --color-card: #1a1919;
+  --color-hover: #262626;
+  --color-text: #F1F1F1;
+  --color-text-secondary: #D1D5DB;
+  --color-muted: #9CA3AF;
+  --color-border: #2D2D2D;
+  --color-focus-ring: #4262FF;
+  --color-primary-light: #1a1f3d;
+  --color-success-light: #0d2a1f;
+  --color-warning-light: #2a2008;
+  --color-error-light: #2a0d0d;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5);
+}

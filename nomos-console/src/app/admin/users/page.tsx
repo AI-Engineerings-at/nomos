@@ -209,13 +209,13 @@ function UsersContent() {
                   style={{ backgroundColor: user.is_active ? 'var(--color-primary)' : 'var(--color-muted)' }}
                   aria-hidden="true"
                 >
-                  {user.name.charAt(0).toUpperCase()}
+                  {(user.name ?? user.email ?? '?').charAt(0).toUpperCase()}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-[var(--color-text)]">{user.name}</span>
+                    <span className="text-sm font-semibold text-[var(--color-text)]">{user.name ?? user.email}</span>
                     <Badge status={roleBadgeStatus(user.role)} label={roleLabel(user.role, language)} />
                     {!user.is_active && (
                       <Badge status="offline" label={t('users.inactive', language)} />
@@ -233,7 +233,7 @@ function UsersContent() {
                     variant="ghost"
                     size="sm"
                     onClick={() => openEdit(user)}
-                    aria-label={`${t('action.edit', language)}: ${user.name}`}
+                    aria-label={`${t('action.edit', language)}: ${user.name ?? user.email}`}
                   >
                     {t('action.edit', language)}
                   </Button>
@@ -241,7 +241,7 @@ function UsersContent() {
                     variant={user.is_active ? 'danger' : 'secondary'}
                     size="sm"
                     onClick={() => handleToggleActive(user)}
-                    aria-label={`${user.is_active ? t('users.deactivate', language) : t('users.activate', language)}: ${user.name}`}
+                    aria-label={`${user.is_active ? t('users.deactivate', language) : t('users.activate', language)}: ${user.name ?? user.email}`}
                   >
                     {user.is_active ? t('users.deactivate', language) : t('users.activate', language)}
                   </Button>

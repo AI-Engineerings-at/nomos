@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Index, String, Text, func
+from sqlalchemy import Boolean, JSON, DateTime, Index, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -56,3 +56,32 @@ class AuditLog(Base):
     data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     chain_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     timestamp: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class User(Base):
+    """NomOS user with role-based access, optional 2FA, and recovery key."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="user")  # admin | user | officer
+    totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)  # None = 2FA not enabled
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    recovery_key_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    session_timeout_hours: Mapped[int] = mapped_column(Integer, default=24)  # 8 for admin, 24 for user
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )

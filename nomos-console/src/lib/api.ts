@@ -22,12 +22,17 @@ interface ApiErrorResponse {
   code?: string;
 }
 
-/** Base URL for the NomOS API. Defaults to same origin /api. */
+/** Base URL for the NomOS API. Uses NEXT_PUBLIC_API_URL env var or defaults to localhost:8060. */
 function getBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    return window.location.origin + '/api';
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '') + '/api';
   }
-  return '/api';
+  if (typeof window !== 'undefined') {
+    // Development: API runs on different port
+    return 'http://localhost:8060/api';
+  }
+  return 'http://localhost:8060/api';
 }
 
 /** Default request timeout in milliseconds. */

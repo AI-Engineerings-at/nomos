@@ -76,7 +76,7 @@ function ComplianceContent() {
 
   const data = matrix.data;
 
-  if (!data || data.agents.length === 0) {
+  if (!data || (data.matrix ?? data.agents ?? []).length === 0) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-extrabold text-[var(--color-text)] font-[family-name:var(--font-headline)]">
@@ -90,13 +90,27 @@ function ComplianceContent() {
     );
   }
 
-  // Build lookup: agent_id -> doc_type -> cell
+  // Derive agent list and document types from matrix response
+  const agents = data.matrix ?? [];
+  const agentIds = agents.map((a: { agent_id: string }) => a.agent_id);
+
+  // Build a simple lookup for display
   const cellLookup = new Map<string, Map<string, ComplianceMatrixCell>>();
-  for (const cell of data.matrix) {
-    if (!cellLookup.has(cell.agent_id)) {
-      cellLookup.set(cell.agent_id, new Map());
+  // The API returns per-agent summary, not per-cell matrix — adapt
+  for (const agent of agents) {
+    const docs = new Map<string, ComplianceMatrixCell>();
+    // Mark missing docs as 'missing', rest as 'valid'
+    const allDocs = ['dpia', 'register', 'art50', 'art14', 'art12', 'avv', 'risk_mgmt', 'rights', 'literacy', 'tia', 'art22', 'incident', 'tom', 'accessibility'];
+    const missingSet = new Set((agent as { missing_docs?: string[] }).missing_docs ?? []);
+    for (const doc of allDocs) {
+      docs.set(doc, {
+        agent_id: agent.agent_id,
+        agent_name: (agent as { agent_name?: string }).agent_name ?? agent.agent_id,
+        document_type: doc,
+        status: missingSet.has(doc) ? 'missing' : 'valid',
+      } as ComplianceMatrixCell);
     }
-    cellLookup.get(cell.agent_id)!.set(cell.document_type, cell);
+    cellLookup.set(agent.agent_id, docs);
   }
 
   return (
@@ -188,7 +202,7 @@ function ComplianceContent() {
                 >
                   {t('audit.agent', language)}
                 </th>
-                {data.document_types.map((docType) => (
+                {['dpia', 'register', 'art50', 'art14', 'art12', 'avv', 'risk_mgmt', 'rights', 'literacy', 'tia', 'art22', 'incident', 'tom', 'accessibility'].map((docType) => (
                   <th
                     key={docType}
                     scope="col"
@@ -200,7 +214,7 @@ function ComplianceContent() {
               </tr>
             </thead>
             <tbody>
-              {data.agents.map((agentId) => {
+              {agentIds.map((agentId: string) => {
                 const agentCells = cellLookup.get(agentId);
                 const agentName = agentCells?.values().next().value?.agent_name ?? agentId;
                 return (
@@ -208,7 +222,7 @@ function ComplianceContent() {
                     <td className="px-4 py-3 font-semibold text-[var(--color-text)] whitespace-nowrap">
                       {agentName}
                     </td>
-                    {data.document_types.map((docType) => {
+                    {['dpia', 'register', 'art50', 'art14', 'art12', 'avv', 'risk_mgmt', 'rights', 'literacy', 'tia', 'art22', 'incident', 'tom', 'accessibility'].map((docType) => {
                       const cell = agentCells?.get(docType);
                       const status = cell?.status ?? 'missing';
                       const colors = statusColors[status];

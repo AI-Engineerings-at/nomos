@@ -56,7 +56,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         fetch('/api/incidents', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            log_entry: `Console error: ${payload.error} at ${payload.url}`,
+            agent_id: 'console',
+            context: payload,
+          }),
           credentials: 'same-origin',
         }).catch(() => {
           // Silently fail — we cannot let the error reporter cause more errors

@@ -119,5 +119,6 @@ export interface OpenClawPluginApi {
   registerCli: (registrar: unknown, opts?: { commands?: string[] }) => void;
   registerService: (service: { id: string; start: (ctx: unknown) => void; stop?: (ctx: unknown) => void }) => void;
   resolvePath: (input: string) => string;
-  on: (hookName: string, handler: HookHandler, opts?: { priority?: number }) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on: (hookName: string, handler: HookHandler<any, any>, opts?: { priority?: number }) => void;
 }

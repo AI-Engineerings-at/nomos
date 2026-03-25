@@ -47,6 +47,42 @@ async def _require_admin(
     return user
 
 
+@router.post("/bootstrap", response_model=UserCreateResponse, status_code=201)
+async def bootstrap_admin(
+    body: UserCreateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> UserCreateResponse:
+    """Create the first admin user. Only works when no users exist."""
+    existing = await db.execute(select(User))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=403, detail="Bootstrap already completed. Users exist.")
+
+    errors = validate_password_strength(body.password)
+    if errors:
+        raise HTTPException(status_code=422, detail="; ".join(errors))
+
+    recovery_words = generate_recovery_key()
+    recovery_phrase = " ".join(recovery_words)
+
+    user = User(
+        id=str(uuid.uuid4()),
+        email=body.email,
+        password_hash=hash_password(body.password),
+        role="admin",
+        recovery_key_hash=hash_recovery_key(recovery_phrase),
+        session_timeout_hours=8,
+    )
+    db.add(user)
+    await db.commit()
+    logger.info("Bootstrap admin created: %s", body.email)
+
+    return UserCreateResponse(
+        id=user.id, email=user.email, role="admin",
+        recovery_key=recovery_words,
+        totp_enabled=False, session_timeout_hours=8, is_active=True,
+    )
+
+
 @router.get("", response_model=UserListResponse)
 async def list_users(
     admin: User = Depends(_require_admin),

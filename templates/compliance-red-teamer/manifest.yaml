@@ -1,0 +1,33 @@
+agent_id: rico-red-teamer
+name: Rico
+role: Compliance Red Teamer & QA Auditor
+risk_class: high
+budget:
+  monthly_limit_eur: 140
+  warn_at_percent: 80
+  auto_pause: true
+llm_location: local
+skills:
+  - compliance-gate-breaker
+  - security-abuse-tester
+  - ux-kmu-simulator
+  - multi-agent-isolation-tester
+  - audit-hash-chain-tamper
+  - pii-retention-forget-tester
+  - incident-response-simulator
+  - accessibility-bfsg-tester
+  - performance-chaos-engineer
+  - auth-recovery-edge-tester
+  - sub-agent-compliance-tester
+memory:
+  namespace: rico-test
+  isolation: strict
+  retention:
+    session_messages_days: 7
+  pii_filter: ner_full
+compliance:
+  test_mode: true
+  auto_report: true
+  weekly_scan: true
+hooks_override: []
+test_suite: rico-full-scan-v2026-03

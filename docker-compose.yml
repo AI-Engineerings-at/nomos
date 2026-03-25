@@ -1,3 +1,6 @@
+# NomOS v2 — Docker Compose Stack
+# Aktueller Stand: API + PostgreSQL (Console + Plugin werden in Phase H/A neu gebaut)
+
 services:
   nomos-api:
     build:
@@ -8,7 +11,7 @@ services:
     environment:
       - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:-nomos}@postgres:5432/nomos
       - NOMOS_AGENTS_DIR=/data/agents
-      - NOMOS_CORS_ORIGINS=["http://localhost:${NOMOS_CONSOLE_PORT:-3040}"]
+      - NOMOS_CORS_ORIGINS=["http://localhost:3040","http://localhost:3045"]
     volumes:
       - nomos-agents:/data/agents
     depends_on:
@@ -21,19 +24,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  nomos-console:
-    build:
-      context: .
-      dockerfile: nomos-console/Dockerfile
-    ports:
-      - "${NOMOS_CONSOLE_PORT:-3040}:3040"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://nomos-api:8000
-    depends_on:
-      nomos-api:
-        condition: service_healthy
-    restart: unless-stopped
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -49,6 +39,11 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+  # Valkey wird in Phase B hinzugefuegt (Event Bus, Queue)
+  # Console wird in Phase H neu gebaut (Next.js 15, Command Center)
+  # Plugin wird in Phase A neu gebaut (OpenClaw TypeScript)
+  # Piper TTS + Whisper STT werden in Phase H als optionale Services hinzugefuegt
 
 volumes:
   nomos-pgdata:

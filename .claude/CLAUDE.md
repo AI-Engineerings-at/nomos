@@ -1,7 +1,11 @@
 # NomOS — Development Rules
 
 ## Was ist NomOS?
-NomOS (Nomos = Gesetz + OS) ist ein standalone Docker-Produkt das EU AI Act Compliance fuer AI-Agenten erzwingt. Kunden starten `docker compose up -d` auf IHREM Server.
+NomOS (Nomos = Gesetz + OS) ist ein standalone Docker-Produkt das EU AI Act Compliance fuer AI-Agenten erzwingt. Kunden starten `docker compose up -d` auf IHREM Server. NomOS ist LLM-provider-agnostic — der Kunde waehlt seinen Anbieter, NomOS dokumentiert und erzwingt die passende Compliance.
+
+**Leitsatz:** *"Jeder entwickelt fuer sich, wir fuer alle."*
+
+**Lizenz:** FCL (Fair Core License) — 3 Agents gratis mit vollem Funktionsumfang, ab 4 kommerziell.
 
 ## HARD RULES (gelten fuer ALLE Agents)
 
@@ -18,7 +22,7 @@ NomOS (Nomos = Gesetz + OS) ist ein standalone Docker-Produkt das EU AI Act Comp
 4. **Fake-Visualisierungen** — Keine Dashboards mit erfundenen Daten.
 5. **Skeleton-Dateien** — Keine Datei ohne echte Implementation + Test.
 
-## Neue Regeln R8-R12
+## Regeln R8-R12
 
 ### R8: Scope Validation Gate (BLOCKER)
 Vor JEDEM Code 3 Pflichtfragen beantworten:
@@ -53,11 +57,13 @@ Keine Datei wird committed die:
 - Python 3.12 (Backend: FastAPI, CLI: Click, Models: Pydantic v2)
 - TypeScript strict (Console: Next.js 15, Plugin: OpenClaw)
 - PostgreSQL + pgvector (Datenbank)
+- Valkey (Event Bus, Queue) — BSD-3, Drop-in Redis Replacement
+- Piper TTS (MIT) + Whisper.cpp (MIT) — optionale lokale Sprach-Services
 - Docker Compose (Deployment)
 - pytest + ruff (Testing + Linting)
 - GitHub Actions (CI/CD)
 
-## Repo-Struktur (aktuell)
+## Repo-Struktur (Stand: 25.03.2026)
 ```
 nomos/
 ├── nomos-cli/nomos/core/    # manifest, validator, hash_chain, events, compliance, gate, forge
@@ -65,15 +71,28 @@ nomos/
 ├── nomos-cli/tests/          # 84 Tests
 ├── nomos-api/nomos_api/     # FastAPI: config, database, models, schemas, services, routers
 ├── nomos-api/tests/          # 14 Tests
-├── nomos-console/src/        # Next.js Dashboard
-├── nomos-plugin/src/         # TypeScript OpenClaw Plugin
-├── schemas/                  # YAML Schema Templates
-├── templates/                # Agent Templates
+├── templates/                # Agent Templates (Mani, Rico)
 ├── scripts/e2e-test.sh       # E2E Test Script
-├── docker-compose.yml        # Master Stack (API + Console + Postgres)
-├── docs/plans/               # Implementation Plans (1, 2, 7)
-└── .claude/agents/           # Dev-Team Agent Definitionen
+├── docker-compose.yml        # Master Stack
+├── docs/
+│   ├── superpowers/specs/    # Design Spec v4
+│   ├── superpowers/plans/    # Master Plan + Sub-Projekt Plaene
+│   ├── reviews/              # Externes Feedback
+│   ├── de/                   # Deutsche Doku
+│   └── *.md                  # Englische Doku
+├── _archive/                 # Archivierte v1-Komponenten
+│   ├── console-v1/           # Altes Next.js Dashboard (wird neu gebaut)
+│   ├── plugin-v1/            # Altes OpenClaw Plugin (wird neu gebaut)
+│   ├── schemas-v1/           # Alte YAML Schemas
+│   └── plans-v1/             # Alte Implementation Plans
+└── .claude/                  # Dev-Regeln + Agent-Definitionen
 ```
+
+## Implementation Plan
+- **Master Plan:** `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md`
+- **Design Spec:** `docs/superpowers/specs/2026-03-24-nomos-v2-design.md` (v4)
+- **6 Phasen, 9 Sub-Projekte (A-I)**
+- **Naechste Phase:** 0 (Repo-Reorg) → dann Phase 1 (Plugin Core + Auth)
 
 ## Sprache
 - Code + Commits: Englisch

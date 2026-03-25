@@ -5,23 +5,51 @@ Commands:
     nomos verify  — Verify compliance of an agent
     nomos fleet   — List all agents in the local fleet
     nomos audit   — Show or verify audit trail
+    nomos pause   — Pause a running agent
+    nomos resume  — Resume a paused agent
+    nomos retire  — Gracefully retire an agent
+    nomos forget  — DSGVO Art. 17 — delete personal data
+    nomos assign  — Assign a task to an agent
+    nomos costs   — Show cost overview (all or single agent)
+    nomos incidents — List all incidents
+    nomos workspace — Mount/unmount collections
 """
 
 from __future__ import annotations
 
+import json as json_module
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from nomos.core import api
 from nomos.core.compliance_engine import check_compliance
 from nomos.core.forge import forge_agent
 from nomos.core.hash_chain import HashChain, verify_chain
 from nomos.core.manifest_validator import compute_manifest_hash, load_manifest, validate_manifest
 
 console = Console()
+
+
+# ---------------------------------------------------------------------------
+# Helpers for v2 commands
+# ---------------------------------------------------------------------------
+
+def _print_result(result: dict[str, Any], *, json_flag: bool, success_msg: str) -> None:
+    """Print the result of an API call — human-readable or JSON."""
+    if json_flag:
+        console.print(json_module.dumps(result, indent=2, ensure_ascii=False))
+        return
+
+    if result["success"]:
+        console.print(f"[green]{success_msg}[/green]")
+    else:
+        console.print(f"[red]Fehler:[/red] {result['error']}")
+        raise SystemExit(1)
 
 
 @click.group()
@@ -267,3 +295,227 @@ def audit(agent_dir: str, do_verify: bool) -> None:
             )
 
         console.print(table)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CLI v2 — API-backed commands
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@main.command()
+@click.argument("agent_id")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def pause(agent_id: str, json_flag: bool) -> None:
+    """Pause a running agent."""
+    result = api.pause_agent(agent_id)
+    if not json_flag and result["success"]:
+        data = result["data"]
+        _print_result(result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) pausiert.")
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")
+
+
+@main.command()
+@click.argument("agent_id")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def resume(agent_id: str, json_flag: bool) -> None:
+    """Resume a paused agent."""
+    result = api.resume_agent(agent_id)
+    if not json_flag and result["success"]:
+        data = result["data"]
+        _print_result(result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) laeuft wieder.")
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")
+
+
+@main.command()
+@click.argument("agent_id")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def retire(agent_id: str, json_flag: bool) -> None:
+    """Gracefully retire an agent — revoke access, archive data."""
+    result = api.retire_agent(agent_id)
+    if not json_flag and result["success"]:
+        data = result["data"]
+        _print_result(result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) wurde in den Ruhestand versetzt.")
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")
+
+
+@main.command()
+@click.argument("email")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def forget(email: str, json_flag: bool) -> None:
+    """DSGVO Art. 17 — delete all personal data for an email address."""
+    result = api.forget_email(email)
+    if not json_flag and result["success"]:
+        data = result["data"]
+        deleted = data.get("deleted_messages", 0)
+        _print_result(
+            result,
+            json_flag=False,
+            success_msg=f"DSGVO Loeschung: {deleted} Nachrichten fuer {email} geloescht.",
+        )
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")
+
+
+@main.command()
+@click.argument("agent_id")
+@click.option("--task", required=True, help="Task description")
+@click.option("--priority", default="normal", type=click.Choice(["low", "normal", "high", "urgent"]))
+@click.option("--timeout", "timeout_minutes", default=60, type=int, help="Timeout in minutes")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def assign(agent_id: str, task: str, priority: str, timeout_minutes: int, json_flag: bool) -> None:
+    """Assign a task to an agent."""
+    result = api.create_task(agent_id, task, priority=priority, timeout_minutes=timeout_minutes)
+    if not json_flag and result["success"]:
+        data = result["data"]
+        _print_result(
+            result,
+            json_flag=False,
+            success_msg=f"Task {data['id']} erstellt fuer Agent {agent_id}: {task}",
+        )
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")
+
+
+@main.command()
+@click.argument("agent_id", required=False, default=None)
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def costs(agent_id: str | None, json_flag: bool) -> None:
+    """Show cost overview — all agents or a single agent."""
+    if agent_id:
+        result = api.get_agent_costs(agent_id)
+        if json_flag:
+            _print_result(result, json_flag=True, success_msg="")
+            return
+        if not result["success"]:
+            _print_result(result, json_flag=False, success_msg="")
+            return
+
+        data = result["data"]
+        table = Table(title=f"Kosten: {agent_id}")
+        table.add_column("Agent", style="bold")
+        table.add_column("Kosten (EUR)", justify="right")
+        table.add_column("Budget (EUR)", justify="right")
+        table.add_column("Auslastung", justify="right")
+        table.add_column("Status")
+        table.add_row(
+            data["agent_id"],
+            f"{data['total_cost_eur']:.2f}",
+            f"{data['budget_limit_eur']:.2f}",
+            f"{data['percent_used']:.0f}%",
+            data["budget_status"],
+        )
+        console.print(table)
+    else:
+        result = api.get_costs()
+        if json_flag:
+            _print_result(result, json_flag=True, success_msg="")
+            return
+        if not result["success"]:
+            _print_result(result, json_flag=False, success_msg="")
+            return
+
+        data = result["data"]
+        cost_list = data.get("costs", [])
+        if not cost_list:
+            console.print("Keine Kostendaten vorhanden.")
+            return
+
+        table = Table(title=f"Kostenuebersicht ({data['total']} Agents)")
+        table.add_column("Agent", style="bold")
+        table.add_column("Kosten (EUR)", justify="right")
+        table.add_column("Budget (EUR)", justify="right")
+        table.add_column("Auslastung", justify="right")
+        table.add_column("Status")
+        for c in cost_list:
+            table.add_row(
+                c["agent_id"],
+                f"{c['total_cost_eur']:.2f}",
+                f"{c['budget_limit_eur']:.2f}",
+                f"{c['percent_used']:.0f}%",
+                c["budget_status"],
+            )
+        console.print(table)
+
+
+@main.command()
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def incidents(json_flag: bool) -> None:
+    """List all incidents (Art. 33/34 DSGVO)."""
+    result = api.get_incidents()
+    if json_flag:
+        _print_result(result, json_flag=True, success_msg="")
+        return
+    if not result["success"]:
+        _print_result(result, json_flag=False, success_msg="")
+        return
+
+    data = result["data"]
+    incident_list = data.get("incidents", [])
+    if not incident_list:
+        console.print("Keine Incidents vorhanden.")
+        return
+
+    table = Table(title=f"Incidents ({data['total']})")
+    table.add_column("ID", style="bold")
+    table.add_column("Agent")
+    table.add_column("Typ")
+    table.add_column("Schwere")
+    table.add_column("Status")
+    table.add_column("Erkannt")
+    table.add_column("Meldefrist")
+    for inc in incident_list:
+        table.add_row(
+            str(inc["id"]),
+            inc["agent_id"],
+            inc["incident_type"],
+            inc["severity"],
+            inc["status"],
+            inc["detected_at"][:19],
+            inc["report_deadline"][:19],
+        )
+    console.print(table)
+
+
+# --- Workspace sub-group ---
+
+
+@main.group()
+def workspace() -> None:
+    """Manage agent workspace collections."""
+
+
+@workspace.command("mount")
+@click.option("--agent", required=True, help="Agent ID")
+@click.option("--collection", required=True, help="Collection name")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def workspace_mount(agent: str, collection: str, json_flag: bool) -> None:
+    """Mount a collection to an agent's workspace."""
+    result = api.mount_collection(agent, collection)
+    if not json_flag and result["success"]:
+        _print_result(
+            result,
+            json_flag=False,
+            success_msg=f"Collection '{collection}' fuer Agent {agent} gemountet.",
+        )
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")
+
+
+@workspace.command("unmount")
+@click.option("--agent", required=True, help="Agent ID")
+@click.option("--collection", required=True, help="Collection name")
+@click.option("--json", "json_flag", is_flag=True, default=False, help="Machine-readable JSON output")
+def workspace_unmount(agent: str, collection: str, json_flag: bool) -> None:
+    """Unmount a collection from an agent's workspace."""
+    result = api.unmount_collection(agent, collection)
+    if not json_flag and result["success"]:
+        _print_result(
+            result,
+            json_flag=False,
+            success_msg=f"Collection '{collection}' fuer Agent {agent} ausgehaengt.",
+        )
+    else:
+        _print_result(result, json_flag=json_flag, success_msg="")

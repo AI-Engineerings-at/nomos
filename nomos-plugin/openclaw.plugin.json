@@ -1,0 +1,22 @@
+{
+  "id": "nomos",
+  "name": "NomOS",
+  "version": "2.0.0",
+  "description": "EU AI Act + DSGVO compliance enforcement for OpenClaw agents",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "apiUrl": {
+        "type": "string",
+        "description": "NomOS API URL",
+        "default": "http://nomos-api:8000"
+      },
+      "agentsDir": {
+        "type": "string",
+        "description": "Local agents directory",
+        "default": "./data/agents"
+      }
+    },
+    "additionalProperties": false
+  }
+}

@@ -52,7 +52,9 @@ function OfficerSkeleton() {
 function OfficerContent() {
   const { language, addToast } = useNomosStore();
   const matrixFetch = useFetch<ComplianceMatrixResponse>('/compliance/matrix');
-  const auditFetch = useFetch<{ entries: AuditEntry[]; total: number }>('/audit');
+  // Global /audit endpoint does not exist — only /agents/{id}/audit is available.
+  // Show empty state gracefully until a global aggregation endpoint is implemented.
+  const auditFetch = { data: null as { entries: AuditEntry[]; total: number } | null, loading: false, error: null as string | null, reload: () => { /* no-op */ } };
   const [activeTab, setActiveTab] = useState<'matrix' | 'audit'>('matrix');
 
   // Build matrix lookup

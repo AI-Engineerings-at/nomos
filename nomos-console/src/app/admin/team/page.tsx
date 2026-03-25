@@ -174,26 +174,27 @@ function TeamContent() {
   const fleet = useFetch<FleetResponse>('/fleet');
   const costs = useFetch<CostOverviewResponse>('/costs');
 
-  if (fleet.loading || costs.loading) {
-    return <TeamSkeleton />;
-  }
-
   const agents = fleet.data?.agents ?? [];
-  const costMap = new Map<string, { used: number; limit: number }>();
-  if (costs.data) {
-    for (const c of costs.data.costs) {
-      costMap.set(c.agent_id, { used: c.total_cost_eur, limit: c.budget_limit_eur });
+  const costMap = useMemo(() => {
+    const map = new Map<string, { used: number; limit: number }>();
+    if (costs.data) {
+      for (const c of costs.data.costs) {
+        map.set(c.agent_id, { used: c.total_cost_eur, limit: c.budget_limit_eur });
+      }
     }
-  }
+    return map;
+  }, [costs.data]);
 
   // Filter
-  const filteredAgents = agents.filter((a) => {
-    if (filter === 'all') return true;
-    if (filter === 'running') return a.status === 'running';
-    if (filter === 'paused') return a.status === 'paused';
-    if (filter === 'offline') return a.status === 'killed' || a.status === 'error';
-    return true;
-  });
+  const filteredAgents = useMemo(() => {
+    return agents.filter((a) => {
+      if (filter === 'all') return true;
+      if (filter === 'running') return a.status === 'running';
+      if (filter === 'paused') return a.status === 'paused';
+      if (filter === 'offline') return a.status === 'killed' || a.status === 'error';
+      return true;
+    });
+  }, [agents, filter]);
 
   // Sort
   const sortedAgents = useMemo(() => {
@@ -213,6 +214,10 @@ function TeamContent() {
       }
     });
   }, [filteredAgents, sortKey, costMap]);
+
+  if (fleet.loading || costs.loading) {
+    return <TeamSkeleton />;
+  }
 
   const filterOptions: { key: FilterStatus; labelKey: 'team.filterAll' | 'team.filterOnline' | 'team.filterPaused' | 'team.filterOffline' }[] = [
     { key: 'all', labelKey: 'team.filterAll' },

@@ -100,8 +100,12 @@ function AuditContent() {
   const [eventFilter, setEventFilter] = useState<string>('');
   const [verifying, setVerifying] = useState(false);
 
-  const auditFetch = useFetch<AuditResponse & { entries: AuditEntry[]; total: number }>('/audit');
   const fleetFetch = useFetch<FleetResponse>('/fleet');
+
+  // Global /audit endpoint does not exist — aggregate from per-agent audit endpoints.
+  // For now, show empty state gracefully. When agents are loaded, we could fetch
+  // /agents/{id}/audit for each agent, but that is a feature addition, not a fix.
+  const auditFetch = { data: null as (AuditResponse & { entries: AuditEntry[]; total: number }) | null, loading: false, error: null as string | null, reload: () => { /* no-op */ } };
 
   const entries = auditFetch.data?.entries ?? [];
 

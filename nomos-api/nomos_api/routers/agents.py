@@ -1,4 +1,4 @@
-"""Agent endpoints — create, patch (pause/resume/kill), heartbeat, and kill switch."""
+"""Agent endpoints — create, patch, heartbeat, pause, resume, kill, retire."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.config import settings
 from nomos_api.database import get_db
-from nomos_api.models import AuditLog
+from nomos_api.models import Agent, AuditLog
 from nomos_api.schemas import (
     AgentCreateRequest,
     AgentPatchRequest,
@@ -32,6 +32,39 @@ _heartbeat_service = HeartbeatService()
 def get_heartbeat_service() -> HeartbeatService:
     """Return the shared HeartbeatService instance."""
     return _heartbeat_service
+
+
+async def _write_audit_event(
+    db: AsyncSession,
+    agent: Agent,
+    agent_id: str,
+    event_type: EventType,
+    data: dict,
+) -> None:
+    """Write an event to the on-disk hash chain and persist it to the DB."""
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
+        return
+    audit_dir = agent_dir / "audit"
+    if not audit_dir.exists():
+        return
+    chain = HashChain(storage_dir=audit_dir)
+    entry = chain.append(
+        event_type=event_type,
+        agent_id=agent_id,
+        data=data,
+    )
+    audit_log = AuditLog(
+        agent_id=entry.agent_id,
+        sequence=entry.sequence,
+        event_type=entry.event_type,
+        data=entry.data,
+        chain_hash=entry.hash,
+        timestamp=entry.timestamp,
+    )
+    db.add(audit_log)
+    await db.commit()
 
 
 @router.post("/agents", response_model=AgentResponse, status_code=201)
@@ -67,6 +100,61 @@ async def patch_agent(agent_id: str, request: AgentPatchRequest) -> dict:
     return {"agent_id": agent_id, "status": request.status, "updated": True}
 
 
+@router.post("/agents/{agent_id}/pause", response_model=AgentResponse)
+async def pause_agent(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> AgentResponse:
+    """Pause an agent. Any authenticated user can pause their own agents.
+
+    Sets agent status to 'paused' and creates an audit trail entry
+    for the kill_switch.user_pause event (Art. 14 EU AI Act).
+    """
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+
+    agent = await update_agent_status(db, agent_id, "paused")
+
+    await _write_audit_event(
+        db, agent, agent_id,
+        EventType.KILL_SWITCH_USER_PAUSE,
+        {"reason": "kill_switch.user_pause", "status": "paused"},
+    )
+
+    return AgentResponse.model_validate(agent)
+
+
+@router.post("/agents/{agent_id}/resume", response_model=AgentResponse)
+async def resume_agent(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> AgentResponse:
+    """Resume a paused agent. Only allowed when agent is currently paused.
+
+    Sets agent status to 'running' and creates an audit trail entry.
+    """
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+
+    if agent.status != "paused":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Agent {agent_id!r} is not paused (current status: {agent.status!r})",
+        )
+
+    agent = await update_agent_status(db, agent_id, "running")
+
+    await _write_audit_event(
+        db, agent, agent_id,
+        EventType.AGENT_DEPLOYED,
+        {"reason": "agent.resumed", "status": "running", "previous_status": "paused"},
+    )
+
+    return AgentResponse.model_validate(agent)
+
+
 @router.post("/agents/{agent_id}/kill", response_model=AgentResponse)
 async def kill_agent(
     agent_id: str,
@@ -81,31 +169,37 @@ async def kill_agent(
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
 
-    # Update status to killed
     agent = await update_agent_status(db, agent_id, "killed")
 
-    # Write kill switch event to audit chain on disk
-    agent_dir = Path(agent.agents_dir).resolve()
-    safe_base = settings.agents_dir.resolve()
-    if agent_dir.is_relative_to(safe_base):
-        audit_dir = agent_dir / "audit"
-        if audit_dir.exists():
-            chain = HashChain(storage_dir=audit_dir)
-            entry = chain.append(
-                event_type=EventType.KILL_SWITCH_ACTIVATED,
-                agent_id=agent_id,
-                data={"reason": "kill_switch.activated", "status": "killed"},
-            )
-            # Persist audit entry to DB
-            audit_log = AuditLog(
-                agent_id=entry.agent_id,
-                sequence=entry.sequence,
-                event_type=entry.event_type,
-                data=entry.data,
-                chain_hash=entry.hash,
-                timestamp=entry.timestamp,
-            )
-            db.add(audit_log)
-            await db.commit()
+    await _write_audit_event(
+        db, agent, agent_id,
+        EventType.KILL_SWITCH_ACTIVATED,
+        {"reason": "kill_switch.activated", "status": "killed"},
+    )
+
+    return AgentResponse.model_validate(agent)
+
+
+@router.post("/agents/{agent_id}/retire", response_model=AgentResponse)
+async def retire_agent(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> AgentResponse:
+    """Gracefully retire an agent — revoke access, unmount collections, archive.
+
+    Sets agent status to 'retired' and creates an audit trail entry
+    for the agent.retired event.
+    """
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+
+    agent = await update_agent_status(db, agent_id, "retired")
+
+    await _write_audit_event(
+        db, agent, agent_id,
+        EventType.AGENT_RETIRED,
+        {"reason": "agent.retired", "status": "retired"},
+    )
 
     return AgentResponse.model_validate(agent)

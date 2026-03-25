@@ -36,6 +36,16 @@ async def list_tasks(agent_id: str | None = None) -> TaskListResponse:
     )
 
 
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
+async def get_task(task_id: str) -> TaskResponse:
+    svc = get_task_service()
+    try:
+        task = svc.get(task_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
+    return TaskResponse(**task)
+
+
 @router.post("/tasks", response_model=TaskResponse, status_code=201)
 async def create_task(request: TaskCreateRequest) -> TaskResponse:
     svc = get_task_service()

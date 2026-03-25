@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,12 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from nomos_api.config import settings
 from nomos_api.database import get_db
 from nomos_api.models import AuditLog
-from nomos_api.schemas import ComplianceResponse
-from nomos_api.services.fleet_service import get_agent
+from nomos_api.schemas import ComplianceMatrixEntry, ComplianceMatrixResponse, ComplianceResponse
+from nomos_api.services.fleet_service import get_agent, list_agents
 from nomos.core.compliance_engine import check_compliance
 from nomos.core.events import EventType
 from nomos.core.hash_chain import HashChain
 from nomos.core.manifest_validator import load_manifest
+
+logger = logging.getLogger("nomos-api")
 
 router = APIRouter(prefix="/api", tags=["compliance"])
 
@@ -104,3 +107,42 @@ async def run_compliance_gate(
         errors=result.errors,
         warnings=result.warnings,
     )
+
+
+@router.get("/compliance/matrix", response_model=ComplianceMatrixResponse)
+async def get_compliance_matrix(
+    db: AsyncSession = Depends(get_db),
+) -> ComplianceMatrixResponse:
+    """Return compliance status for all agents in the fleet.
+
+    Provides a matrix view showing each agent's compliance status,
+    missing documents, and risk class. Used by the Console dashboard.
+    """
+    agents = await list_agents(db)
+    safe_base = settings.agents_dir.resolve()
+    matrix: list[ComplianceMatrixEntry] = []
+
+    for agent in agents:
+        agent_dir = Path(agent.agents_dir).resolve()
+        missing_docs: list[str] = []
+
+        if agent_dir.is_relative_to(safe_base):
+            manifest_path = agent_dir / "manifest.yaml"
+            compliance_dir = agent_dir / "compliance"
+            if manifest_path.exists():
+                try:
+                    manifest = load_manifest(manifest_path)
+                    result = check_compliance(manifest, compliance_dir)
+                    missing_docs = result.missing_documents
+                except Exception as exc:
+                    logger.warning("Compliance check failed for %s: %s", agent.id, exc)
+
+        matrix.append(ComplianceMatrixEntry(
+            agent_id=agent.id,
+            agent_name=agent.name,
+            status=agent.compliance_status,
+            missing_docs=missing_docs,
+            risk_class=agent.risk_class,
+        ))
+
+    return ComplianceMatrixResponse(matrix=matrix, total=len(matrix))

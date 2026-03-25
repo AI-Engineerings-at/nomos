@@ -13,6 +13,7 @@ import { createGatewayStartHook } from "./hooks/gateway-start.js";
 import { createSessionStartHook } from "./hooks/session-start.js";
 import { createSessionEndHook } from "./hooks/session-end.js";
 import { createAgentEndHook } from "./hooks/agent-end.js";
+import { createOnErrorHook } from "./hooks/on-error.js";
 
 export default function register(api: OpenClawPluginApi): void {
   const config = getPluginConfig(api);
@@ -56,6 +57,10 @@ export default function register(api: OpenClawPluginApi): void {
 
   api.on("agent_end",
     wrapHook("agent_end", createAgentEndHook(client), wrapOpts));
+
+  // Error handler hook — auto-pause + incident (Art. 14 EU AI Act)
+  api.on("on_error",
+    wrapHook("on_error", createOnErrorHook(client), wrapOpts));
 
   // Banner
   logger.info("");

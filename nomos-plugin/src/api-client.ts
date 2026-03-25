@@ -109,6 +109,18 @@ export class NomOSApiClient {
     }
   }
 
+  async pauseAgent(agentId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/agents/${agentId}/pause`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async reportIncident(agentId: string, description: string, severity: string): Promise<boolean> {
     try {
       const res = await fetch(`${this.baseUrl}/api/incidents`, {

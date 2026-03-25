@@ -47,6 +47,23 @@ Keine Datei wird committed die:
 - Max 1 Produkt-Komponente pro Session
 - Review-Checkpoint nach jedem Task
 
+### R13: Post-Phase Analyse (GATE — nach JEDER Phase)
+Nach Abschluss jeder Phase MUSS ein Analyse-Agent laufen bevor die naechste Phase startet:
+1. **IST/SOLL Vergleich:** Jeden geplanten Endpoint, Service, Datei gegen die Realitaet pruefen
+2. **Test-Verifizierung:** Alle Tests auf main ausfuehren (CLI + API + Plugin)
+3. **Luecken-Report:** Was fehlt? Was weicht ab? Was blockiert die naechste Phase?
+4. **Gap-Fix:** Luecken schliessen BEVOR die naechste Phase startet
+5. **Plan-Update:** Master Plan aktualisieren mit tatsaechlichem Stand
+
+Kein Phasen-Uebergang ohne gruenen Analyse-Report.
+
+### R14: Agent-Fuehrung durch Plan (PFLICHT fuer Worktree-Agents)
+Jeder Agent der einen Sub-Plan ausfuehrt MUSS:
+- Den KOMPLETTEN Plan lesen (nicht nur seine Tasks)
+- Die Endpoint-Liste aus dem Master Plan gegen seine Arbeit abgleichen
+- Am Ende einen Self-Check Report erstellen: "Geplant vs. Gebaut"
+- Fehlende Endpoints/Tests explizit als GAP melden, nicht stillschweigend ueberspringen
+
 ### R12: Produkt/Infra Trennung (BLOCKER)
 - KEINE internen IPs (10.40.10.x) in Produkt-Code
 - KEINE Referenz zu .80, .82, .83, .90, .91, .99

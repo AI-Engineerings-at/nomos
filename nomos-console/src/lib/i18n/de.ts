@@ -175,6 +175,13 @@ export const de = {
   'dashboard.perMonth': 'pro Monat',
   'dashboard.open': 'offen',
   'dashboard.active': 'aktiv',
+  'dashboard.compliancePerfect': 'Alle Anforderungen erfuellt',
+  'dashboard.quickActions': 'Schnellzugriff',
+  'dashboard.quickAction.hire': 'Mitarbeiter einstellen',
+  'dashboard.quickAction.compliance': 'Rechts-Check oeffnen',
+  'dashboard.quickAction.costs': 'Kosten einsehen',
+  'dashboard.quickAction.audit': 'Protokoll pruefen',
+  'dashboard.budgetOf': 'von',
 
   // Team
   'team.title': 'Mein Team',

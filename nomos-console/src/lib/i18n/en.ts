@@ -177,6 +177,13 @@ export const en: Record<TranslationKey, string> = {
   'dashboard.perMonth': 'per month',
   'dashboard.open': 'open',
   'dashboard.active': 'active',
+  'dashboard.compliancePerfect': 'All requirements fulfilled',
+  'dashboard.quickActions': 'Quick Actions',
+  'dashboard.quickAction.hire': 'Hire employee',
+  'dashboard.quickAction.compliance': 'Open legal check',
+  'dashboard.quickAction.costs': 'View costs',
+  'dashboard.quickAction.audit': 'Review audit log',
+  'dashboard.budgetOf': 'of',
 
   // Team
   'team.title': 'My Team',

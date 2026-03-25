@@ -1,4 +1,4 @@
-name: CI
+name: CI — NomOS Quality Gate
 
 on:
   push:
@@ -6,9 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ──────────────────────────────────────
+  # Stage 1: Lint (fast, catches obvious issues)
+  # ──────────────────────────────────────
+
   lint-python:
-    name: Lint Python
+    name: Lint Python (ruff)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,10 +28,33 @@ jobs:
       - run: ruff check nomos-cli nomos-api
       - run: ruff format --check nomos-cli nomos-api
 
+  lint-typescript:
+    name: Lint TypeScript (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Plugin typecheck
+        working-directory: nomos-plugin
+        run: npm ci && npx tsc --noEmit
+      - name: Console typecheck
+        working-directory: nomos-console
+        run: npm ci && npx tsc --noEmit
+        continue-on-error: true  # Console may not exist yet
+
+  # ──────────────────────────────────────
+  # Stage 2: Unit Tests (per package)
+  # ──────────────────────────────────────
+
   test-cli:
-    name: Test CLI
+    name: Test CLI (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     needs: lint-python
+    strategy:
+      matrix:
+        python-version: ["3.12"]
     defaults:
       run:
         working-directory: nomos-cli
@@ -30,14 +62,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - run: uv sync
-      - run: uv run pytest -v --tb=short
+      - run: uv run pytest -v --tb=short --junitxml=../test-results/cli.xml
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-cli
+          path: test-results/
 
   test-api:
-    name: Test API
+    name: Test API (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     needs: lint-python
+    strategy:
+      matrix:
+        python-version: ["3.12"]
     defaults:
       run:
         working-directory: nomos-api
@@ -45,15 +86,145 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
-      - run: PYTHONPATH="../nomos-cli" uv run pytest -v --tb=short
+      - run: PYTHONPATH="../nomos-cli" uv run pytest -v --tb=short --junitxml=../test-results/api.xml
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-api
+          path: test-results/
+
+  test-plugin:
+    name: Test Plugin (vitest)
+    runs-on: ubuntu-latest
+    needs: lint-typescript
+    defaults:
+      run:
+        working-directory: nomos-plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx vitest run --reporter=junit --outputFile=../test-results/plugin.xml
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-plugin
+          path: test-results/
+
+  test-console:
+    name: Test Console (vitest)
+    runs-on: ubuntu-latest
+    needs: lint-typescript
+    if: hashFiles('nomos-console/package.json') != ''
+    defaults:
+      run:
+        working-directory: nomos-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx vitest run --reporter=junit --outputFile=../test-results/console.xml
+        continue-on-error: true  # Console tests may not exist yet
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-console
+          path: test-results/
+
+  # ──────────────────────────────────────
+  # Stage 3: Quality Gate (blocks merge)
+  # ──────────────────────────────────────
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [test-cli, test-api, test-plugin]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for S9 violations
+        run: |
+          echo "=== S9 Check: No TODOs, placeholders, or skeleton code ==="
+          VIOLATIONS=""
+          # Check Python code
+          if grep -rn "TODO\|FIXME\|HACK\|coming soon\|placeholder\|pass\s*#" \
+            nomos-cli/nomos/ nomos-api/nomos_api/ 2>/dev/null | grep -v "__pycache__" | grep -v ".pyc"; then
+            VIOLATIONS="Python S9 violations found"
+          fi
+          # Check TypeScript code
+          if grep -rn "TODO\|FIXME\|HACK\|coming soon\|placeholder" \
+            nomos-plugin/src/ 2>/dev/null; then
+            VIOLATIONS="$VIOLATIONS TypeScript S9 violations found"
+          fi
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::$VIOLATIONS"
+            exit 1
+          fi
+          echo "S9 Check passed"
+
+      - name: Check for internal IPs (R12)
+        run: |
+          echo "=== R12 Check: No internal IPs in product code ==="
+          if grep -rn "10\.40\.10\." \
+            nomos-cli/nomos/ nomos-api/nomos_api/ nomos-plugin/src/ \
+            nomos-console/src/ 2>/dev/null | grep -v "__pycache__"; then
+            echo "::error::Internal IPs found in product code (R12 violation)"
+            exit 1
+          fi
+          echo "R12 Check passed"
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "=== Secret Check: No credentials in code ==="
+          if grep -rn "sk-proj-\|ghp_\|AKIA\|xox[bpors]-\|BEGIN.*PRIVATE KEY" \
+            nomos-cli/ nomos-api/ nomos-plugin/ nomos-console/ \
+            2>/dev/null | grep -v "__pycache__" | grep -v node_modules | grep -v ".pyc"; then
+            echo "::error::Potential secrets found in code"
+            exit 1
+          fi
+          echo "Secret Check passed"
+
+  # ──────────────────────────────────────
+  # Stage 4: Docker Build (integration)
+  # ──────────────────────────────────────
 
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [test-cli, test-api]
+    needs: quality-gate
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - run: docker compose build
+
+  # ──────────────────────────────────────
+  # Stage 5: Summary
+  # ──────────────────────────────────────
+
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [quality-gate, docker-build]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## NomOS CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Lint | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Tests | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plugin Tests | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality Gate | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

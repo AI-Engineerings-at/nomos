@@ -65,6 +65,17 @@ class AuditVerifyResponse(BaseModel):
     errors: list[str]
 
 
+class AuditEntryCreateRequest(BaseModel):
+    agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
+    event_type: str = Field(..., min_length=1, examples=["governance.hook.triggered"])
+    payload: dict = Field(default_factory=dict)
+
+
+class AuditEntryCreateResponse(BaseModel):
+    hash: str
+    id: int
+
+
 class HealthResponse(BaseModel):
     status: str
     service: str

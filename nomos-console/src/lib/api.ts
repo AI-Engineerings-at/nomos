@@ -22,14 +22,18 @@ interface ApiErrorResponse {
   code?: string;
 }
 
-/** Base URL for the NomOS API. Uses Next.js rewrite proxy (/api → backend). */
+/** Base URL for the NomOS API. Uses NEXT_PUBLIC_API_URL or same-host with API port. */
 function getBaseUrl(): string {
-  // Next.js rewrites /api/* to the backend (NOMOS_API_URL in next.config.ts)
-  // This keeps cookies on the same origin — no CORS issues.
-  if (typeof window !== 'undefined') {
-    return window.location.origin + '/api';
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '') + '/api';
   }
-  return '/api';
+  if (typeof window !== 'undefined') {
+    // Browser: use same hostname but API port (8060)
+    const hostname = window.location.hostname;
+    return `http://${hostname}:8060/api`;
+  }
+  return 'http://nomos-api:8000/api';
 }
 
 /** Default request timeout in milliseconds. */

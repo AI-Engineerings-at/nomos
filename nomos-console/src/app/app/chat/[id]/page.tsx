@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SpeakButton } from '@/components/ui/speak-button';
+import { MicButton } from '@/components/ui/mic-button';
 import type { Agent, ChatMessage, ProxyChatResponse, ProxyStatusResponse } from '@/lib/types';
 import { agentStatusToBadge } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -66,17 +68,9 @@ function MessageBubble({ message, lang }: { message: ChatMessage; lang: 'de' | '
           <span className={`text-xs ${isUser ? 'text-white/70' : 'text-[var(--color-muted)]'}`}>
             {formatDate(message.timestamp, lang)}
           </span>
-          {/* Speaker button placeholder for agent messages */}
+          {/* Speak button on agent messages — reads the message aloud */}
           {!isUser && (
-            <button
-              className="p-1 rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-card)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]"
-              aria-label={t('a11y.speakerPlaceholder', lang)}
-              disabled
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            </button>
+            <SpeakButton text={message.content} size="sm" />
           )}
         </div>
         {/* Art. 50 AI disclosure on agent messages */}
@@ -196,7 +190,7 @@ function ChatContent() {
   const isOffline = agent.status !== 'running';
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height)-3rem)] bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-lg)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-3rem)] bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-lg)] overflow-hidden" data-tour="chat">
       {/* Chat Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-card)]">
         <div className="flex items-center gap-3">
@@ -277,16 +271,11 @@ function ChatContent() {
       {/* Input area */}
       <div className="px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-card)]">
         <div className="flex items-center gap-2">
-          {/* Microphone placeholder */}
-          <button
-            className="p-2 rounded-[var(--radius)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-hover)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]"
-            aria-label={t('a11y.microphonePlaceholder', language)}
-            disabled
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          </button>
+          {/* Microphone button — fills input with recognized speech */}
+          <MicButton
+            onResult={(text) => setInputValue((prev) => prev ? `${prev} ${text}` : text)}
+            size="md"
+          />
 
           <input
             ref={inputRef}

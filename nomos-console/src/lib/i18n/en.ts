@@ -153,8 +153,8 @@ export const en: Record<TranslationKey, string> = {
   'a11y.filterByStatus': 'Filter by status',
   'a11y.sortBy': 'Sort by',
   'a11y.pauseAgent': 'Pause employee',
-  'a11y.microphonePlaceholder': 'Voice input (coming soon)',
-  'a11y.speakerPlaceholder': 'Read aloud (coming soon)',
+  'a11y.microphonePlaceholder': 'Voice input',
+  'a11y.speakerPlaceholder': 'Read aloud',
 
   // Dashboard
   'dashboard.greeting.morning': 'Good morning',
@@ -292,6 +292,41 @@ export const en: Record<TranslationKey, string> = {
   'approvals.rejected': 'Rejected',
   'approvals.confirmApprove': 'Do you want to approve this action?',
   'approvals.confirmReject': 'Do you want to reject this action?',
+
+  // Speech (TTS/STT)
+  'speech.readAloud': 'Read aloud',
+  'speech.stopReading': 'Stop reading',
+  'speech.voiceInput': 'Voice input',
+  'speech.stopVoiceInput': 'Stop voice input',
+  'speech.settings.title': 'Speech Settings',
+  'speech.settings.description': 'Configure text-to-speech and voice input',
+  'speech.settings.enabled': 'Speech features enabled',
+  'speech.settings.enabledDescription': 'Enable read-aloud and voice input across the application.',
+  'speech.settings.source': 'Source',
+  'speech.settings.sourceBrowser': 'Browser-native speech synthesis and speech recognition.',
+  'speech.settings.notSupported': 'Your browser does not support speech features.',
+  'speech.settings.speed': 'Speed',
+  'speech.settings.speed.slow': 'Slow',
+  'speech.settings.speed.normal': 'Normal',
+  'speech.settings.speed.fast': 'Fast',
+  'speech.settings.language': 'Language',
+  'speech.settings.languageFollows': 'Language automatically follows the app language.',
+  'speech.settings.test': 'Test',
+
+  // Onboarding Tour
+  'tour.step1.title': 'Welcome to NomOS!',
+  'tour.step1.description': 'See your entire team at a glance. Compliance status, costs, and activities — all in one place.',
+  'tour.step2.title': 'Your Team',
+  'tour.step2.description': 'All your AI employees on one page. Filter, sort, and manage your team.',
+  'tour.step3.title': 'Hire a New Employee',
+  'tour.step3.description': 'Your new employee is ready in 4 steps. Choose a role, set capabilities, define a budget — done.',
+  'tour.step4.title': 'Talk to Your Employee',
+  'tour.step4.description': 'Chat directly with your AI employee. Every response is automatically labeled as AI-generated.',
+  'tour.step5.title': 'Everything Under Control',
+  'tour.step5.description': 'NomOS automatically monitors all legal requirements. EU AI Act and GDPR compliance — without any effort on your part.',
+  'tour.skip': 'Skip',
+  'tour.finish': 'Let\'s go',
+  'tour.restart': 'Restart tour',
 
   // Deploy Steps
   'deploy.step.validateManifest': 'Validating manifest',

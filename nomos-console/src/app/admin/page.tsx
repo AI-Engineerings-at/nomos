@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { SpeakButton } from '@/components/ui/speak-button';
 import { useRouter } from 'next/navigation';
 import type { FleetResponse, CostOverviewResponse, ApprovalListResponse, IncidentListResponse, AuditEntry } from '@/lib/types';
 import { agentStatusToBadge } from '@/lib/types';
@@ -252,9 +253,12 @@ function DashboardContent() {
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <h1 className="text-2xl font-extrabold text-[var(--color-text)] font-[family-name:var(--font-headline)]">
-        {greeting}, {userName}.
-      </h1>
+      <div className="flex items-center gap-2" data-tour="dashboard">
+        <h1 className="text-2xl font-extrabold text-[var(--color-text)] font-[family-name:var(--font-headline)]">
+          {greeting}, {userName}.
+        </h1>
+        <SpeakButton text={`${greeting}, ${userName}.`} size="md" />
+      </div>
 
       {/* Compliance Health Bar */}
       <Card>

@@ -1,7 +1,10 @@
-# NomOS v2 — Docker Compose Stack
-# Aktueller Stand: API + PostgreSQL (Console + Plugin werden in Phase H/A neu gebaut)
+# NomOS v2 — Complete Docker Compose Stack
+# docker compose up -d → alles laeuft
+# Ports: API 8060, Console 3040, Postgres 5432, Valkey 6380
 
 services:
+  # ─── Core ───────────────────────────────────────────
+
   nomos-api:
     build:
       context: .
@@ -12,10 +15,15 @@ services:
       - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:-nomos}@postgres:5432/nomos
       - NOMOS_AGENTS_DIR=/data/agents
       - NOMOS_CORS_ORIGINS=["http://localhost:3040","http://localhost:3045"]
+      - NOMOS_GATEWAY_URL=${NOMOS_GATEWAY_URL:-http://openclaw-gateway:3000}
+      - NOMOS_VALKEY_URL=redis://valkey:6379
+      - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:-change-me-in-production}
     volumes:
       - nomos-agents:/data/agents
     depends_on:
       postgres:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -24,6 +32,22 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  nomos-console:
+    build:
+      context: .
+      dockerfile: nomos-console/Dockerfile
+    ports:
+      - "${NOMOS_CONSOLE_PORT:-3040}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:${NOMOS_API_PORT:-8060}
+      - NOMOS_API_URL=http://nomos-api:8000
+    depends_on:
+      nomos-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Data ───────────────────────────────────────────
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -40,11 +64,48 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Valkey wird in Phase B hinzugefuegt (Event Bus, Queue)
-  # Console wird in Phase H neu gebaut (Next.js 15, Command Center)
-  # Plugin wird in Phase A neu gebaut (OpenClaw TypeScript)
-  # Piper TTS + Whisper STT werden in Phase H als optionale Services hinzugefuegt
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "${NOMOS_VALKEY_PORT:-6380}:6379"
+    volumes:
+      - nomos-valkey:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── TTS/STT (optional, fuer lokale Sprach-Services) ───
+
+  piper-tts:
+    image: rhasspy/wyoming-piper:latest
+    ports:
+      - "${NOMOS_PIPER_PORT:-10200}:10200"
+    command: --voice de_DE-thorsten-high --length-scale 1.0
+    volumes:
+      - nomos-piper:/data
+    restart: unless-stopped
+    profiles:
+      - speech
+
+  whisper-stt:
+    image: linuxserver/faster-whisper:latest
+    ports:
+      - "${NOMOS_WHISPER_PORT:-10300}:10300"
+    environment:
+      - WHISPER_MODEL=base
+      - WHISPER_LANGUAGE=de
+    volumes:
+      - nomos-whisper:/data
+    restart: unless-stopped
+    profiles:
+      - speech
 
 volumes:
   nomos-pgdata:
   nomos-agents:
+  nomos-valkey:
+  nomos-piper:
+  nomos-whisper:

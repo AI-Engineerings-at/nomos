@@ -22,18 +22,14 @@ interface ApiErrorResponse {
   code?: string;
 }
 
-/** Base URL for the NomOS API. Uses NEXT_PUBLIC_API_URL or same-host with API port. */
+/** Base URL for the NomOS API. In dev: Next.js proxy (/api). In Docker: env var. */
 function getBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (envUrl) {
-    return envUrl.replace(/\/$/, '') + '/api';
-  }
   if (typeof window !== 'undefined') {
-    // Browser: use same hostname but API port (8060)
-    const hostname = window.location.hostname;
-    return `http://${hostname}:8060/api`;
+    // Browser: always use same-origin proxy (Next.js rewrite handles routing)
+    return '/api';
   }
-  return 'http://nomos-api:8000/api';
+  // Server-side: direct connection
+  return (process.env.NOMOS_API_URL || 'http://localhost:8060') + '/api';
 }
 
 /** Default request timeout in milliseconds. */

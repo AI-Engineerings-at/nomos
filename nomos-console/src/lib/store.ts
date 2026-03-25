@@ -57,10 +57,10 @@ function generateToastId(): string {
   return `toast-${Date.now()}-${toastCounter}`;
 }
 
-export const useNomosStore = create<NomosState>((set) => ({
+export const useNomosStore = create<NomosState>()((set) => ({
   // Theme — defaults applied during hydration in layout
-  theme: 'light',
-  setTheme: (theme) => {
+  theme: 'light' as Theme,
+  setTheme: (theme: Theme) => {
     set({ theme });
     if (typeof window !== 'undefined') {
       localStorage.setItem('nomos-theme', theme);
@@ -68,7 +68,7 @@ export const useNomosStore = create<NomosState>((set) => ({
     }
   },
   toggleTheme: () => {
-    set((state) => {
+    set((state: NomosState) => {
       const next = state.theme === 'light' ? 'dark' : 'light';
       if (typeof window !== 'undefined') {
         localStorage.setItem('nomos-theme', next);
@@ -80,7 +80,7 @@ export const useNomosStore = create<NomosState>((set) => ({
 
   // Language — default German
   language: 'de',
-  setLanguage: (language) => {
+  setLanguage: (language: Language) => {
     set({ language });
     if (typeof window !== 'undefined') {
       localStorage.setItem('nomos-lang', language);
@@ -90,30 +90,30 @@ export const useNomosStore = create<NomosState>((set) => ({
 
   // User
   user: null,
-  setUser: (user) => set({ user }),
+  setUser: (user: NomosUser | null) => set({ user }),
 
   // Toasts
   toasts: [],
-  addToast: (toast) => {
+  addToast: (toast: Omit<Toast, 'id'>) => {
     const id = generateToastId();
-    set((state) => ({
+    set((state: NomosState) => ({
       toasts: [...state.toasts, { ...toast, id }],
     }));
     // Auto-remove after duration
     if (typeof window !== 'undefined') {
       window.setTimeout(() => {
-        set((state) => ({
-          toasts: state.toasts.filter((t) => t.id !== id),
+        set((state: NomosState) => ({
+          toasts: state.toasts.filter((t: Toast) => t.id !== id),
         }));
       }, toast.duration);
     }
   },
-  removeToast: (id) =>
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
+  removeToast: (id: string) =>
+    set((state: NomosState) => ({
+      toasts: state.toasts.filter((t: Toast) => t.id !== id),
     })),
 
   // Sidebar
   sidebarCollapsed: false,
-  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  setSidebarCollapsed: (collapsed: boolean) => set({ sidebarCollapsed: collapsed }),
 }));

@@ -22,6 +22,8 @@ export function createMockApiServer(port: number) {
         res.end(JSON.stringify({ filtered, found }));
       } else if (url.includes("/api/budget/check")) {
         res.end(JSON.stringify({ allowed: true, remaining: 45.50 }));
+      } else if (url.includes("/api/agents") && url.includes("/pause")) {
+        res.end(JSON.stringify({ id: "agent-1", status: "paused" }));
       } else if (url.includes("/api/agents") && url.includes("/heartbeat")) {
         res.end(JSON.stringify({ ok: true }));
       } else if (url.includes("/api/incidents")) {

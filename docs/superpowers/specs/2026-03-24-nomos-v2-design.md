@@ -1,12 +1,13 @@
 # NomOS v2 — Design Specification
 
-> **Status**: ENTWURF v3 — Nach 3-Rollen-Review + externem Feedback korrigiert
-> **Datum**: 24.03.2026
+> **Status**: ENTWURF v4 — Alle Entscheidungen getroffen, Plan steht
+> **Datum**: 25.03.2026 (Ursprung: 24.03.2026)
 > **Autor**: Claude (nach Joe-Korrekturen + Legal/Tech/UX Review)
 > **Vorbilder**: Paperclip (Control Plane), Mission Control (Task Dispatch, 577 Tests), Stitch (Visual Inspiration)
 > **Vorgaenger**: NomOS v1 (84 Tests Core Library, 1/10 Produkt — siehe GAP-Analyse)
 > **Reviews**: Legal 6.1/10, Tech 6.4/10, UX 5.5/10 — Alle Luecken in v2 geschlossen
 > **Externes Feedback**: 8.7/10 — 3 kritische Punkte in v3 eingearbeitet (Workspace-Isolation, Doc-Validierung, Rico Red-Team)
+> **Leitsatz**: *"Jeder entwickelt fuer sich, wir fuer alle."* — Accessibility ist kein Nachgedanke, sondern Fundament
 
 ---
 
@@ -841,6 +842,45 @@ Pflicht:
   ✓ Manuelle Pruefung mit Screen Reader (NVDA/VoiceOver) vor Release
   ✓ Barrierefreiheitserklaerung als eigenes Dokument (Doc #14)
 
+TTS/STT — Sprachausgabe + Spracheingabe (3-Schichten):
+  Leitsatz: "Jeder entwickelt fuer sich, wir fuer alle."
+  Accessibility ist kein Nachgedanke — es ist das Fundament.
+  Von Anfang an auf die Schwaechsten abzielen und einbinden.
+
+  Schicht 1 — Browser-Native (STANDARD, null Setup):
+    TTS: window.speechSynthesis (alle modernen Browser)
+    STT: window.SpeechRecognition (Chrome, Edge, Safari)
+    → Funktioniert sofort, kein Container, keine GPU
+    → JEDER User bekommt das automatisch
+
+  Schicht 2 — Piper + Whisper (lokal, Docker, BESSER):
+    TTS: Piper (MIT Lizenz, deutsche + englische Stimmen)
+         → Docker Container als optionaler Service
+         → Laeuft auf jedem Kunden-Server (sogar Raspberry Pi)
+         → 100% lokal, kein Cloud-Call, DSGVO-konform
+    STT: Whisper.cpp (MIT Lizenz, OpenAI Whisper Modell)
+         → Laeuft als WebAssembly im Browser ODER als Container
+         → Deutsche + englische Sprache
+         → Kein Internet noetig
+
+  Schicht 3 — Cloud API (optional, Kundenentscheidung):
+    → Wenn Kunde eh Cloud-LLMs nutzt (OpenAI, Google)
+    → NomOS dokumentiert im Manifest, TIA wird generiert
+    → Beste Qualitaet, aber Datentransfer
+
+  UI-Integration (JEDES Panel):
+    🎤 Mikrofon-Button neben jedem Textfeld
+       → Klick → Spracheingabe → Text erscheint
+       → Chat, Hire Wizard, Suche, ueberall
+    🔊 Vorlese-Button bei jedem Text-Block
+       → Agent-Antworten, Compliance-Reports, Fehlermeldungen
+       → Pause/Stop/Geschwindigkeit einstellbar
+    Einstellungen → Barrierefreiheit:
+       Sprachausgabe:  [Browser] / [Piper (lokal)] / [Cloud]
+       Spracheingabe:  [Browser] / [Whisper (lokal)] / [Cloud]
+       Geschwindigkeit: [Langsam] [Normal] [Schnell]
+       Stimme:          [Deutsch] [English]
+
 Bilingual:
   ✓ DE + EN, Switch im Header
   ✓ Alle Labels, Texte, Fehlermeldungen, Hilfe in beiden Sprachen
@@ -1013,15 +1053,21 @@ Jedes Sub-Projekt bekommt eigene Spec → Plan → Implementation.
 
 ---
 
-## 15. Offene Entscheidungen
+## 15. Entscheidungen (ALLE GETROFFEN — 25.03.2026)
 
-| # | Frage | Optionen | Empfehlung |
-|---|-------|---------|------------|
-| 1 | NemoClaw lokal ohne NVIDIA API Key? | a) Ollama lokal, b) NVIDIA Cloud, c) beides | c) Beides — Hire Wizard fragt |
-| 2 | Honcho LLM fuer Deriver | a) Ollama lokal, b) Cloud API | a) Ollama — DSGVO sicherer |
-| 3 | Fair Source Enforcement | a) API Key Check, b) Container Count, c) Honor | b) Container Count via Fleet API |
-| 4 | TTS/STT Accessibility | a) Browser-native, b) eigene Engine | a) Browser-native (Web Speech API) |
-| 5 | Mobile Responsive? | a) Ja (responsive), b) Nein (desktop-only) | a) Ja — KMU-Chef schaut am Handy |
+| # | Frage | Entscheidung | Begruendung |
+|---|-------|-------------|-------------|
+| 1 | NemoClaw LLM-Anbieter | **Kundenentscheidung** — NomOS ist provider-agnostic | OpenClaw unterstuetzt alle Anbieter. NomOS dokumentiert die Wahl im Manifest (llm_provider, llm_location) und erzwingt die passenden Compliance-Docs (TIA bei US-Cloud, Standard bei EU/lokal). |
+| 2 | Honcho Deriver LLM | **Kundenentscheidung** — wie #1 | Gleiche Logik. Kunde waehlt, NomOS dokumentiert und protokolliert. |
+| 3 | Fair Source Enforcement | **FCL (Fair Core License) — 3 Agents, voller Funktionsumfang** | 3 Agents gratis mit ALLEM (Reports, Audit, Compliance). Ab Agent 4 → kommerzielle Lizenz. Kein Zeitlimit, keine beschnittenen Reports. Hire-Wizard zeigt "3/3 Mitarbeiter" und Link zur Lizenz. Fleet API enforced count. Change License: Apache 2.0 nach 2 Jahren. |
+| 4 | TTS/STT Accessibility | **3-Schichten: Browser → Piper/Whisper → Cloud** | Leitsatz: "Jeder entwickelt fuer sich, wir fuer alle." Accessibility ist Fundament, kein Nachgedanke. Schicht 1 (Browser-native) sofort fuer alle. Schicht 2 (Piper TTS MIT + Whisper.cpp MIT) lokal in Docker. Schicht 3 (Cloud) optional. Alle Open Source, alle DSGVO-konform. |
+| 5 | Mobile Responsive | **Ja** — responsive Design | KMU-Chef schaut am Handy ob alles laeuft. Kein Mobile-First, aber responsive. |
+
+### Zusaetzliche technische Entscheidung (25.03.2026)
+
+| # | Frage | Entscheidung | Begruendung |
+|---|-------|-------------|-------------|
+| 6 | Redis vs Valkey | **Valkey** statt Redis | Redis ist AGPL-3.0 (Copyleft-Risiko). Valkey ist BSD-3 (Linux Foundation Fork, Drop-in Replacement). Null Lizenz-Risiko fuer kommerzielles Produkt. |
 
 ---
 

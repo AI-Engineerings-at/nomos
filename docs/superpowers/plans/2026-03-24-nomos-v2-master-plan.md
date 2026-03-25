@@ -6,13 +6,17 @@
 
 **Goal:** NomOS v1 (CLI-Tool mit 84 Tests) in ein produktionsreifes Compliance Control Plane Produkt transformieren das EU AI Act und DSGVO Konformitaet fuer OpenClaw/NemoClaw erzwingt.
 
-**Architecture:** NomOS ist ein OpenClaw Plugin (TypeScript) das sich in den Gateway einklinkt und 11 Runtime Hooks ausfuehrt. Dahinter steht eine FastAPI (Python) als Control Plane mit PostgreSQL/pgvector + Redis. Die Console (Next.js 15) ist der EINZIGE Zugang fuer den Kunden. Alles laeuft in Docker Compose auf dem Server des Kunden.
+**Architecture:** NomOS ist ein OpenClaw Plugin (TypeScript) das sich in den Gateway einklinkt und 11 Runtime Hooks ausfuehrt. Dahinter steht eine FastAPI (Python) als Control Plane mit PostgreSQL/pgvector + Valkey. Die Console (Next.js 15) ist der EINZIGE Zugang fuer den Kunden. NomOS ist LLM-provider-agnostic — der Kunde waehlt seinen Anbieter, NomOS dokumentiert und erzwingt die passende Compliance. Alles laeuft in Docker Compose auf dem Server des Kunden.
+
+**Leitsatz:** *"Jeder entwickelt fuer sich, wir fuer alle."*
 
 **Tech Stack:**
 - Python 3.12 (FastAPI, Pydantic v2, Click, pytest, ruff)
 - TypeScript strict (Next.js 15, OpenClaw Plugin SDK, vitest, Playwright)
 - PostgreSQL + pgvector (Fleet Registry, Audit Trail, Honcho Storage)
-- Redis (Event Bus, Honcho Queue)
+- Valkey (Event Bus, Honcho Queue) — BSD-3, Drop-in Redis Replacement
+- Piper TTS (MIT) + Whisper.cpp (MIT) — optionale lokale Sprach-Services
+- Lizenz: FCL (Fair Core License) — 3 Agents gratis, voller Funktionsumfang
 - Docker Compose (Deployment)
 - GitHub Actions (CI/CD)
 
@@ -301,6 +305,9 @@ nomos/
 │   │   ├── lib/                 # Utilities
 │   │   │   ├── api.ts           # API Client
 │   │   │   ├── auth.ts          # Auth Context
+│   │   │   ├── speech/          # TTS/STT Integration
+│   │   │   │   ├── tts.ts       # 3-Schichten TTS (Browser → Piper → Cloud)
+│   │   │   │   └── stt.ts       # 3-Schichten STT (Browser → Whisper → Cloud)
 │   │   │   └── i18n/            # DE + EN Translations
 │   │   └── styles/              # Design System (Light + Dark)
 │   ├── e2e/                     # Playwright E2E Tests
@@ -314,7 +321,7 @@ nomos/
 │       ├── soul.md
 │       └── test-suite.yaml
 │
-├── docker-compose.yml           # Erweitert (+Redis, +Honcho)
+├── docker-compose.yml           # Erweitert (+Valkey, +Honcho, +Piper, +Whisper)
 ├── docker-compose.dev.yml       # NEU — Dev Stack
 ├── .env.example                 # Erweitert
 │
@@ -362,34 +369,33 @@ templates/compliance-red-teamer/
   └── test-suite.yaml  # 80+ Tests, 17 Sektionen
 ```
 
-### 0.5 Offene Entscheidungen klaeren (mit Joe)
-
-Die Spec (Sektion 15) listet 5 offene Entscheidungen. Diese MUESSEN vor Phase 1 geklaert sein,
-weil sie Implementation-Entscheidungen in spaeterenen Phasen beeinflussen:
+### 0.5 Entscheidungen (ALLE GETROFFEN — 25.03.2026)
 
 ```
-1. NemoClaw lokal ohne NVIDIA API Key?
-   → Empfehlung: Beides (Ollama lokal + NVIDIA Cloud)
-   → Betrifft: Phase A (Plugin), Phase H (Wizard LLM-Auswahl)
+1. LLM-Anbieter: KUNDENENTSCHEIDUNG — NomOS ist provider-agnostic
+   → Manifest speichert llm_provider + llm_location
+   → Compliance-Docs passen sich automatisch an (TIA bei US-Cloud)
 
-2. Honcho LLM fuer Deriver?
-   → Empfehlung: Ollama lokal (DSGVO sicherer)
-   → Betrifft: Phase D (Honcho Integration)
+2. Honcho Deriver LLM: KUNDENENTSCHEIDUNG — wie #1
 
-3. Fair Source Enforcement?
-   → Empfehlung: Container Count via Fleet API
-   → Betrifft: Phase B (Control Plane), Phase I (CI/CD)
+3. Fair Source: FCL (Fair Core License) — 3 Agents gratis
+   → Voller Funktionsumfang (Reports, Audit, Compliance)
+   → Ab Agent 4 → kommerzielle Lizenz
+   → Fleet API enforced count
+   → Hire-Wizard: "3/3 Mitarbeiter — [Lizenz-Link]"
+   → Change License: Apache 2.0 nach 2 Jahren
 
-4. TTS/STT Accessibility?
-   → Empfehlung: Browser-native (Web Speech API)
-   → Betrifft: Phase H (Console)
+4. TTS/STT: 3-SCHICHTEN Accessibility
+   → Schicht 1: Browser-native (Web Speech API) — Standard, null Setup
+   → Schicht 2: Piper TTS (MIT) + Whisper.cpp (MIT) — lokal Docker
+   → Schicht 3: Cloud API (optional, Kundenentscheidung)
+   → UI: 🎤 Mikrofon + 🔊 Vorlese-Button in JEDEM Panel
+   → Leitsatz: "Jeder entwickelt fuer sich, wir fuer alle."
 
-5. Mobile Responsive?
-   → Empfehlung: Ja (responsive, kein Mobile-First)
-   → Betrifft: Phase H (Console)
+5. Mobile: JA — responsive (kein Mobile-First)
+
+6. Redis → VALKEY (BSD-3 statt AGPL-3.0, Drop-in Replacement)
 ```
-
-Joe entscheidet. Empfehlungen stehen in der Spec. ERST DANACH weiter.
 
 ### 0.6 Feedback archivieren
 
@@ -557,6 +563,9 @@ Als KMU-Chef will ich dass Kosten automatisch kontrolliert werden
 
 Als KMU-Chef will ich jede Config-Aenderung zuruecksetzen koennen
   → Config Revisioning (Versionshistorie + Rollback)
+
+Als KMU-Chef will ich bis zu 3 Mitarbeiter kostenlos einsetzen koennen
+  → FCL Enforcement: Fleet API count, Hire blockiert ab 4, voller Funktionsumfang
 ```
 
 ### Dateien
@@ -1010,7 +1019,9 @@ nomos costs <agent>                      # Kosten pro Agent
 
 ### Scope
 
-Komplettes Next.js 15 Dashboard. Alle 13 Admin-Panels + 4 User-Panels + 1 Officer-Panel. Hire Wizard (4 Steps). Embedded Chat. WCAG 2.2 AA. Bilingual. Light + Dark Mode.
+Komplettes Next.js 15 Dashboard. Alle 13 Admin-Panels + 4 User-Panels + 1 Officer-Panel. Hire Wizard (4 Steps). Embedded Chat. WCAG 2.2 AA. TTS/STT (3-Schichten). Bilingual. Light + Dark Mode.
+
+**Leitsatz:** *"Jeder entwickelt fuer sich, wir fuer alle."* — Accessibility ist Fundament, nicht Feature.
 
 ### Design-System (aus Spec)
 
@@ -1069,6 +1080,11 @@ Officer (1):
 - [ ] Mitarbeiter-Metapher DURCHGEHEND (keine technischen Begriffe)
 - [ ] Hilfe-System in jedem Panel ("?" Icon)
 - [ ] Onboarding-Tour beim ersten Login
+- [ ] TTS/STT Schicht 1 (Browser-native) in allen Panels
+- [ ] TTS/STT Schicht 2 (Piper + Whisper) als optionaler Docker-Service
+- [ ] Mikrofon-Button neben jedem Textfeld
+- [ ] Vorlese-Button bei jedem Text-Block (Agent-Antworten, Reports, Fehler)
+- [ ] Einstellungen → Barrierefreiheit (Quelle, Geschwindigkeit, Stimme)
 - [ ] Playwright E2E Tests fuer alle kritischen Flows
 
 ---
@@ -1204,4 +1220,67 @@ Phase 0 ausfuehren (Repo-Reorganisation), dann den detaillierten TDD-Plan fuer S
 
 ---
 
-*Plan basiert auf: NomOS v2 Design Spec v3 (24.03.2026), Brand Bible V2 (17.03.2026), externes Feedback (8.7/10), Codebase-Analyse (92 Tests, 2.850 LOC v1)*
+---
+
+## Anhang: Open-Source Lizenz-Audit
+
+### Kern-Abhaengigkeiten
+
+| Tool | Lizenz | Kommerziell frei? | Risiko |
+|---|---|---|---|
+| OpenClaw | MIT | Ja | Keins |
+| NemoClaw | Apache 2.0 | Ja | Keins |
+| Honcho | AGPL-3.0 | Ja (via API, kein Fork) | Gering — als Container, kein Code-Aenderung |
+| PostgreSQL | PostgreSQL (BSD-artig) | Ja | Keins |
+| Valkey | BSD-3 (Linux Foundation) | Ja | Keins |
+
+### Python
+
+| Tool | Lizenz | | Tool | Lizenz |
+|---|---|---|---|---|
+| FastAPI | MIT | | Pydantic | MIT |
+| Click | BSD-3 | | pytest | MIT |
+| ruff | MIT | | spaCy (NER) | MIT |
+| pyotp (2FA) | MIT | | bcrypt | Apache 2.0 |
+| PyJWT | MIT | | SQLAlchemy | MIT |
+| psycopg | LGPL-3.0 | | | |
+
+### TypeScript/Frontend
+
+| Tool | Lizenz | | Tool | Lizenz |
+|---|---|---|---|---|
+| Next.js 15 | MIT | | React | MIT |
+| Tailwind CSS | MIT | | Playwright | Apache 2.0 |
+| vitest | MIT | | Zod | MIT |
+| axe-core | MPL-2.0 | | | |
+
+### TTS/STT
+
+| Tool | Lizenz | Kommerziell frei? |
+|---|---|---|
+| Piper TTS | MIT (Core) | Ja |
+| Whisper.cpp | MIT | Ja |
+| Web Speech API | Browser-Feature | Ja |
+
+### Infrastruktur
+
+| Tool | Lizenz | Kommerziell frei? |
+|---|---|---|
+| Docker Engine | Apache 2.0 | Ja |
+| Docker Compose | Apache 2.0 | Ja |
+| GitHub Actions | Plattform | Ja (Free Tier) |
+
+### NomOS selbst
+
+| Aspekt | Entscheidung |
+|---|---|
+| Lizenz | FCL (Fair Core License) |
+| Use Limitation | 3 Agents |
+| Change License | Apache 2.0 |
+| Change Date | 2 Jahre nach Release |
+
+**Fazit:** Alle Abhaengigkeiten sind MIT, Apache 2.0, BSD oder gleichwertig. Einziges Copyleft ist Honcho (AGPL-3.0) — aber wir nutzen es als separaten Container via API, ohne den Code zu forken. Kein Lizenz-Risiko.
+
+---
+
+*Plan basiert auf: NomOS v2 Design Spec v4 (25.03.2026), Brand Bible V2, externes Feedback (8.7/10), Codebase-Analyse (92 Tests, 2.850 LOC v1), Lizenz-Audit (25.03.2026)*

@@ -1011,81 +1011,221 @@ nomos costs <agent>                      # Kosten pro Agent
 
 ---
 
-## Sub-Projekt H: Console (Command Center)
+## Phase 5: Aufgeteilt in 5a/5b/5c (Rescope nach Phase 4 Audit)
 
-**Plan-Dokument:** `docs/superpowers/plans/2026-03-2X-sub-H-console.md`
-**Abhaengigkeit:** F abgeschlossen
-**Parallelisierbar mit:** G (CLI v2)
+> **Leitsatz:** *"Jeder entwickelt fuer sich, wir fuer alle."*
+> **Brand Bible:** Company Soul, 6 Pflicht-Mehrwerte, Dual-Layer, Enterprise-Saeulen
+> **UI = das Produkt.** Der Kunde sieht kein Backend. Er sieht die Console.
+> **Kein Panel ohne:** Error Handling, Loading States, Empty States, Keyboard Nav, ARIA Labels
 
-### Scope
-
-Komplettes Next.js 15 Dashboard. Alle 13 Admin-Panels + 4 User-Panels + 1 Officer-Panel. Hire Wizard (4 Steps). Embedded Chat. WCAG 2.2 AA. TTS/STT (3-Schichten). Bilingual. Light + Dark Mode.
-
-**Leitsatz:** *"Jeder entwickelt fuer sich, wir fuer alle."* — Accessibility ist Fundament, nicht Feature.
-
-### Design-System (aus Spec)
+### Design-System (MUSS VOR dem ersten Panel stehen)
 
 ```
-Light Mode:
+Light Mode (Default):
   Background: #FAFAFA | Cards: #FFFFFF | Primary: #4262FF | Text: #1A1A2E
   Headlines: Montserrat (bold) | Body: Geist Sans | Code: Geist Mono
   Border-Radius: 8px | Transitions: 150ms ease
+  Success: #10B981 | Error: #EF4444 | Warning: #F59E0B
 
 Dark Mode:
   Background: #0a0a0a | Cards: #1a1919 | Text: #FFFFFF
   Gleiche Akzentfarben wie Light Mode
 
-WCAG 2.2 AA:
+WCAG 2.2 AA (von Anfang an, nicht nachtraeglich):
   Kontrast min 4.5:1 | Focus 2px #4262FF | Zoom 200% | lang="de"
   axe-core: 0 critical + 0 serious | Keyboard Navigation
+  Skip-to-content Link | Live Regions fuer dynamische Inhalte
+
+Brand Voice in der UI:
+  Mitarbeiter-Metapher DURCHGEHEND (keine technischen Begriffe)
+  Fehlermeldungen: menschlich, konkret, mit Loesung
+  Keine generischen "Error 500" — immer "Was ist passiert? Was tun?"
+  Hilfe-System: "?" Icon in jedem Panel, Tooltips, FAQ
+  Bilingual: DE + EN, Switch im Header
 ```
 
-### Panels (18 total)
+### Enterprise-Saeulen (PFLICHT fuer jede UI-Komponente)
 
 ```
-Admin (13):
-  /admin/                    Dashboard (Team, Rechts-Status, Kosten, Gesundheit)
-  /admin/team                Mein Team (Agent-Karten)
-  /admin/team/{id}           Mitarbeiter-Profil
-  /admin/compliance          Rechts-Check (Matrix)
-  /admin/audit               Protokoll (Hash Chain Viewer)
-  /admin/diagnostics         Gesundheitscheck
-  /admin/hire                Neuen Mitarbeiter einstellen (4-Step Wizard)
-  /admin/costs               Kosten
-  /admin/approvals           Freigaben
-  /admin/users               Nutzer
-  /admin/settings            Einstellungen
-  /admin/incidents           Vorfaelle
-  /admin/tasks               Aufgaben (Admin-View)
+A. Global Error Handler:
+   → Error Boundary um jedes Panel
+   → Fehler werden gefangen, NICHT an den User durchgereicht
+   → User sieht: "Etwas ist schiefgegangen. [Was tun] [Details fuer Admin]"
+   → Fehler werden an /api/incidents gemeldet
 
-User (4):
-  /app/                      Meine Mitarbeiter
-  /app/chat/{id}             Chat (Embedded via Proxy)
-  /app/tasks                 Aufgaben
-  /app/help                  Hilfe
+B. State Management:
+   → Loading States: Skeleton Screens, nicht leere Seiten
+   → Empty States: "Noch keine Mitarbeiter. [Jetzt einstellen]"
+   → Error States: Retry-Button, nicht nur rote Meldung
+   → Optimistic Updates wo sinnvoll (Pause-Button → sofort visuell)
+
+C. Modulare Komponenten:
+   → Design System als eigene Komponenten-Bibliothek (ui/)
+   → Jede Seite nutzt die gleichen Bausteine
+   → Aenderung am Button → aendert sich ueberall
+```
+
+---
+
+## Sub-Projekt 5a: CLI v2 + Console Foundation
+
+**Plan-Dokument:** `docs/superpowers/plans/2026-03-25-sub-5a-foundation.md`
+**PDCA Checkpoint am Ende**
+
+### CLI v2 (parallel zur Console Foundation)
+
+```
+Neue Commands (rufen alle die API auf):
+  nomos pause <agent>
+  nomos resume <agent>
+  nomos retire <agent>
+  nomos forget <email>
+  nomos assign <agent> --task "..."
+  nomos costs
+  nomos costs <agent>
+  nomos incidents
+  nomos workspace mount --agent --collection
+  nomos workspace unmount --agent --collection
+```
+
+### Console Foundation
+
+```
+1. Next.js 15 Projekt aufsetzen (App Router, TypeScript strict)
+2. Design System: ui/ Komponenten-Bibliothek
+   → Button, Card, Badge, Table, Input, Select, Modal, Toast
+   → Sidebar, Header, Layout (Admin/User/Officer)
+   → ErrorBoundary, LoadingState, EmptyState
+   → Alle mit WCAG: Focus, ARIA, Keyboard
+   → Light + Dark Mode von Tag 1
+   → Storybook oder Testseite fuer visuelle Pruefung
+3. API Client (lib/api.ts) — typed, error handling
+4. Auth Context (lib/auth.ts) — JWT, Role-based rendering
+5. i18n Setup (lib/i18n/) — DE + EN, Switch-Komponente
+6. Login-Seite (/login) — Email + Passwort + optional 2FA
+7. Layout mit Sidebar + Header (rollenbasiert)
+```
+
+### Erfolgs-Kriterien 5a
+
+- [ ] CLI: Alle neuen Commands implementiert + getestet
+- [ ] Console: Next.js 15 laeuft auf Port 3040
+- [ ] Design System: min. 10 UI-Komponenten mit Tests
+- [ ] Login funktioniert (JWT + Cookie)
+- [ ] Rollenbasiertes Layout (Admin sieht Sidebar, User sieht weniger)
+- [ ] Light + Dark Mode toggle
+- [ ] DE + EN switch
+- [ ] axe-core: 0 critical/serious auf Login-Seite
+- [ ] Keyboard Navigation durch Login + Layout
+
+---
+
+## Sub-Projekt 5b: Console MVP (6 Kern-Panels)
+
+**Plan-Dokument:** `docs/superpowers/plans/2026-03-25-sub-5b-mvp.md`
+**PDCA Checkpoint am Ende**
+
+Die 6 Panels die ein KMU-Chef SOFORT braucht:
+
+```
+1. /admin/           Dashboard
+   → Team-Uebersicht (Karten mit Status-Badge)
+   → Kosten-Zusammenfassung
+   → Compliance-Status (gruen/gelb/rot)
+   → Letzte Aktivitaet
+
+2. /admin/team       Mein Team
+   → Agent-Karten (Name, Rolle, Status, Risk Class)
+   → Filter/Sortierung
+   → "Neuen Mitarbeiter einstellen" Button
+
+3. /admin/team/{id}  Mitarbeiter-Profil
+   → Profil-Header (Name, Rolle, Status, Budget)
+   → Tabs: Uebersicht | Protokoll | Kosten | Config
+   → Pause/Resume/Kill Buttons
+   → Config-History + Rollback
+
+4. /admin/hire       Hire Wizard (4 Steps)
+   → Step 1: Name + Rolle (+ Rico Template)
+   → Step 2: Faehigkeiten + LLM + Channels
+   → Step 3: Budget + Risk Class + LLM Standort
+   → Step 4: Deploy mit Live-Status (10 Schritte)
+   → FCL Check: "3/3 Mitarbeiter" Warnung
+
+5. /app/chat/{id}    Chat
+   → Embedded Chat via /api/proxy/chat
+   → Art. 50 Label sichtbar ("KI-generiert")
+   → Pause-Button IMMER sichtbar (Art. 14)
+   → Streaming-Antworten (Live Regions fuer Screen Reader)
+
+6. /admin/approvals  Freigaben
+   → Offene Freigaben mit Genehmigen/Ablehnen
+   → Wer hat was wann angefragt
+```
+
+### Erfolgs-Kriterien 5b
+
+- [ ] Alle 6 MVP-Panels implementiert
+- [ ] Hire Wizard end-to-end funktional
+- [ ] Chat via Proxy (oder Offline-Meldung wenn Gateway fehlt)
+- [ ] Pause-Button funktioniert in JEDEM Kontext
+- [ ] FCL Warnung bei 3/3 Agents
+- [ ] Error/Loading/Empty States in jedem Panel
+- [ ] Mitarbeiter-Metapher ueberall
+- [ ] axe-core: 0 critical/serious auf allen 6 Panels
+- [ ] Playwright E2E: Login → Hire → Chat → Pause
+
+---
+
+## Sub-Projekt 5c: Console Komplett (12 restliche Panels + TTS/STT)
+
+**Plan-Dokument:** `docs/superpowers/plans/2026-03-25-sub-5c-complete.md`
+**PDCA Checkpoint am Ende**
+
+```
+Admin (7 weitere):
+  /admin/compliance    Rechts-Check (Compliance Matrix)
+  /admin/audit         Protokoll (Hash Chain Viewer + Export)
+  /admin/diagnostics   Gesundheitscheck (Container Health)
+  /admin/costs         Kosten (Detail-Ansicht + Trends)
+  /admin/users         Nutzer (CRUD + Rollen)
+  /admin/settings      Einstellungen (+ GET/PATCH /api/settings)
+  /admin/incidents     Vorfaelle (Incident Timeline + 72h Timer)
+  /admin/tasks         Aufgaben (Task Board)
+
+User (3 weitere):
+  /app/                Meine Mitarbeiter (vereinfacht)
+  /app/tasks           Aufgaben (User-View)
+  /app/help            Hilfe (FAQ + Onboarding-Tour)
 
 Officer (1):
-  /compliance/               Compliance Reports + Audit (read-only)
+  /compliance/         Compliance Reports + Audit (read-only Export)
+
+TTS/STT:
+  → Schicht 1: Browser-native (Web Speech API) in allen Panels
+  → Schicht 2: Piper + Whisper als optionale Docker-Services
+  → 🎤 Mikrofon-Button neben jedem Textfeld
+  → 🔊 Vorlese-Button bei jedem Text-Block
+  → Einstellungen → Barrierefreiheit (Quelle, Geschwindigkeit, Stimme)
+
+Onboarding-Tour:
+  → 5 Schritte beim ersten Login
+  → Interaktive Fuehrung: Dashboard → Team → Hire → Chat → Protokoll
+  → Ueberspringbar + spaeter wiederholbar
 ```
 
-### Erfolgs-Kriterien
+### Erfolgs-Kriterien 5c
 
-- [ ] Alle 18 Panels implementiert
-- [ ] Hire Wizard funktioniert end-to-end
-- [ ] Embedded Chat via Proxy
-- [ ] WCAG 2.2 AA: axe-core 0 critical/serious
-- [ ] Keyboard Navigation in allen Panels
-- [ ] Bilingual DE + EN (Switch im Header)
-- [ ] Light + Dark Mode
-- [ ] Mitarbeiter-Metapher DURCHGEHEND (keine technischen Begriffe)
-- [ ] Hilfe-System in jedem Panel ("?" Icon)
-- [ ] Onboarding-Tour beim ersten Login
-- [ ] TTS/STT Schicht 1 (Browser-native) in allen Panels
-- [ ] TTS/STT Schicht 2 (Piper + Whisper) als optionaler Docker-Service
-- [ ] Mikrofon-Button neben jedem Textfeld
-- [ ] Vorlese-Button bei jedem Text-Block (Agent-Antworten, Reports, Fehler)
-- [ ] Einstellungen → Barrierefreiheit (Quelle, Geschwindigkeit, Stimme)
-- [ ] Playwright E2E Tests fuer alle kritischen Flows
+- [ ] Alle 18 Panels komplett
+- [ ] TTS funktioniert (Browser-native + Piper)
+- [ ] STT funktioniert (Browser-native + Whisper)
+- [ ] Onboarding-Tour
+- [ ] Hilfe-System ("?" in jedem Panel)
+- [ ] Settings Endpoints implementiert
+- [ ] Global Audit Endpoint implementiert
+- [ ] Playwright E2E: Kompletter Flow alle Rollen
+- [ ] axe-core: 0 critical/serious auf ALLEN 18 Panels
+- [ ] Screen Reader Test (NVDA) auf kritischen Flows
 
 ---
 

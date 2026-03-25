@@ -1,9 +1,9 @@
 # NomOS v2 — Design Specification
 
-> **Status**: ENTWURF v4 — Alle Entscheidungen getroffen, Plan steht
+> **Status**: ENTWURF v5 — Backend fertig, Console Design-Vision definiert
 > **Datum**: 25.03.2026 (Ursprung: 24.03.2026)
 > **Autor**: Claude (nach Joe-Korrekturen + Legal/Tech/UX Review)
-> **Vorbilder**: Paperclip (Control Plane), Mission Control (Task Dispatch, 577 Tests), Stitch (Visual Inspiration)
+> **Vorbilder**: Paperclip (Control Plane), Mission Control (Task Dispatch), Kimi Agent Team (Pixel-Art Office), Cloudflare/Kaspersky (Security Dashboard)
 > **Vorgaenger**: NomOS v1 (84 Tests Core Library, 1/10 Produkt — siehe GAP-Analyse)
 > **Reviews**: Legal 6.1/10, Tech 6.4/10, UX 5.5/10 — Alle Luecken in v2 geschlossen
 > **Externes Feedback**: 8.7/10 — 3 kritische Punkte in v3 eingearbeitet (Workspace-Isolation, Doc-Validierung, Rico Red-Team)
@@ -721,9 +721,68 @@ Art. 22 DSGVO (Automatisierte Entscheidungen):
 
 ## 11. Console — Command Center
 
+### Design-Philosophie: "Trusted Control" + Pixel-Art Office
+
+Die NomOS Console sieht aus wie KEIN anderes Compliance-Tool. Wir zeigen AI-Agents als Mitarbeiter in einem visuellen Buero — nicht als Tabellen-Zeilen. Kein Standard-Template, eigene Identitaet.
+
+**Inspiration:** Kimi Agent Team (Pixel-Art Avatare, ID Badges), Cloudflare (Security Score), Kaspersky (Security Dashboard), Grafana (Logs), Uptime Kuma (Status Board).
+
+**Dual-Layer Dashboard:**
+
+```
+[Buero-Ansicht]  ← Default fuer KMU-Chef
+  → Stilisiertes Office-Layout mit PixiJS (@pixi/react)
+  → Pixel-Art Agents (48-64px) an Schreibtischen
+  → Status visuell: am Schreibtisch = online, Kaffee = pause, leer = offline
+  → Sprechblase = aktuelle Aufgabe
+  → Firmenwissen als Buecherregal, Freigaben als Posteingang
+  → FCL: Tuerschild "3/3 Mitarbeiter"
+  → Klick auf Agent → Mitarbeiter-Profil
+
+[Analytics-Ansicht]  ← Toggle fuer IT-Leiter
+  → Compliance Health Score, Kosten-Charts, Heartbeat-Board
+  → Hash Chain Viewer, Incident Timeline
+  → Cloudflare/Grafana/Uptime Kuma Style
+  → Gleiche Daten, andere Darstellung
+```
+
+**Agent-Badges (wie Mitarbeiterausweise):**
+
+```
+Jeder Agent hat:
+  → Pixel-Art Avatar (48-64px, rollenbasiert)
+  → ID-Badge Karte (Name, Rolle, Status, Kosten)
+  → Activity View (aktuelle Aufgabe, letzte Aktionen)
+  → NomOS Logo auf der Karte
+```
+
+**UI Tech Stack:**
+
+```
+Rendering:     PixiJS (@pixi/react) — Office-Visualisierung (~300KB)
+UI Components: Pixelact UI (shadcn-based Pixel-Art Components)
+Icons:         Pixelarticons (800 SVG, npm, pixel-style)
+Sprites:       Custom 48-64px PNGs (Universal LPC Generator als Basis)
+State:         Zustand (real-time Agent Status)
+Real-time:     WebSocket (Live Status Updates)
+Framework:     Next.js 15 + TypeScript strict
+Design Skill:  Anthropic frontend-design Plugin (offiziell)
+```
+
+**Referenz-Projekte (alle MIT Lizenz):**
+
+| Projekt | URL | Was wir daraus lernen |
+|---------|-----|----------------------|
+| pixel-agents-standalone | github.com/rolandal/pixel-agents-standalone | Standalone Pixel Office Web App |
+| claude-office | github.com/paulrobello/claude-office | Boss/Employee Pattern + PixiJS + Next.js |
+| Clawboard | github.com/kirillkuzin/clawboard | Admin Panel + Pixel Office kombiniert |
+| Pixelact UI | github.com/pixelact-ui/pixelact-ui | Pixel-Art React Components |
+| Pixelarticons | github.com/halfmage/pixelarticons | 800 Pixel SVG Icons |
+| Mission Control | github.com/builderz-labs/mission-control | Agent Orchestration Dashboard |
+
 ### Design-System
 
-Professionelles B2B-Design mit Dark Mode Option. Default: HELL (Vertrauen, Serioesitaet).
+"Trusted Control" — serioes wie Online-Banking, warm wie ein Buero. Kein Standard-Template.
 
 **Light Mode (Default):**
 

@@ -116,6 +116,111 @@ export interface AgentCreateRequest {
   risk_class: 'minimal' | 'limited' | 'high';
 }
 
+/** Compliance matrix cell for one agent and one document. */
+export interface ComplianceMatrixCell {
+  agent_id: string;
+  agent_name: string;
+  document_type: string;
+  status: 'valid' | 'expiring' | 'missing';
+  last_updated: string | null;
+  expires_at: string | null;
+}
+
+/** Full compliance matrix response from the API. */
+export interface ComplianceMatrixResponse {
+  matrix: ComplianceMatrixCell[];
+  agents: string[];
+  document_types: string[];
+  health_score: number;
+}
+
+/** Health status for a system component. */
+export interface HealthStatus {
+  service: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  latency_ms: number;
+  last_check: string;
+  details: Record<string, unknown>;
+}
+
+/** Overall health response. */
+export interface HealthResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  services: HealthStatus[];
+  uptime_seconds: number;
+  version: string;
+}
+
+/** Agent heartbeat entry. */
+export interface HeartbeatEntry {
+  agent_id: string;
+  agent_name: string;
+  last_seen: string;
+  status: 'running' | 'paused' | 'killed' | 'deploying' | 'error';
+  memory_mb: number;
+  cpu_percent: number;
+}
+
+/** Daily cost data point for trend charts. */
+export interface DailyCostEntry {
+  date: string;
+  cost_eur: number;
+}
+
+/** Full cost response with daily breakdown. */
+export interface CostDetailResponse {
+  costs: CostEntry[];
+  total: number;
+  total_cost_eur: number;
+  budget_total_eur: number;
+  daily_trend: DailyCostEntry[];
+}
+
+/** NomOS user account for admin management. */
+export interface UserAccount {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'user' | 'officer';
+  is_active: boolean;
+  max_tasks: number;
+  allowed_agents: string[];
+  created_at: string;
+}
+
+/** User list response. */
+export interface UserListResponse {
+  users: UserAccount[];
+  total: number;
+}
+
+/** System settings configuration. */
+export interface SystemSettings {
+  gateway_url: string;
+  retention_days: number;
+  pii_filter_mode: 'strict' | 'standard' | 'off';
+}
+
+/** Task entry. */
+export interface TaskEntry {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  title: string;
+  description: string;
+  status: 'queued' | 'assigned' | 'running' | 'review' | 'done';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Task list response. */
+export interface TaskListResponse {
+  tasks: TaskEntry[];
+  total: number;
+}
+
 /** Chat message for local UI state. */
 export interface ChatMessage {
   id: string;

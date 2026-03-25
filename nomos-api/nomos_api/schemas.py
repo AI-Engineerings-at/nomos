@@ -65,6 +65,19 @@ class AuditVerifyResponse(BaseModel):
     errors: list[str]
 
 
+class ComplianceMatrixEntry(BaseModel):
+    agent_id: str
+    agent_name: str
+    status: str
+    missing_docs: list[str]
+    risk_class: str
+
+
+class ComplianceMatrixResponse(BaseModel):
+    matrix: list[ComplianceMatrixEntry]
+    total: int
+
+
 class AuditEntryCreateRequest(BaseModel):
     agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
     event_type: str = Field(..., min_length=1, examples=["governance.hook.triggered"])

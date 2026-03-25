@@ -55,7 +55,7 @@ const statusConfig: Record<BadgeStatus, { dotColor: string; bgColor: string; tex
 };
 
 export function Badge({ status, label, className = '' }: BadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] ?? statusConfig['offline'];
   const displayLabel = label ?? config.defaultLabel;
 
   return (

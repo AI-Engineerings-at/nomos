@@ -37,6 +37,25 @@ class EventType(str, Enum):
     AUDIT_CHAIN_VERIFIED = "audit.chain.verified"
     AUDIT_EXPORTED = "audit.exported"
 
+    # Task dispatch
+    TASK_CREATED = "task.created"
+    TASK_ASSIGNED = "task.assigned"
+    TASK_COMPLETED = "task.completed"
+    TASK_FAILED = "task.failed"
+
+    # Budget
+    BUDGET_WARNING = "budget.warning"
+    BUDGET_EXCEEDED = "budget.exceeded"
+
+    # Approval
+    APPROVAL_REQUESTED = "approval.requested"
+    APPROVAL_GRANTED = "approval.granted"
+    APPROVAL_DENIED = "approval.denied"
+
+    # Config revision
+    CONFIG_CHANGED = "config.changed"
+    CONFIG_ROLLED_BACK = "config.rolled_back"
+
 
 _VALID_EVENT_TYPES = {e.value for e in EventType}
 

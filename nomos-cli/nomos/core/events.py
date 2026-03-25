@@ -32,6 +32,10 @@ class EventType(str, Enum):
     GOVERNANCE_KILL_SWITCH = "governance.kill_switch"
     GOVERNANCE_ESCALATION = "governance.escalation"
 
+    # Tool Calls (from Plugin hooks)
+    TOOL_CALL_ALLOWED = "tool.call_allowed"
+    TOOL_CALL_BLOCKED = "tool.call_blocked"
+
     # Audit
     AUDIT_CHAIN_CREATED = "audit.chain.created"
     AUDIT_CHAIN_VERIFIED = "audit.chain.verified"

@@ -17,7 +17,7 @@ from nomos_api.schemas import (
     HeartbeatRequest,
     HeartbeatResponse,
 )
-from nomos_api.services.agent_service import create_agent
+from nomos_api.services.agent_service import create_agent, check_fcl_limit_with_message
 from nomos_api.services.fleet_service import get_agent, update_agent_status
 from nomos_api.services.heartbeat import HeartbeatService
 from nomos.core.events import EventType
@@ -72,6 +72,14 @@ async def create_new_agent(
     request: AgentCreateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
+    # FCL Check — max 3 agents free
+    from sqlalchemy import select, func
+    count_result = await db.execute(select(func.count()).select_from(Agent).where(Agent.status != "killed"))
+    active_count = count_result.scalar() or 0
+    allowed, msg = check_fcl_limit_with_message(active_count)
+    if not allowed:
+        raise HTTPException(status_code=403, detail=msg)
+
     result = await create_agent(
         db=db,
         name=request.name,

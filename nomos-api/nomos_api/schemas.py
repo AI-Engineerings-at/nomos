@@ -352,3 +352,23 @@ class DSGVOExportResponse(BaseModel):
     messages: list[dict]
     total: int
     timestamp: str
+
+
+# --- Proxy Schemas ---
+
+
+class ProxyChatRequest(BaseModel):
+    agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
+    message: str = Field(..., min_length=1, examples=["Hello, what can you do?"])
+    session_id: str | None = Field(default=None, examples=["sess-abc123"])
+
+
+class ProxyChatResponse(BaseModel):
+    response: str
+    session_id: str
+
+
+class ProxyStatusResponse(BaseModel):
+    status: str  # "online" | "offline"
+    version: str | None = None
+    agents_count: int | None = None

@@ -8,6 +8,11 @@
     "nativeSkills": "auto",
     "restart": true
   },
+  "agents": {
+    "defaults": {
+      "model": "nvidia/nvidia/llama-3.1-nemotron-70b-instruct"
+    }
+  },
   "session": {
     "dmScope": "per-channel-peer"
   },

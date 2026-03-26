@@ -1,6 +1,6 @@
 /**
  * NomOS User Layout — Simplified sidebar for regular users.
- * Only accessible to users with role "user".
+ * Accessible to users with role "user" or "admin" (admin can also chat).
  * Error Boundary wraps the entire content area.
  */
 'use client';
@@ -19,12 +19,13 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const { user, loading } = useAuth();
   const { language } = useNomosStore();
 
-  // Redirect non-user users
+  // Redirect unauthenticated users
+  const allowed = user?.role === 'user' || user?.role === 'admin';
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'user')) {
+    if (!loading && !allowed) {
       router.replace('/login');
     }
-  }, [user, loading, router]);
+  }, [allowed, loading, router]);
 
   if (loading) {
     return (
@@ -36,7 +37,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!user || user.role !== 'user') return null;
+  if (!allowed) return null;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">

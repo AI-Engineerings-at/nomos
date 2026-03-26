@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.config import settings
@@ -146,3 +147,16 @@ async def get_compliance_matrix(
         ))
 
     return ComplianceMatrixResponse(matrix=matrix, total=len(matrix))
+
+
+class ComplianceGateRequest(BaseModel):
+    agent_id: str
+
+
+@router.post("/compliance/gate", response_model=ComplianceResponse)
+async def compliance_gate_alias(
+    request: ComplianceGateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ComplianceResponse:
+    """Alias for plugin compatibility: POST /api/compliance/gate {agent_id}."""
+    return await run_compliance_gate(request.agent_id, db)

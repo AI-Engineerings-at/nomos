@@ -15,7 +15,7 @@ from starlette.responses import Response
 from nomos_api.config import settings
 from nomos_api.database import engine
 from nomos_api.models import Base
-from nomos_api.routers import agents, approvals, audit, auth, compliance, costs, dsgvo, fleet, health, incidents, pii, proxy, tasks, users, workspace
+from nomos_api.routers import agents, approvals, audit, auth, budget, compliance, costs, dsgvo, fleet, health, incidents, pii, proxy, tasks, users, workspace
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,7 +59,7 @@ app.add_middleware(
     allow_origin_regex=r"^http://localhost(:\d+)?$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept"],
+    allow_headers=["Content-Type", "Accept", "X-NomOS-API-Key"],
 )
 
 app.include_router(health.router)
@@ -72,6 +72,7 @@ app.include_router(users.router)
 app.include_router(tasks.router)
 app.include_router(approvals.router)
 app.include_router(costs.router)
+app.include_router(budget.router)
 app.include_router(pii.router)
 app.include_router(incidents.router)
 app.include_router(workspace.router)

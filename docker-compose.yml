@@ -8,24 +8,23 @@ services:
   openclaw-gateway:
     image: ghcr.io/openclaw/openclaw:latest
     ports:
-      - "${NOMOS_GATEWAY_PORT:-3050}:3000"
+      - "${NOMOS_GATEWAY_PORT:-3050}:18789"
     environment:
-      - OPENCLAW_PLUGINS_DIR=/plugins
-      - OPENCLAW_AGENTS_DIR=/data/agents
-      - OPENCLAW_HEADLESS=true
+      - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:-nomos-plugin-dev}
     volumes:
-      - nomos-agents:/data/agents
-      - ./nomos-plugin/dist:/plugins/nomos:ro
+      - ./config/openclaw.json:/home/node/.openclaw/openclaw.json:ro
+      - ./nomos-plugin/dist:/home/node/.openclaw/extensions/nomos:ro
+      - nomos-agents:/home/node/.openclaw/workspace
     depends_on:
       valkey:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:18789/healthz"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 15s
+      retries: 10
+      start_period: 30s
 
   # ─── NomOS Control Plane ───────────────────────────────
 
@@ -39,9 +38,10 @@ services:
       - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:-nomos}@postgres:5432/nomos
       - NOMOS_AGENTS_DIR=/data/agents
       - NOMOS_CORS_ORIGINS=["http://localhost:3040","http://localhost:3045"]
-      - NOMOS_GATEWAY_URL=http://openclaw-gateway:3000
+      - NOMOS_GATEWAY_URL=http://openclaw-gateway:18789
       - NOMOS_VALKEY_URL=redis://valkey:6379
-      - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:-change-me-in-production}
+      - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:-dev-secret-not-for-production-32chars}
+      - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:-nomos-plugin-dev}
     volumes:
       - nomos-agents:/data/agents
     depends_on:

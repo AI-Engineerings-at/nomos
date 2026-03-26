@@ -1,0 +1,29 @@
+{
+  "tools": {
+    "profile": "coding",
+    "fs": { "workspaceOnly": true }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "discovery": {
+    "mdns": { "mode": "off" }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "lan",
+    "controlUi": {
+      "enabled": false
+    },
+    "auth": {
+      "mode": "token",
+      "token": "nomos-dev-token"
+    }
+  }
+}

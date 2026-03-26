@@ -65,7 +65,7 @@ function generateToastId(): string {
 
 export const useNomosStore = create<NomosState>()((set) => ({
   // Theme — defaults applied during hydration in layout
-  theme: 'light' as Theme,
+  theme: 'dark' as Theme,
   setTheme: (theme: Theme) => {
     set({ theme });
     if (typeof window !== 'undefined') {

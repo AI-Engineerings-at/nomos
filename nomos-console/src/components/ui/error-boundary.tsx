@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            log_entry: `Console error: ${payload.error} at ${payload.url}`,
+            log_entry: `Console error: ${payload.message} at ${payload.url}`,
             agent_id: 'console',
             context: payload,
           }),

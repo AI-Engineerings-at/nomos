@@ -37,20 +37,22 @@ function DiagnosticsSkeleton() {
   );
 }
 
-/** Status badge mapping for health services. */
-function healthBadgeStatus(status: HealthStatus['status']): 'online' | 'paused' | 'error' {
+/** Status badge mapping for health — API returns 'ok', services use 'healthy'/'degraded'/'unhealthy'. */
+function healthBadgeStatus(status: string): 'online' | 'paused' | 'error' {
   switch (status) {
+    case 'ok':
     case 'healthy': return 'online';
     case 'degraded': return 'paused';
-    case 'unhealthy': return 'error';
+    default: return 'error';
   }
 }
 
-function healthLabel(status: HealthStatus['status'], lang: 'de' | 'en'): string {
+function healthLabel(status: string, lang: 'de' | 'en'): string {
   switch (status) {
+    case 'ok':
     case 'healthy': return t('diagnostics.healthy', lang);
     case 'degraded': return t('diagnostics.degraded', lang);
-    case 'unhealthy': return t('diagnostics.unhealthy', lang);
+    default: return t('diagnostics.unhealthy', lang);
   }
 }
 
@@ -147,8 +149,7 @@ function ResourceBar({
 
 function DiagnosticsContent() {
   const { language } = useNomosStore();
-  // Health endpoint is at /health, not /api/health — handled by graceful fallback
-  const health = { data: { status: 'ok', service: 'NomOS Fleet API', version: '0.1.0' } as HealthResponse, loading: false, error: null, reload: () => {} };
+  const health = useFetch<HealthResponse>('/health');
   const fleet = useFetch<FleetResponse>('/fleet');
 
   if (health.loading || fleet.loading) {
@@ -201,7 +202,7 @@ function DiagnosticsContent() {
                 label={healthLabel(healthData.status, language)}
               />
               <span className="text-sm text-[var(--color-muted)]">
-                {t('diagnostics.uptime', language)}: {formatUptime(healthData.uptime_seconds, language)}
+                {healthData.uptime_seconds != null && <>{t('diagnostics.uptime', language)}: {formatUptime(healthData.uptime_seconds, language)}</>}
               </span>
             </div>
             <span className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">

@@ -143,12 +143,13 @@ export interface HealthStatus {
   details: Record<string, unknown>;
 }
 
-/** Overall health response. */
+/** Overall health response — matches GET /health. */
 export interface HealthResponse {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  services: HealthStatus[];
-  uptime_seconds: number;
+  status: string;
+  service: string;
   version: string;
+  services?: HealthStatus[];
+  uptime_seconds?: number;
 }
 
 /** Agent heartbeat entry. */

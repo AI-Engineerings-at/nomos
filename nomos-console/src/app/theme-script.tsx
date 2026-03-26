@@ -6,7 +6,7 @@
 
 // This static string is safe: it reads only from localStorage and matchMedia,
 // both controlled by the user's own browser. No external or untrusted input.
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('nomos-theme');if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('nomos-lang');if(l==='en')document.documentElement.lang='en'}catch(e){}})()`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('nomos-theme');if(!t){t='dark'}document.documentElement.setAttribute('data-theme',t);var l=localStorage.getItem('nomos-lang');if(l==='en')document.documentElement.lang='en'}catch(e){}})()`;
 
 export function ThemeScript() {
   // Static content only — no dynamic values, no user input

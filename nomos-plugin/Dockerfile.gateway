@@ -1,0 +1,7 @@
+FROM ghcr.io/openclaw/openclaw:latest
+
+# Copy plugin with correct permissions (avoids Windows bind-mount mode=777 issue)
+COPY --chown=node:node openclaw.plugin.json /home/node/.openclaw/extensions/nomos/
+COPY --chown=node:node dist/ /home/node/.openclaw/extensions/nomos/
+RUN chmod -R 755 /home/node/.openclaw/extensions/nomos && \
+    find /home/node/.openclaw/extensions/nomos -type f -exec chmod 644 {} +

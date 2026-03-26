@@ -53,6 +53,7 @@ async def lifespan(app: FastAPI):
 # Public routes that don't need authentication
 PUBLIC_PATHS = {
     "/health",
+    "/api/health",
     "/api/auth/login",
     "/api/auth/recovery",
     "/api/users/bootstrap",

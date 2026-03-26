@@ -6,14 +6,15 @@ services:
   # ─── OpenClaw Gateway (headless, NomOS Plugin) ─────────
 
   openclaw-gateway:
-    image: ghcr.io/openclaw/openclaw:latest
+    build:
+      context: ./nomos-plugin
+      dockerfile: Dockerfile.gateway
     ports:
       - "${NOMOS_GATEWAY_PORT:-3050}:18789"
     environment:
       - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:-nomos-plugin-dev}
     volumes:
       - ./config/openclaw.json:/home/node/.openclaw/openclaw.json:ro
-      - ./nomos-plugin/dist:/home/node/.openclaw/extensions/nomos:ro
       - nomos-agents:/home/node/.openclaw/workspace
     depends_on:
       valkey:

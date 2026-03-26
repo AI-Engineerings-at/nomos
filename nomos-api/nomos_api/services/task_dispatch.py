@@ -1,4 +1,4 @@
-"""Task dispatch service — CRUD and lifecycle management for agent tasks.
+"""Task dispatch service — DB-backed CRUD and lifecycle management for agent tasks.
 
 Implements a status machine with valid transitions:
     queued -> assigned -> running -> review -> done
@@ -9,8 +9,11 @@ Implements a status machine with valid transitions:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from nomos_api.models import Task
 
 # Valid status transitions: from_status -> set of allowed to_statuses
 _TRANSITIONS: dict[str, set[str]] = {
@@ -23,67 +26,75 @@ _TRANSITIONS: dict[str, set[str]] = {
 }
 
 
-class TaskService:
-    """In-memory task dispatch with status machine enforcement."""
+async def create_task(
+    db: AsyncSession,
+    agent_id: str,
+    description: str,
+    priority: str = "normal",
+    created_by: str | None = None,
+    timeout_minutes: int = 60,
+    cost_eur: float = 0.0,
+) -> Task:
+    """Create a new task in 'queued' status."""
+    task = Task(
+        id=str(uuid.uuid4()),
+        agent_id=agent_id,
+        description=description,
+        priority=priority,
+        status="queued",
+        created_by=created_by,
+        timeout_minutes=timeout_minutes,
+        cost_eur=cost_eur,
+    )
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+    return task
 
-    def __init__(self) -> None:
-        self._tasks: dict[str, dict] = {}
 
-    def create(
-        self,
-        agent_id: str,
-        description: str,
-        priority: str = "normal",
-        created_by: str | None = None,
-        timeout_minutes: int = 60,
-    ) -> dict:
-        """Create a new task in 'queued' status."""
-        task_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
-        task = {
-            "id": task_id,
-            "agent_id": agent_id,
-            "description": description,
-            "priority": priority,
-            "status": "queued",
-            "created_by": created_by,
-            "timeout_minutes": timeout_minutes,
-            "cost_eur": 0.0,
-            "created_at": now,
-            "updated_at": now,
-        }
-        self._tasks[task_id] = task
-        return dict(task)
+async def get_task(
+    db: AsyncSession,
+    task_id: str,
+) -> Task | None:
+    """Get a task by ID. Returns None if not found."""
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    return result.scalar_one_or_none()
 
-    def get(self, task_id: str) -> dict:
-        """Get a task by ID. Raises KeyError if not found."""
-        if task_id not in self._tasks:
-            raise KeyError(f"Task {task_id!r} not found")
-        return dict(self._tasks[task_id])
 
-    def update_status(self, task_id: str, new_status: str) -> dict:
-        """Transition a task to a new status. Validates the transition."""
-        if task_id not in self._tasks:
-            raise KeyError(f"Task {task_id!r} not found")
+async def update_task_status(
+    db: AsyncSession,
+    task_id: str,
+    new_status: str,
+) -> Task | None:
+    """Transition a task to a new status. Validates the transition.
 
-        task = self._tasks[task_id]
-        current = task["status"]
-        allowed = _TRANSITIONS.get(current, set())
+    Returns None if task not found.
+    Raises ValueError if the transition is invalid.
+    """
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalar_one_or_none()
+    if task is None:
+        return None
 
-        if new_status not in allowed:
-            raise ValueError(
-                f"Invalid transition: {current!r} -> {new_status!r}. "
-                f"Allowed: {sorted(allowed)}"
-            )
+    current = task.status
+    allowed = _TRANSITIONS.get(current, set())
 
-        task["status"] = new_status
-        task["updated_at"] = datetime.now(timezone.utc).isoformat()
-        return dict(task)
+    if new_status not in allowed:
+        raise ValueError(f"Invalid transition: {current!r} -> {new_status!r}. Allowed: {sorted(allowed)}")
 
-    def list_by_agent(self, agent_id: str) -> list[dict]:
-        """List all tasks for a specific agent."""
-        return [dict(t) for t in self._tasks.values() if t["agent_id"] == agent_id]
+    task.status = new_status
+    await db.commit()
+    await db.refresh(task)
+    return task
 
-    def list_all(self) -> list[dict]:
-        """List all tasks across all agents."""
-        return [dict(t) for t in self._tasks.values()]
+
+async def list_tasks(
+    db: AsyncSession,
+    agent_id: str | None = None,
+) -> list[Task]:
+    """List tasks, optionally filtered by agent_id."""
+    stmt = select(Task)
+    if agent_id is not None:
+        stmt = stmt.where(Task.agent_id == agent_id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

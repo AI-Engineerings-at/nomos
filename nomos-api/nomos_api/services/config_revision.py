@@ -1,4 +1,4 @@
-"""Config revision service — versioned snapshots of agent configurations.
+"""Config revision service — DB-backed versioned snapshots of agent configurations.
 
 Supports saving new revisions, listing history, retrieving the latest,
 and rolling back to a specific version.
@@ -8,68 +8,78 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from nomos_api.models import ConfigRevision
 
 
-class ConfigRevisionService:
-    """In-memory config revision tracker with versioning and rollback."""
+async def save_revision(
+    db: AsyncSession,
+    agent_id: str,
+    config_json: dict,
+    change_description: str,
+    created_by: str | None = None,
+) -> ConfigRevision:
+    """Save a new config revision. Auto-increments version number."""
+    # Get the current max version for this agent
+    result = await db.execute(select(func.max(ConfigRevision.version)).where(ConfigRevision.agent_id == agent_id))
+    max_version = result.scalar_one_or_none()
+    version = (max_version or 0) + 1
 
-    def __init__(self) -> None:
-        # agent_id -> list of revisions (ordered by version)
-        self._revisions: dict[str, list[dict]] = {}
+    revision = ConfigRevision(
+        id=str(uuid.uuid4()),
+        agent_id=agent_id,
+        version=version,
+        config_json=json.dumps(config_json),
+        change_description=change_description,
+        created_by=created_by,
+    )
+    db.add(revision)
+    await db.commit()
+    await db.refresh(revision)
+    return revision
 
-    def save(
-        self,
-        agent_id: str,
-        config: dict,
-        change_description: str,
-        created_by: str | None = None,
-    ) -> dict:
-        """Save a new config revision. Auto-increments version number."""
-        if agent_id not in self._revisions:
-            self._revisions[agent_id] = []
 
-        revs = self._revisions[agent_id]
-        version = len(revs) + 1
-        now = datetime.now(timezone.utc).isoformat()
+async def get_latest(
+    db: AsyncSession,
+    agent_id: str,
+) -> ConfigRevision | None:
+    """Get the latest revision for an agent, or None if no revisions exist."""
+    result = await db.execute(
+        select(ConfigRevision)
+        .where(ConfigRevision.agent_id == agent_id)
+        .order_by(ConfigRevision.version.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
-        revision = {
-            "id": str(uuid.uuid4()),
-            "agent_id": agent_id,
-            "version": version,
-            "config_json": json.dumps(config),
-            "change_description": change_description,
-            "created_by": created_by,
-            "created_at": now,
-        }
-        revs.append(revision)
-        return dict(revision)
 
-    def list(self, agent_id: str) -> list[dict]:
-        """List all revisions for an agent, ordered by version."""
-        return [dict(r) for r in self._revisions.get(agent_id, [])]
+async def list_revisions(
+    db: AsyncSession,
+    agent_id: str,
+) -> list[ConfigRevision]:
+    """List all revisions for an agent, ordered by version ascending."""
+    result = await db.execute(
+        select(ConfigRevision).where(ConfigRevision.agent_id == agent_id).order_by(ConfigRevision.version.asc())
+    )
+    return list(result.scalars().all())
 
-    def get_latest(self, agent_id: str) -> dict | None:
-        """Get the latest revision for an agent, or None if no revisions exist."""
-        revs = self._revisions.get(agent_id, [])
-        if not revs:
-            return None
-        return dict(revs[-1])
 
-    def rollback(self, agent_id: str, version: int) -> dict:
-        """Retrieve the config from a specific version.
+async def rollback(
+    db: AsyncSession,
+    agent_id: str,
+    version: int,
+) -> ConfigRevision | None:
+    """Retrieve the revision for a specific version.
 
-        Returns the parsed config dict (not the revision metadata).
-
-        Raises:
-            KeyError: If agent_id or version not found.
-        """
-        revs = self._revisions.get(agent_id, [])
-        if not revs:
-            raise KeyError(f"No revisions found for agent {agent_id!r}")
-
-        for rev in revs:
-            if rev["version"] == version:
-                return json.loads(rev["config_json"])
-
-        raise KeyError(f"Version {version} not found for agent {agent_id!r}")
+    Returns None if agent_id/version combination not found.
+    """
+    result = await db.execute(
+        select(ConfigRevision).where(
+            ConfigRevision.agent_id == agent_id,
+            ConfigRevision.version == version,
+        )
+    )
+    return result.scalar_one_or_none()

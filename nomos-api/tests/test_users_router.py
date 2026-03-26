@@ -190,3 +190,18 @@ async def test_create_user_weak_password(users_client, admin_user):
         "role": "user",
     }, cookies=cookies)
     assert resp.status_code == 422
+
+
+async def test_user_response_contains_created_at_and_extra_fields(users_client, admin_user):
+    """Verify the user response includes created_at, name, max_tasks, allowed_agents."""
+    cookies = await _login_as_admin(users_client)
+    resp = await users_client.get("/api/users", cookies=cookies)
+    assert resp.status_code == 200
+    user = resp.json()["users"][0]
+    # created_at may be None for SQLite in-memory (no server_default), but field must exist
+    assert "created_at" in user
+    assert "name" in user
+    assert "max_tasks" in user
+    assert isinstance(user["max_tasks"], int)
+    assert "allowed_agents" in user
+    assert isinstance(user["allowed_agents"], list)

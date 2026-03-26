@@ -163,10 +163,14 @@ class UserCreateResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
+    name: str = ""
     role: str
     totp_enabled: bool
     session_timeout_hours: int
     is_active: bool
+    max_tasks: int = 10
+    allowed_agents: list[str] = []
+    created_at: datetime | None = None
     model_config = {"from_attributes": True}
 
 

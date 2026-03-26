@@ -28,6 +28,22 @@ logger = logging.getLogger("nomos-api.users")
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
+def _user_to_response(u: User) -> UserResponse:
+    """Convert a User ORM object to a UserResponse, with safe defaults."""
+    return UserResponse(
+        id=u.id,
+        email=u.email,
+        name=u.email.split("@")[0],
+        role=u.role,
+        totp_enabled=u.totp_enabled,
+        session_timeout_hours=u.session_timeout_hours,
+        is_active=u.is_active,
+        max_tasks=10,
+        allowed_agents=[],
+        created_at=u.created_at,
+    )
+
+
 async def _require_admin(
     nomos_token: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
@@ -91,17 +107,7 @@ async def list_users(
     result = await db.execute(select(User).order_by(User.email))
     users = result.scalars().all()
     return UserListResponse(
-        users=[
-            UserResponse(
-                id=u.id,
-                email=u.email,
-                role=u.role,
-                totp_enabled=u.totp_enabled,
-                session_timeout_hours=u.session_timeout_hours,
-                is_active=u.is_active,
-            )
-            for u in users
-        ],
+        users=[_user_to_response(u) for u in users],
         total=len(users),
     )
 
@@ -177,14 +183,7 @@ async def update_user(
     await db.refresh(user)
 
     logger.info("User %s updated by admin %s", user.email, admin.email)
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        role=user.role,
-        totp_enabled=user.totp_enabled,
-        session_timeout_hours=user.session_timeout_hours,
-        is_active=user.is_active,
-    )
+    return _user_to_response(user)
 
 
 @router.delete("/{user_id}", response_model=UserResponse)
@@ -202,11 +201,4 @@ async def deactivate_user(
     await db.commit()
 
     logger.info("User %s deactivated by admin %s", user.email, admin.email)
-    return UserResponse(
-        id=user.id,
-        email=user.email,
-        role=user.role,
-        totp_enabled=user.totp_enabled,
-        session_timeout_hours=user.session_timeout_hours,
-        is_active=user.is_active,
-    )
+    return _user_to_response(user)

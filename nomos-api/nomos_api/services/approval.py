@@ -71,14 +71,15 @@ async def resolve_approval(
 async def list_approvals(
     db: AsyncSession,
     agent_id: str | None = None,
-    status: str = "pending",
+    status: str | None = "pending",
 ) -> list[Approval]:
-    """List approvals, optionally filtered by agent_id and/or status."""
+    """List approvals, filtered by agent_id and/or status independently."""
     stmt = select(Approval)
     if agent_id is not None:
         stmt = stmt.where(Approval.agent_id == agent_id)
-    else:
+    if status is not None:
         stmt = stmt.where(Approval.status == status)
+    stmt = stmt.order_by(Approval.id.desc())
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

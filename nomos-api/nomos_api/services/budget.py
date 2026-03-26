@@ -6,7 +6,7 @@ No in-memory state. All data persisted via SQLAlchemy async sessions.
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.models import Agent
@@ -58,17 +58,23 @@ async def track_cost(
     agent_id: str,
     cost: float,
 ) -> dict | None:
-    """Add cost to an agent's budget_used_eur. Returns None if agent not found."""
-    agent = await db.get(Agent, agent_id)
-    if agent is None:
+    """Add cost to an agent's budget_used_eur atomically. Returns None if agent not found.
+
+    Uses SQL UPDATE with expression to avoid lost updates under concurrent requests.
+    """
+    stmt = (
+        update(Agent)
+        .where(Agent.id == agent_id)
+        .values(budget_used_eur=Agent.budget_used_eur + cost)
+    )
+    result = await db.execute(stmt)
+    if result.rowcount == 0:
         return None
-
-    agent.budget_used_eur += cost
     await db.commit()
-    await db.refresh(agent)
-
+    # Re-read to get updated values
+    agent = await db.get(Agent, agent_id)
     return {
-        "agent_id": agent_id,
+        "agent_id": agent.id,
         "budget_used_eur": agent.budget_used_eur,
         "budget_limit_eur": agent.budget_limit_eur,
     }

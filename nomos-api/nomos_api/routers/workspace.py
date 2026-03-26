@@ -38,7 +38,9 @@ async def mount_collection(
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceMountResponse:
     """Mount a collection to an agent's workspace."""
-    await workspace_svc.mount_collection(db, request.agent_id, request.collection_name)
+    result = await workspace_svc.mount_collection(db, request.agent_id, request.collection_name)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
     return WorkspaceMountResponse(
         agent_id=request.agent_id,
         collection_name=request.collection_name,

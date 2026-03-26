@@ -10,6 +10,7 @@ import json
 import uuid
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.models import ConfigRevision
@@ -22,24 +23,34 @@ async def save_revision(
     change_description: str,
     created_by: str | None = None,
 ) -> ConfigRevision:
-    """Save a new config revision. Auto-increments version number."""
-    # Get the current max version for this agent
-    result = await db.execute(select(func.max(ConfigRevision.version)).where(ConfigRevision.agent_id == agent_id))
-    max_version = result.scalar_one_or_none()
-    version = (max_version or 0) + 1
+    """Save a new config revision. Auto-increments version number.
 
-    revision = ConfigRevision(
-        id=str(uuid.uuid4()),
-        agent_id=agent_id,
-        version=version,
-        config_json=json.dumps(config_json),
-        change_description=change_description,
-        created_by=created_by,
-    )
-    db.add(revision)
-    await db.commit()
-    await db.refresh(revision)
-    return revision
+    Uses a retry loop with unique constraint to prevent duplicate versions
+    under concurrent requests.
+    """
+    for _attempt in range(3):
+        result = await db.execute(
+            select(func.max(ConfigRevision.version)).where(ConfigRevision.agent_id == agent_id)
+        )
+        max_version = result.scalar() or 0
+
+        revision = ConfigRevision(
+            id=str(uuid.uuid4()),
+            agent_id=agent_id,
+            version=max_version + 1,
+            config_json=json.dumps(config_json),
+            change_description=change_description,
+            created_by=created_by,
+        )
+        db.add(revision)
+        try:
+            await db.commit()
+            await db.refresh(revision)
+            return revision
+        except IntegrityError:
+            await db.rollback()
+            continue
+    raise ValueError("Could not save revision after 3 attempts")
 
 
 async def get_latest(

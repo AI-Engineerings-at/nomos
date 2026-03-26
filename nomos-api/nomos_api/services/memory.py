@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.models import AgentMemory
@@ -56,14 +56,14 @@ async def delete_by_agent(db: AsyncSession, agent_id: str) -> int:
 
 async def delete_by_content(db: AsyncSession, search_term: str) -> int:
     """Delete messages containing search_term (DSGVO Art. 17). Returns deleted count."""
-    stmt = delete(AgentMemory).where(AgentMemory.content.contains(search_term))
+    stmt = delete(AgentMemory).where(func.lower(AgentMemory.content).contains(search_term.lower()))
     result = await db.execute(stmt)
     await db.commit()
     return result.rowcount
 
 
 async def search_messages(db: AsyncSession, search_term: str) -> list[AgentMemory]:
-    """Find all messages containing search_term across all agents."""
-    stmt = select(AgentMemory).where(AgentMemory.content.contains(search_term))
+    """Find all messages containing search_term across all agents (case-insensitive)."""
+    stmt = select(AgentMemory).where(func.lower(AgentMemory.content).contains(search_term.lower()))
     result = await db.execute(stmt)
     return list(result.scalars().all())

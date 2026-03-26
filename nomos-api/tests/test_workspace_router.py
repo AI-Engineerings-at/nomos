@@ -47,7 +47,35 @@ async def test_workspace_get_unknown_agent(client):
 
 
 @pytest.mark.asyncio
-async def test_workspace_mount_creates_workspace(client):
+async def test_workspace_mount_requires_existing_agent(client):
+    """Mounting a collection for a non-existent agent returns 404."""
+    resp = await client.post(
+        "/api/workspace/mount",
+        json={"agent_id": "nonexistent", "collection_name": "brand-guidelines"},
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_workspace_mount_creates_workspace(client, db_session):
+    from nomos_api.models import Agent
+
+    agent = Agent(
+        id="mani",
+        name="Mani Agent",
+        role="secretary",
+        company="TestCo",
+        email="mani@test.com",
+        risk_class="limited",
+        status="running",
+        manifest_hash="a" * 64,
+        manifest_data={},
+        compliance_status="compliant",
+        agents_dir="/tmp/agents",
+    )
+    db_session.add(agent)
+    await db_session.commit()
+
     resp = await client.post(
         "/api/workspace/mount",
         json={"agent_id": "mani", "collection_name": "brand-guidelines"},

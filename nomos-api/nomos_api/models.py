@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Float, JSON, DateTime, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Float, JSON, DateTime, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -166,6 +166,7 @@ class ConfigRevision(Base):
     """A versioned snapshot of an agent's configuration."""
 
     __tablename__ = "config_revisions"
+    __table_args__ = (UniqueConstraint("agent_id", "version"),)
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     agent_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)

@@ -26,11 +26,15 @@ async def get_mounted_collections(db: AsyncSession, agent_id: str) -> list[str]:
     return list(result.scalars().all())
 
 
-async def mount_collection(db: AsyncSession, agent_id: str, collection_name: str) -> bool:
+async def mount_collection(db: AsyncSession, agent_id: str, collection_name: str) -> bool | None:
     """Mount a collection into an agent's workspace. Idempotent.
 
-    Returns True if the mount exists after the call.
+    Returns True if the mount exists after the call, None if agent does not exist.
     """
+    agent = await db.get(Agent, agent_id)
+    if agent is None:
+        return None
+
     # Check if already mounted
     stmt = select(WorkspaceMount.id).where(
         WorkspaceMount.agent_id == agent_id,

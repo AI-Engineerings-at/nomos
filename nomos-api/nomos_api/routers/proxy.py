@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from urllib.parse import urljoin
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,42 +25,19 @@ router = APIRouter(prefix="/api", tags=["proxy"])
 
 async def _gateway_fetch(method: str, path: str, json_body: dict | None = None) -> dict | None:
     """HTTP request to OpenClaw Gateway. Returns parsed JSON or None on failure."""
-    import asyncio
-    import json
-    from urllib.request import Request, urlopen
-    from urllib.error import URLError, HTTPError
+    url = f"{settings.gateway_url.rstrip('/')}/{path.lstrip('/')}"
+    headers = {"Authorization": f"Bearer {settings.gateway_token}"}
 
-    url = urljoin(settings.gateway_url.rstrip("/") + "/", path.lstrip("/"))
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": f"Bearer {settings.gateway_token}",
-    }
-    data = json.dumps(json_body).encode("utf-8") if json_body else None
-
-    def _do_request() -> dict | None:
-        try:
-            req = Request(url, data=data, headers=headers, method=method)
-            with urlopen(req, timeout=30) as resp:
-                body = resp.read().decode("utf-8")
-                return json.loads(body) if body else {}
-        except HTTPError as exc:
-            # HTTP errors (4xx, 5xx) still have a response body we can parse
-            try:
-                body = exc.read().decode("utf-8")
-                return json.loads(body)
-            except Exception:
-                logger.debug("Gateway HTTP %d at %s", exc.code, url)
-                return None
-        except (URLError, OSError, TimeoutError) as exc:
-            logger.debug("Gateway unreachable at %s: %s", url, exc)
-            return None
-        except (OSError, TimeoutError) as exc:
-            logger.debug("Gateway unreachable at %s: %s", url, exc)
-            return None
-
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _do_request)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.request(method, url, json=json_body, headers=headers)
+            return response.json()
+    except (httpx.ConnectError, httpx.TimeoutException) as exc:
+        logger.debug("Gateway unreachable at %s: %s", url, exc)
+        return None
+    except Exception as exc:
+        logger.debug("Gateway error at %s: %s", url, exc)
+        return None
 
 
 @router.get("/proxy/status", response_model=ProxyStatusResponse)

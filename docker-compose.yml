@@ -40,6 +40,7 @@ services:
       - NOMOS_AGENTS_DIR=/data/agents
       - NOMOS_CORS_ORIGINS=["http://localhost:3040","http://localhost:3045"]
       - NOMOS_GATEWAY_URL=http://openclaw-gateway:18789
+      - NOMOS_GATEWAY_TOKEN=${NOMOS_GATEWAY_TOKEN:-nomos-dev-token}
       - NOMOS_VALKEY_URL=redis://valkey:6379
       - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:-dev-secret-not-for-production-32chars}
       - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:-nomos-plugin-dev}

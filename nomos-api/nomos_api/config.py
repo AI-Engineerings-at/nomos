@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     plugin_api_key: str = "nomos-plugin-dev"
     gateway_url: str = "http://openclaw-gateway:18789"
+    gateway_token: str = "nomos-dev-token"
     retention_days: int = 365
     pii_filter_mode: str = "standard"
 

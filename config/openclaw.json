@@ -21,6 +21,11 @@
     "controlUi": {
       "enabled": false
     },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    },
     "auth": {
       "mode": "token",
       "token": "nomos-dev-token"

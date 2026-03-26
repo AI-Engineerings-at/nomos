@@ -19,6 +19,7 @@ from nomos_api.models import User
 from nomos_api.schemas import (
     LoginRequest,
     LoginResponse,
+    LoginUserInfo,
     LogoutResponse,
     RecoveryRequest,
     RecoveryResponse,
@@ -100,7 +101,17 @@ async def login(
     )
 
     logger.info("Successful login for %s (role=%s)", user.email, user.role)
-    return LoginResponse(message="Login successful", role=user.role, email=user.email)
+    has_2fa = getattr(user, "totp_enabled", False)
+    return LoginResponse(
+        requires_2fa=has_2fa,
+        user=LoginUserInfo(
+            id=str(user.id),
+            email=user.email,
+            name=user.email.split("@")[0],
+            role=user.role,
+        ) if not has_2fa else None,
+        message="Login successful",
+    )
 
 
 @router.post("/logout", response_model=LogoutResponse)

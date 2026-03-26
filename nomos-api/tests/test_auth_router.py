@@ -82,6 +82,9 @@ async def test_login_success(auth_client, seeded_user):
     assert resp.status_code == 200
     data = resp.json()
     assert data["message"] == "Login successful"
+    assert data["requires_2fa"] is False
+    assert data["user"]["email"] == "admin@nomos.local"
+    assert data["user"]["role"] == "admin"
     assert "nomos_token" in resp.cookies
 
 

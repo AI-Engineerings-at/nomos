@@ -103,10 +103,17 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
-class LoginResponse(BaseModel):
-    message: str
-    role: str
+class LoginUserInfo(BaseModel):
+    id: str
     email: str
+    name: str
+    role: str
+
+
+class LoginResponse(BaseModel):
+    requires_2fa: bool = False
+    user: LoginUserInfo | None = None
+    message: str | None = None
 
 
 class LogoutResponse(BaseModel):

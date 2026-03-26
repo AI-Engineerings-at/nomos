@@ -44,8 +44,15 @@ async def client(db_engine, tmp_path, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setattr(settings, "agents_dir", tmp_path / "agents")
 
+    # Set a test plugin API key so all requests pass the auth middleware
+    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key")
+
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test",
+        headers={"X-NomOS-API-Key": "test-plugin-key"},
+    ) as ac:
         yield ac
 
     app.dependency_overrides.clear()

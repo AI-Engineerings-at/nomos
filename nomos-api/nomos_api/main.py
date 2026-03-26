@@ -6,11 +6,12 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
+import jwt
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from nomos_api.config import settings
 from nomos_api.database import engine
@@ -49,8 +50,48 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 
+# Public routes that don't need authentication
+PUBLIC_PATHS = {
+    "/health",
+    "/api/auth/login",
+    "/api/auth/recovery",
+    "/api/users/bootstrap",
+    "/docs",
+    "/openapi.json",
+}
+
+PUBLIC_PREFIXES = ("/api/auth/2fa",)
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """Global authentication — JWT cookie or Plugin API key."""
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        path = request.url.path
+        if request.method == "OPTIONS" or path in PUBLIC_PATHS or path.startswith(PUBLIC_PREFIXES):
+            return await call_next(request)
+
+        # Service-to-service auth (Plugin → API)
+        api_key = request.headers.get("X-NomOS-API-Key")
+        if api_key and api_key == settings.plugin_api_key:
+            request.state.user = {"role": "service", "email": "plugin@nomos.local"}
+            return await call_next(request)
+
+        # User auth via JWT cookie
+        token = request.cookies.get("nomos_token")
+        if not token:
+            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+        try:
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+            request.state.user = payload
+        except jwt.InvalidTokenError:
+            return JSONResponse(status_code=401, content={"detail": "Invalid token"})
+        return await call_next(request)
+
+
 app = FastAPI(title=settings.api_title, version=settings.api_version, lifespan=lifespan)
 
+app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(

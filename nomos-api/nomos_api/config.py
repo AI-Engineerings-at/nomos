@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3040"]
     agents_dir: Path = Path("./data/agents")
     jwt_secret: str = "change-me-in-production"
-    gateway_url: str = "http://openclaw-gateway:3000"
+    plugin_api_key: str = "nomos-plugin-dev"
+    gateway_url: str = "http://openclaw-gateway:18789"
 
     model_config = {"env_prefix": "NOMOS_", "env_file": ".env", "extra": "ignore"}
 

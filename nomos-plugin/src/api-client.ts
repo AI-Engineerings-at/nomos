@@ -99,7 +99,7 @@ export class NomOSApiClient {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/health`, {
+      const res = await fetch(`${this.baseUrl}/health`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -126,7 +126,11 @@ export class NomOSApiClient {
       const res = await fetch(`${this.baseUrl}/api/incidents`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent_id: agentId, description, severity }),
+        body: JSON.stringify({
+          log_entry: description,
+          agent_id: agentId,
+          context: { severity, source: "nomos-plugin" },
+        }),
       });
       return res.ok;
     } catch {

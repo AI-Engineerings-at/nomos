@@ -1,4 +1,4 @@
-"""Approval service — manages approval queue for gated agent actions.
+"""Approval service — DB-backed approval queue for gated agent actions.
 
 Actions that require human sign-off (e.g. external API calls, file deletion,
 data export) are submitted as approval requests and must be explicitly
@@ -10,76 +10,83 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from nomos_api.models import Approval
 
 _VALID_RESOLUTIONS = {"approved", "denied"}
 
 
-class ApprovalService:
-    """In-memory approval queue for gated agent actions."""
+async def create_approval(
+    db: AsyncSession,
+    agent_id: str,
+    action: str,
+    description: str,
+    timeout_minutes: int = 60,
+) -> Approval:
+    """Create a new approval request in 'pending' status."""
+    approval = Approval(
+        id=str(uuid.uuid4()),
+        agent_id=agent_id,
+        action=action,
+        description=description,
+        status="pending",
+        timeout_minutes=timeout_minutes,
+    )
+    db.add(approval)
+    await db.commit()
+    await db.refresh(approval)
+    return approval
 
-    def __init__(self) -> None:
-        self._approvals: dict[str, dict] = {}
 
-    def request(
-        self,
-        agent_id: str,
-        action: str,
-        description: str,
-        timeout_minutes: int = 60,
-    ) -> dict:
-        """Submit an approval request. Returns the request in 'pending' status."""
-        approval_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
-        approval = {
-            "id": approval_id,
-            "agent_id": agent_id,
-            "action": action,
-            "description": description,
-            "status": "pending",
-            "requested_at": now,
-            "resolved_at": None,
-            "resolved_by": None,
-            "timeout_minutes": timeout_minutes,
-        }
-        self._approvals[approval_id] = approval
-        return dict(approval)
+async def resolve_approval(
+    db: AsyncSession,
+    approval_id: str,
+    resolution: str,
+    resolved_by: str,
+) -> Approval | None:
+    """Approve or deny a pending request. Returns None if not found.
 
-    def resolve(self, approval_id: str, resolution: str, resolved_by: str) -> dict:
-        """Approve or deny a pending request.
+    Raises ValueError if resolution is not 'approved' or 'denied'.
+    """
+    if resolution not in _VALID_RESOLUTIONS:
+        raise ValueError(
+            f"Invalid resolution: {resolution!r}. Must be one of {sorted(_VALID_RESOLUTIONS)}"
+        )
 
-        Args:
-            approval_id: The approval request ID.
-            resolution: Must be 'approved' or 'denied'.
-            resolved_by: Identifier of the person resolving.
+    result = await db.execute(select(Approval).where(Approval.id == approval_id))
+    approval = result.scalar_one_or_none()
+    if approval is None:
+        return None
 
-        Raises:
-            KeyError: If approval_id not found.
-            ValueError: If resolution is not 'approved' or 'denied'.
-        """
-        if approval_id not in self._approvals:
-            raise KeyError(f"Approval {approval_id!r} not found")
+    approval.status = resolution
+    approval.resolved_by = resolved_by
+    approval.resolved_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(approval)
+    return approval
 
-        if resolution not in _VALID_RESOLUTIONS:
-            raise ValueError(
-                f"Invalid resolution: {resolution!r}. Must be one of {sorted(_VALID_RESOLUTIONS)}"
-            )
 
-        approval = self._approvals[approval_id]
-        approval["status"] = resolution
-        approval["resolved_by"] = resolved_by
-        approval["resolved_at"] = datetime.now(timezone.utc).isoformat()
-        return dict(approval)
+async def list_approvals(
+    db: AsyncSession,
+    agent_id: str | None = None,
+    status: str = "pending",
+) -> list[Approval]:
+    """List approvals, optionally filtered by agent_id and/or status."""
+    stmt = select(Approval)
+    if agent_id is not None:
+        stmt = stmt.where(Approval.agent_id == agent_id)
+    else:
+        stmt = stmt.where(Approval.status == status)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
-    def get(self, approval_id: str) -> dict:
-        """Get an approval by ID. Raises KeyError if not found."""
-        if approval_id not in self._approvals:
-            raise KeyError(f"Approval {approval_id!r} not found")
-        return dict(self._approvals[approval_id])
 
-    def list_pending(self) -> list[dict]:
-        """List all pending approval requests."""
-        return [dict(a) for a in self._approvals.values() if a["status"] == "pending"]
-
-    def list_by_agent(self, agent_id: str) -> list[dict]:
-        """List all approvals for a specific agent."""
-        return [dict(a) for a in self._approvals.values() if a["agent_id"] == agent_id]
+async def get_approval(
+    db: AsyncSession,
+    approval_id: str,
+) -> Approval | None:
+    """Get a single approval by ID. Returns None if not found."""
+    result = await db.execute(select(Approval).where(Approval.id == approval_id))
+    return result.scalar_one_or_none()

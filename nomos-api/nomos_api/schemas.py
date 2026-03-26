@@ -25,6 +25,7 @@ class AgentResponse(BaseModel):
     status: str
     manifest_hash: str
     compliance_status: str
+    heartbeat_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     model_config = {"from_attributes": True}
@@ -392,3 +393,22 @@ class ProxyStatusResponse(BaseModel):
     status: str  # "online" | "offline"
     version: str | None = None
     agents_count: int | None = None
+
+
+# --- Budget Tracking Schemas ---
+
+
+class BudgetCheckRequest(BaseModel):
+    agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
+    estimated_cost: float = Field(default=0.0, ge=0, description="Estimated cost in EUR")
+
+
+class BudgetTrackRequest(BaseModel):
+    agent_id: str = Field(..., min_length=1, examples=["mani-ruf-01"])
+    cost: float = Field(gt=0, description="Cost in EUR to track")
+
+
+class BudgetTrackResponse(BaseModel):
+    agent_id: str
+    budget_used_eur: float
+    budget_limit_eur: float

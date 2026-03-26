@@ -2,35 +2,61 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.database import get_db
+from nomos_api.models import Agent
 from nomos_api.schemas import (
     DSGVOExportRequest,
     DSGVOExportResponse,
     DSGVOForgetRequest,
     DSGVOForgetResponse,
 )
-from nomos_api.services.forget import ForgetService
-from nomos_api.services.honcho import HonchoClient
+from nomos_api.services.audit import write_audit_event
+from nomos_api.services.forget import export_data, forget
+from nomos.core.events import EventType
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["dsgvo"])
 
-_client = HonchoClient(base_url="http://localhost:5055")
-_forget_service = ForgetService(_client)
-
-
-def get_forget_service() -> ForgetService:
-    """Return the forget service singleton."""
-    return _forget_service
-
 
 @router.post("/dsgvo/forget", response_model=DSGVOForgetResponse)
-async def dsgvo_forget(request: DSGVOForgetRequest) -> DSGVOForgetResponse:
+async def dsgvo_forget(
+    request: DSGVOForgetRequest,
+    db: AsyncSession = Depends(get_db),
+) -> DSGVOForgetResponse:
     """Art. 17 DSGVO — delete all messages containing the email address."""
-    svc = get_forget_service()
-    result = svc.forget(request.email)
+    result = await forget(db, request.email)
+
+    # Write audit trail if messages were deleted and an agent with this email exists
+    if result["deleted_messages"] > 0:
+        stmt = select(Agent).where(Agent.email == request.email)
+        agent_row = await db.execute(stmt)
+        agent = agent_row.scalar_one_or_none()
+        if agent is not None:
+            try:
+                await write_audit_event(
+                    db=db,
+                    agent=agent,
+                    agent_id=agent.id,
+                    event_type=EventType.DATA_ERASED,
+                    data={
+                        "search_term": request.email,
+                        "deleted_messages": result["deleted_messages"],
+                    },
+                )
+            except Exception:
+                logger.warning(
+                    "Could not write audit event for DSGVO forget (agent=%s)",
+                    agent.id,
+                    exc_info=True,
+                )
+
     return DSGVOForgetResponse(
         deleted_messages=result["deleted_messages"],
         search_term=result["search_term"],
@@ -41,16 +67,15 @@ async def dsgvo_forget(request: DSGVOForgetRequest) -> DSGVOForgetResponse:
 
 
 @router.post("/dsgvo/export", response_model=DSGVOExportResponse)
-async def dsgvo_export(request: DSGVOExportRequest) -> DSGVOExportResponse:
+async def dsgvo_export(
+    request: DSGVOExportRequest,
+    db: AsyncSession = Depends(get_db),
+) -> DSGVOExportResponse:
     """Art. 15 DSGVO — export all data for an email address."""
-    svc = get_forget_service()
-    client = svc.client
-    matching_messages = [
-        msg for msg in client._messages.values() if request.email in msg["content"]
-    ]
+    result = await export_data(db, request.email)
     return DSGVOExportResponse(
-        email=request.email,
-        messages=matching_messages,
-        total=len(matching_messages),
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        email=result["email"],
+        messages=result["messages"],
+        total=result["total"],
+        timestamp=result["timestamp"],
     )

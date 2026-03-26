@@ -1,37 +1,36 @@
-"""Budget check endpoint — called by NomOS Plugin before_tool_call hook."""
+"""Budget endpoints — check and track per-agent costs via DB."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from nomos_api.services.budget import BudgetService
+from nomos_api.database import get_db
+from nomos_api.schemas import BudgetCheckRequest, BudgetTrackRequest, BudgetTrackResponse
+from nomos_api.services.budget import check_budget, track_cost
 
 router = APIRouter(prefix="/api", tags=["budget"])
 
-_budget_service = BudgetService()
-
-
-class BudgetCheckRequest(BaseModel):
-    agent_id: str
-    estimated_cost: float = 0.0
-
 
 @router.post("/budget/check")
-async def check_budget(request: BudgetCheckRequest) -> dict:
-    """Check if agent has budget for estimated cost.
+async def budget_check(
+    request: BudgetCheckRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Check if agent has budget for estimated cost. Returns 404 if agent unknown."""
+    result = await check_budget(db, request.agent_id, request.estimated_cost)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
+    return result
 
-    NOTE: BudgetService uses in-memory tracking (known limitation).
-    Default limit 100 EUR, warn_at 80%. To be replaced with DB-backed service.
-    """
-    current = _budget_service._costs.get(request.agent_id, 0.0)
-    projected = current + request.estimated_cost
-    limit = 100.0
-    warn_at = 80
-    result = _budget_service.check(request.agent_id, projected, limit, warn_at)
-    return {
-        "allowed": result.get("allowed", True),
-        "remaining": max(0, limit - projected),
-        "status": result.get("status", "normal"),
-        "error": None if result.get("allowed") else "Budget exceeded",
-    }
+
+@router.post("/budget/track", response_model=BudgetTrackResponse)
+async def budget_track(
+    request: BudgetTrackRequest,
+    db: AsyncSession = Depends(get_db),
+) -> BudgetTrackResponse:
+    """Track a cost against an agent's budget. Returns 404 if agent unknown."""
+    result = await track_cost(db, request.agent_id, request.cost)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
+    return BudgetTrackResponse(**result)

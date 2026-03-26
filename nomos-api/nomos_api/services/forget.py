@@ -1,40 +1,46 @@
-"""DSGVO Art. 17 Forget service — delete messages containing PII.
-
-Deletes all messages containing the search term (e.g., email address)
-from the Honcho message store. Preserves an audit trail entry that
-records the deletion event without storing the deleted content.
-"""
+"""DSGVO forget/export service — DB-backed via agent memory."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from nomos_api.services.honcho import HonchoClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from nomos_api.services.memory import delete_by_content, search_messages
 
 
-@dataclass
-class ForgetService:
-    """Implements DSGVO Art. 17 right to erasure against Honcho message store."""
+async def forget(db: AsyncSession, search_term: str) -> dict:
+    """Delete all messages containing search_term (Art. 17 DSGVO).
 
-    client: HonchoClient
+    Returns a dict with deletion count, audit metadata, and timestamp.
+    """
+    count = await delete_by_content(db, search_term)
+    return {
+        "deleted_messages": count,
+        "search_term": search_term,
+        "audit_event": "data.erased" if count > 0 else "",
+        "audit_preserved": True,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
-    def forget(self, search_term: str) -> dict:
-        """Delete all messages containing search_term and return audit result.
 
-        Returns a dict with:
-        - deleted_messages: number of messages deleted
-        - search_term: the term that was searched for
-        - audit_event: "data.erased" if any messages were deleted, empty otherwise
-        - audit_preserved: True (audit trail is always preserved)
-        - timestamp: ISO 8601 timestamp of the operation
-        """
-        deleted_count = self.client.delete_messages_by_content(search_term)
+async def export_data(db: AsyncSession, search_term: str) -> dict:
+    """Export all messages containing search_term (Art. 15 DSGVO).
 
-        return {
-            "deleted_messages": deleted_count,
-            "search_term": search_term,
-            "audit_event": "data.erased" if deleted_count > 0 else "",
-            "audit_preserved": True,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
+    Returns a dict with matching messages and total count.
+    """
+    messages = await search_messages(db, search_term)
+    return {
+        "email": search_term,
+        "messages": [
+            {
+                "agent_id": m.agent_id,
+                "session_id": m.session_id,
+                "role": m.role,
+                "content": m.content,
+            }
+            for m in messages
+        ],
+        "total": len(messages),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }

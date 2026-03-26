@@ -178,3 +178,32 @@ class ConfigRevision(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class AgentMemory(Base):
+    """Persistent memory store for agent conversations — replaces fake HonchoClient."""
+
+    __tablename__ = "agent_memory"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    agent_id: Mapped[str] = mapped_column(String(128), index=True)
+    session_id: Mapped[str] = mapped_column(String(128), index=True)
+    role: Mapped[str] = mapped_column(String(32))
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WorkspaceMount(Base):
+    """A mounted collection in an agent's workspace."""
+
+    __tablename__ = "workspace_mounts"
+    __table_args__ = (Index("ix_workspace_agent_collection", "agent_id", "collection_name", unique=True),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    collection_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

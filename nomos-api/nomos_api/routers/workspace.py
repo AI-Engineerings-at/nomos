@@ -2,54 +2,43 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.database import get_db
 from nomos_api.schemas import (
     WorkspaceInfoResponse,
     WorkspaceMountRequest,
     WorkspaceMountResponse,
 )
-from nomos_api.services.honcho import HonchoClient
-from nomos_api.services.workspace import WorkspaceService
+from nomos_api.services import workspace as workspace_svc
 
 router = APIRouter(prefix="/api", tags=["workspace"])
 
-_client = HonchoClient(base_url="http://localhost:5055")
-_workspace_service = WorkspaceService(_client)
-
-
-def get_workspace_service() -> WorkspaceService:
-    """Return the workspace service singleton."""
-    return _workspace_service
-
 
 @router.get("/workspace/{agent_id}", response_model=WorkspaceInfoResponse)
-async def get_workspace_info(agent_id: str) -> WorkspaceInfoResponse:
+async def get_workspace_info(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> WorkspaceInfoResponse:
     """Return workspace info and mounted collections for an agent."""
-    svc = get_workspace_service()
-    collections = svc.get_mounted_collections(agent_id)
-    is_active = svc.can_access(agent_id, agent_id, "read")
-    ws_id = svc._agent_workspaces.get(agent_id)
+    exists = await workspace_svc.agent_exists(db, agent_id)
+    collections = await workspace_svc.get_mounted_collections(db, agent_id)
     return WorkspaceInfoResponse(
         agent_id=agent_id,
-        workspace_id=ws_id,
+        workspace_id=agent_id if exists else None,
         mounted_collections=collections,
-        is_active=is_active,
+        is_active=exists,
     )
 
 
 @router.post("/workspace/mount", response_model=WorkspaceMountResponse)
-async def mount_collection(request: WorkspaceMountRequest) -> WorkspaceMountResponse:
+async def mount_collection(
+    request: WorkspaceMountRequest,
+    db: AsyncSession = Depends(get_db),
+) -> WorkspaceMountResponse:
     """Mount a collection to an agent's workspace."""
-    svc = get_workspace_service()
-    if request.agent_id not in svc._agent_workspaces:
-        svc.create_agent_workspace(request.agent_id)
-    result = svc.mount_collection(request.agent_id, request.collection_name)
-    if not result:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot mount collection for agent {request.agent_id}",
-        )
+    await workspace_svc.mount_collection(db, request.agent_id, request.collection_name)
     return WorkspaceMountResponse(
         agent_id=request.agent_id,
         collection_name=request.collection_name,
@@ -58,10 +47,12 @@ async def mount_collection(request: WorkspaceMountRequest) -> WorkspaceMountResp
 
 
 @router.post("/workspace/unmount", response_model=WorkspaceMountResponse)
-async def unmount_collection(request: WorkspaceMountRequest) -> WorkspaceMountResponse:
+async def unmount_collection(
+    request: WorkspaceMountRequest,
+    db: AsyncSession = Depends(get_db),
+) -> WorkspaceMountResponse:
     """Unmount a collection from an agent's workspace."""
-    svc = get_workspace_service()
-    result = svc.unmount_collection(request.agent_id, request.collection_name)
+    result = await workspace_svc.unmount_collection(db, request.agent_id, request.collection_name)
     if not result:
         raise HTTPException(
             status_code=404,

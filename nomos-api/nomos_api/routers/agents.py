@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from nomos_api.config import settings
 from nomos_api.database import get_db
-from nomos_api.models import Agent, AuditLog
+from nomos_api.models import Agent
 from nomos_api.schemas import (
     AgentCreateRequest,
     AgentPatchRequest,
@@ -18,53 +15,12 @@ from nomos_api.schemas import (
     HeartbeatResponse,
 )
 from nomos_api.services.agent_service import create_agent, check_fcl_limit_with_message
+from nomos_api.services.audit import write_audit_event as _write_audit_event
 from nomos_api.services.fleet_service import get_agent, update_agent_status
-from nomos_api.services.heartbeat import HeartbeatService
+from nomos_api.services.heartbeat import record_heartbeat as _record_heartbeat
 from nomos.core.events import EventType
-from nomos.core.hash_chain import HashChain
 
 router = APIRouter(prefix="/api", tags=["agents"])
-
-# Singleton heartbeat service for the application lifecycle
-_heartbeat_service = HeartbeatService()
-
-
-def get_heartbeat_service() -> HeartbeatService:
-    """Return the shared HeartbeatService instance."""
-    return _heartbeat_service
-
-
-async def _write_audit_event(
-    db: AsyncSession,
-    agent: Agent,
-    agent_id: str,
-    event_type: EventType,
-    data: dict,
-) -> None:
-    """Write an event to the on-disk hash chain and persist it to the DB."""
-    agent_dir = Path(agent.agents_dir).resolve()
-    safe_base = settings.agents_dir.resolve()
-    if not agent_dir.is_relative_to(safe_base):
-        return
-    audit_dir = agent_dir / "audit"
-    if not audit_dir.exists():
-        return
-    chain = HashChain(storage_dir=audit_dir)
-    entry = chain.append(
-        event_type=event_type,
-        agent_id=agent_id,
-        data=data,
-    )
-    audit_log = AuditLog(
-        agent_id=entry.agent_id,
-        sequence=entry.sequence,
-        event_type=entry.event_type,
-        data=entry.data,
-        chain_hash=entry.hash,
-        timestamp=entry.timestamp,
-    )
-    db.add(audit_log)
-    await db.commit()
 
 
 @router.post("/agents", response_model=AgentResponse, status_code=201)
@@ -94,11 +50,15 @@ async def create_new_agent(
 
 
 @router.post("/agents/{agent_id}/heartbeat", response_model=HeartbeatResponse)
-async def record_heartbeat(agent_id: str, request: HeartbeatRequest) -> HeartbeatResponse:
-    svc = get_heartbeat_service()
-    svc.record(agent_id, request.metrics)
-    status = svc.get_status(agent_id)
-    return HeartbeatResponse(agent_id=agent_id, status=status)
+async def record_heartbeat(
+    agent_id: str,
+    request: HeartbeatRequest,
+    db: AsyncSession = Depends(get_db),
+) -> HeartbeatResponse:
+    result = await _record_heartbeat(db, agent_id, request.metrics)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    return HeartbeatResponse(agent_id=result["agent_id"], status=result["status"])
 
 
 @router.patch("/agents/{agent_id}", response_model=dict)

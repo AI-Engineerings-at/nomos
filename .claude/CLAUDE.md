@@ -1,13 +1,4 @@
-# NomOS — Development Rules
-
-## Was ist NomOS?
-NomOS (Nomos = Gesetz + OS) ist ein standalone Docker-Produkt das EU AI Act Compliance fuer AI-Agenten erzwingt. Kunden starten `docker compose up -d` auf IHREM Server. NomOS ist LLM-provider-agnostic — der Kunde waehlt seinen Anbieter, NomOS dokumentiert und erzwingt die passende Compliance.
-
-**Leitsatz:** *"Jeder entwickelt fuer sich, wir fuer alle."*
-
-**Lizenz:** FCL (Fair Core License) — 3 Agents gratis mit vollem Funktionsumfang, ab 4 kommerziell.
-
-## HARD RULES (gelten fuer ALLE Agents)
+# HARD RULES — VOR ALLEM ANDEREN
 
 ```
 1. WEISST DU ES SICHER? Nein → LIES die Doku. Raten = VERBOTEN.
@@ -15,106 +6,42 @@ NomOS (Nomos = Gesetz + OS) ist ein standalone Docker-Produkt das EU AI Act Comp
 3. LANGSAM = GUT. Kein Output ohne Verstaendnis.
 ```
 
-## S9 VERBOTEN (ohne Ausnahme)
-1. **Quick-Fix** — Jeder Fix muss Root Cause adressieren.
-2. **Mock-Daten** — Keine Fake-Metriken, keine Dummy-Responses.
-3. **Platzhalter-Code** — Kein "TODO: implement later", kein "pass # placeholder".
-4. **Fake-Visualisierungen** — Keine Dashboards mit erfundenen Daten.
-5. **Skeleton-Dateien** — Keine Datei ohne echte Implementation + Test.
+Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 
-## Regeln R8-R12
+---
 
-### R8: Scope Validation Gate (BLOCKER)
-Vor JEDEM Code 3 Pflichtfragen beantworten:
-1. Welches Problem loest dieser Code fuer den KUNDEN?
-2. Kann ein Fremder das auf seinem Server deployen?
-3. Gibt es einen Test der beweist dass es funktioniert?
+# NomOS — EU AI Act Compliance Control Plane
 
-### R9: Architecture Gate (GATE)
-Kein Code ohne:
-- User Story ("Als KMU-Chef will ich...")
-- Interface-Definition (Inputs, Outputs, Fehler)
-- Test-Strategie
+> Standalone Docker-Produkt. Kunden starten `docker compose up -d` auf IHREM Server.
+> LLM-provider-agnostic. FCL: 3 Agents gratis, ab 4 kommerziell.
+> Leitsatz: *"Jeder entwickelt fuer sich, wir fuer alle."*
 
-### R10: Anti-Skeleton (BLOCKER)
-Keine Datei wird committed die:
-- "coming soon" enthaelt
-- Eine leere Funktion hat (ausser abstrakte Interfaces)
-- Einen "TODO" Kommentar hat
-- Keinen zugehoerigen Test hat
-
-### R11: Session-Limit (GATE)
-- Max 1 Produkt-Komponente pro Session
-- Review-Checkpoint nach jedem Task
-
-### R13: Post-Phase Zyklus (GATE — nach JEDER Phase)
-Planung → Ausfuehrung → Pruefung → Korrektur → Rescope/Plan ausrichten → Weiter
-
-Nach Abschluss jeder Phase MUSS dieser Zyklus komplett durchlaufen werden:
-1. **Pruefung:** IST/SOLL Vergleich — jeden Endpoint, Service, Datei gegen Plan pruefen
-2. **Pruefung:** Alle Tests auf main ausfuehren (CLI + API + Plugin)
-3. **Korrektur:** Luecken identifizieren und schliessen (Gap-Fix Sprint)
-4. **Rescope:** Restlichen Plan anpassen — was hat sich durch die Erkenntnisse geaendert?
-   - Sind Annahmen fuer spaetere Phasen noch gueltig?
-   - Muessen Abhaengigkeiten neu bewertet werden?
-   - Hat sich der Scope verschoben?
-5. **Plan ausrichten:** Master Plan aktualisieren mit tatsaechlichem Stand + Anpassungen
-
-Kein Phasen-Uebergang ohne abgeschlossenen Zyklus.
-
-### R14: Agent-Fuehrung durch Plan (PFLICHT fuer Worktree-Agents)
-Jeder Agent der einen Sub-Plan ausfuehrt MUSS:
-- Den KOMPLETTEN Plan lesen (nicht nur seine Tasks)
-- Die Endpoint-Liste aus dem Master Plan gegen seine Arbeit abgleichen
-- Am Ende einen Self-Check Report erstellen: "Geplant vs. Gebaut"
-- Fehlende Endpoints/Tests explizit als GAP melden, nicht stillschweigend ueberspringen
-
-### R12: Produkt/Infra Trennung (BLOCKER)
-- KEINE internen IPs (10.40.10.x) in Produkt-Code
-- KEINE Referenz zu .80, .82, .83, .90, .91, .99
-- NomOS ist STANDALONE — laeuft auf dem Server des KUNDEN
-- Interne Infra ist NUR die Dev-Umgebung
+## Universelle Rules
+- **Safety S1-S10**: siehe `phantom-ai/.claude/rules/01-safety-rules.md`
+- **Firma-Regeln**: siehe `Playbook01/.claude/CLAUDE.md`
+- **Fehler + Muster**: siehe `phantom-ai/.claude/knowledge/ERRORS.md` + `LEARNINGS.md`
 
 ## Tech Stack
-- Python 3.12 (Backend: FastAPI, CLI: Click, Models: Pydantic v2)
-- TypeScript strict (Console: Next.js 15, Plugin: OpenClaw)
-- PostgreSQL + pgvector (Datenbank)
-- Valkey (Event Bus, Queue) — BSD-3, Drop-in Redis Replacement
-- Piper TTS (MIT) + Whisper.cpp (MIT) — optionale lokale Sprach-Services
-- Docker Compose (Deployment)
-- pytest + ruff (Testing + Linting)
-- GitHub Actions (CI/CD)
+- Python 3.12 (FastAPI, Click, Pydantic v2, pytest, ruff)
+- TypeScript strict (Next.js 15, OpenClaw Plugin SDK, vitest, Playwright)
+- PostgreSQL + pgvector, Valkey (BSD-3 Redis Replacement)
+- Piper TTS (MIT) + Whisper.cpp (MIT) — optional
+- Docker Compose (Deployment), GitHub Actions (CI/CD)
 
-## Repo-Struktur (Stand: 25.03.2026)
-```
-nomos/
-├── nomos-cli/nomos/core/    # manifest, validator, hash_chain, events, compliance, gate, forge
-├── nomos-cli/nomos/cli.py   # CLI: hire, verify, fleet, audit, gate
-├── nomos-cli/tests/          # 84 Tests
-├── nomos-api/nomos_api/     # FastAPI: config, database, models, schemas, services, routers
-├── nomos-api/tests/          # 14 Tests
-├── templates/                # Agent Templates (Mani, Rico)
-├── scripts/e2e-test.sh       # E2E Test Script
-├── docker-compose.yml        # Master Stack
-├── docs/
-│   ├── superpowers/specs/    # Design Spec v4
-│   ├── superpowers/plans/    # Master Plan + Sub-Projekt Plaene
-│   ├── reviews/              # Externes Feedback
-│   ├── de/                   # Deutsche Doku
-│   └── *.md                  # Englische Doku
-├── _archive/                 # Archivierte v1-Komponenten
-│   ├── console-v1/           # Altes Next.js Dashboard (wird neu gebaut)
-│   ├── plugin-v1/            # Altes OpenClaw Plugin (wird neu gebaut)
-│   ├── schemas-v1/           # Alte YAML Schemas
-│   └── plans-v1/             # Alte Implementation Plans
-└── .claude/                  # Dev-Regeln + Agent-Definitionen
-```
+## NomOS-spezifische Rules (.claude/rules/)
+- `01-produkt-standalone.md` — Produkt/Infra Trennung, keine internen IPs
+- `02-integration-first.md` — Stack zuerst, Mocks verboten, Types von API ableiten
+- `03-agent-fuehrung.md` — Plan lesen, Self-Check, GAP melden
+- `04-pdca-zyklus.md` — Post-Phase Pruefung, Korrektur, Rescope
 
-## Implementation Plan
-- **Master Plan:** `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md`
-- **Design Spec:** `docs/superpowers/specs/2026-03-24-nomos-v2-design.md` (v4)
-- **6 Phasen, 9 Sub-Projekte (A-I)**
-- **Naechste Phase:** 0 (Repo-Reorg) → dann Phase 1 (Plugin Core + Auth)
+## Wo finde ich was
+| Thema | Pfad |
+|-------|------|
+| Design Spec | `docs/superpowers/specs/2026-03-24-nomos-v2-design.md` |
+| Master Plan | `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md` |
+| OpenClaw/NemoClaw Referenz | `docs/references/openclaw-nemoclaw-reference.md` |
+| Postmortem | `docs/reports/2026-03-25-session-postmortem.md` |
+| Sub-Plaene | `docs/superpowers/plans/2026-03-25-sub-*.md` |
 
 ## Sprache
 - Code + Commits: Englisch

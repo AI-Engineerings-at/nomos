@@ -75,10 +75,13 @@ async def seeded_user(auth_engine):
 
 
 async def test_login_success(auth_client, seeded_user):
-    resp = await auth_client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "SecureP@ss123!",
-    })
+    resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "SecureP@ss123!",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["message"] == "Login successful"
@@ -89,28 +92,37 @@ async def test_login_success(auth_client, seeded_user):
 
 
 async def test_login_wrong_password(auth_client, seeded_user):
-    resp = await auth_client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "WrongPassword1!",
-    })
+    resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "WrongPassword1!",
+        },
+    )
     assert resp.status_code == 401
     assert "Invalid" in resp.json()["detail"]
 
 
 async def test_login_unknown_user(auth_client):
-    resp = await auth_client.post("/api/auth/login", json={
-        "email": "nobody@nomos.local",
-        "password": "SomePassword1!",
-    })
+    resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "nobody@nomos.local",
+            "password": "SomePassword1!",
+        },
+    )
     assert resp.status_code == 401
 
 
 async def test_logout(auth_client, seeded_user):
     # Login first
-    login_resp = await auth_client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "SecureP@ss123!",
-    })
+    login_resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "SecureP@ss123!",
+        },
+    )
     assert login_resp.status_code == 200
 
     # Logout
@@ -123,14 +135,20 @@ async def test_logout(auth_client, seeded_user):
 async def test_login_rate_limited(auth_client, seeded_user):
     """After 5 failed attempts, login is blocked."""
     for _ in range(5):
-        await auth_client.post("/api/auth/login", json={
+        await auth_client.post(
+            "/api/auth/login",
+            json={
+                "email": "admin@nomos.local",
+                "password": "WrongPassword1!",
+            },
+        )
+    resp = await auth_client.post(
+        "/api/auth/login",
+        json={
             "email": "admin@nomos.local",
-            "password": "WrongPassword1!",
-        })
-    resp = await auth_client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "SecureP@ss123!",
-    })
+            "password": "SecureP@ss123!",
+        },
+    )
     assert resp.status_code == 429
     assert "Rate limit" in resp.json()["detail"]
 
@@ -142,10 +160,13 @@ async def test_2fa_setup_requires_auth(auth_client):
 
 async def test_2fa_setup_and_verify(auth_client, seeded_user):
     # Login first
-    login_resp = await auth_client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "SecureP@ss123!",
-    })
+    login_resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "SecureP@ss123!",
+        },
+    )
     cookies = dict(login_resp.cookies)
 
     # Setup 2FA
@@ -157,10 +178,55 @@ async def test_2fa_setup_and_verify(auth_client, seeded_user):
 
     # Verify with valid TOTP code
     totp = pyotp.TOTP(data["secret"])
-    verify_resp = await auth_client.post("/api/auth/2fa/verify", json={
-        "code": totp.now(),
-    }, cookies=cookies)
+    verify_resp = await auth_client.post(
+        "/api/auth/2fa/verify",
+        json={
+            "code": totp.now(),
+        },
+        cookies=cookies,
+    )
     assert verify_resp.status_code == 200
+    verify_data = verify_resp.json()
+    assert verify_data["verified"] is True
+    assert verify_data["user"] is not None
+    assert verify_data["user"]["email"] == "admin@nomos.local"
+    assert verify_data["user"]["role"] == "admin"
+    assert verify_data["user"]["id"] == "user-test-1"
+
+
+async def test_2fa_verify_returns_user_data(auth_client, seeded_user):
+    """2FA verify endpoint returns user info alongside verified flag."""
+    # Login
+    login_resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "SecureP@ss123!",
+        },
+    )
+    cookies = dict(login_resp.cookies)
+
+    # Setup 2FA
+    setup_resp = await auth_client.post("/api/auth/2fa/setup", cookies=cookies)
+    secret = setup_resp.json()["secret"]
+
+    # Verify
+    totp = pyotp.TOTP(secret)
+    verify_resp = await auth_client.post(
+        "/api/auth/2fa/verify",
+        json={
+            "code": totp.now(),
+        },
+        cookies=cookies,
+    )
+
+    assert verify_resp.status_code == 200
+    data = verify_resp.json()
+    assert data["verified"] is True
+    assert data["user"]["email"] == "admin@nomos.local"
+    assert data["user"]["role"] == "admin"
+    assert data["user"]["id"] == "user-test-1"
+    assert "name" in data["user"]
 
 
 async def test_recovery_flow(auth_client, auth_engine, seeded_user):
@@ -173,22 +239,27 @@ async def test_recovery_flow(auth_client, auth_engine, seeded_user):
     factory = async_sessionmaker(auth_engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
         from sqlalchemy import update
-        await session.execute(
-            update(User).where(User.id == "user-test-1").values(recovery_key_hash=recovery_hash)
-        )
+
+        await session.execute(update(User).where(User.id == "user-test-1").values(recovery_key_hash=recovery_hash))
         await session.commit()
 
     # Use recovery to reset password
-    resp = await auth_client.post("/api/auth/recovery", json={
-        "email": "admin@nomos.local",
-        "recovery_phrase": recovery_phrase,
-        "new_password": "NewSecureP@ss1!",
-    })
+    resp = await auth_client.post(
+        "/api/auth/recovery",
+        json={
+            "email": "admin@nomos.local",
+            "recovery_phrase": recovery_phrase,
+            "new_password": "NewSecureP@ss1!",
+        },
+    )
     assert resp.status_code == 200
 
     # Login with new password
-    login_resp = await auth_client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "NewSecureP@ss1!",
-    })
+    login_resp = await auth_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "NewSecureP@ss1!",
+        },
+    )
     assert login_resp.status_code == 200

@@ -132,6 +132,7 @@ class TotpVerifyRequest(BaseModel):
 
 class TotpVerifyResponse(BaseModel):
     verified: bool
+    user: LoginUserInfo | None = None
 
 
 class RecoveryRequest(BaseModel):

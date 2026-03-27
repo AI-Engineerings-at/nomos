@@ -109,7 +109,9 @@ async def login(
             email=user.email,
             name=user.email.split("@")[0],
             role=user.role,
-        ) if not has_2fa else None,
+        )
+        if not has_2fa
+        else None,
         message="Login successful",
     )
 
@@ -155,7 +157,15 @@ async def verify_2fa(
     await db.commit()
 
     logger.info("2FA enabled for %s", current_user.email)
-    return TotpVerifyResponse(verified=True)
+    return TotpVerifyResponse(
+        verified=True,
+        user=LoginUserInfo(
+            id=str(current_user.id),
+            email=current_user.email,
+            name=current_user.email.split("@")[0],
+            role=current_user.role,
+        ),
+    )
 
 
 @router.post("/recovery", response_model=RecoveryResponse)

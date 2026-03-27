@@ -118,13 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (code: string): Promise<void> => {
       setError(null);
       try {
-        const response = await api.post<{ user: MeResponse }>('/auth/totp/verify', { code });
-        setUser({
-          id: response.user.id,
-          email: response.user.email,
-          name: response.user.name,
-          role: response.user.role,
-        });
+        const response = await api.post<{ verified: boolean; user?: MeResponse }>('/auth/2fa/verify', { code });
+        if (response.user) {
+          setUser({
+            id: response.user.id,
+            email: response.user.email,
+            name: response.user.name,
+            role: response.user.role,
+          });
+        }
       } catch (err) {
         if (err instanceof ApiError) {
           setError(err.detail);

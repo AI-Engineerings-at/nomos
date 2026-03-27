@@ -42,7 +42,7 @@
     },
     "auth": {
       "mode": "token",
-      "token": "nomos-dev-token"
+      "token": "${NOMOS_GATEWAY_TOKEN}"
     }
   }
 }

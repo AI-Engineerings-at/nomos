@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.config import settings
@@ -24,6 +24,48 @@ from nomos.core.events import validate_event_type
 from nomos.core.hash_chain import HashChain, verify_chain
 
 router = APIRouter(prefix="/api", tags=["audit"])
+
+
+@router.get("/audit", response_model=AuditResponse)
+async def get_global_audit(
+    limit: int = 100,
+    offset: int = 0,
+    agent_id: str | None = None,
+    event_type: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> AuditResponse:
+    """Global audit trail -- aggregates all agents with optional filters."""
+    query = select(AuditLog).order_by(AuditLog.id.desc())
+    count_query = select(func.count()).select_from(AuditLog)
+
+    if agent_id:
+        query = query.where(AuditLog.agent_id == agent_id)
+        count_query = count_query.where(AuditLog.agent_id == agent_id)
+    if event_type:
+        query = query.where(AuditLog.event_type == event_type)
+        count_query = count_query.where(AuditLog.event_type == event_type)
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    result = await db.execute(query.offset(offset).limit(limit))
+    entries = result.scalars().all()
+
+    return AuditResponse(
+        agent_id="*",
+        entries=[
+            AuditEntryResponse(
+                sequence=e.sequence,
+                event_type=e.event_type,
+                agent_id=e.agent_id,
+                data=e.data or {},
+                chain_hash=e.chain_hash,
+                timestamp=e.timestamp,
+            )
+            for e in entries
+        ],
+        total=total,
+    )
 
 
 @router.get("/agents/{agent_id}/audit", response_model=AuditResponse)
@@ -76,9 +118,7 @@ async def export_agent_audit(
     return PlainTextResponse(
         content,
         media_type="application/jsonl",
-        headers={
-            "Content-Disposition": f'attachment; filename="{agent_id}-audit-chain.jsonl"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{agent_id}-audit-chain.jsonl"'},
     )
 
 

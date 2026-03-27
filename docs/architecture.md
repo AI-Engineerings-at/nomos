@@ -16,6 +16,11 @@
 |          | HTTP (internal)    |                |      |
 |          +------------------------------------+      |
 |          | asyncpg (PostgreSQL)                       |
+|  +----------------+  +----------------+              |
+|  |    valkey      |  | openclaw-gw    |              |
+|  |  (BSD-3 cache) |  | (LLM gateway)  |              |
+|  |   Port 6379    |  |   Port 8080    |              |
+|  +----------------+  +----------------+              |
 +-----------------------------------------------------+
            |
            v
@@ -39,6 +44,53 @@
 
 ## Components
 
+### nomos-api (FastAPI — Python 3.12)
+
+REST API with 17 routers and 47+ endpoints.
+
+#### Routers
+
+| Router | Prefix | Responsibility |
+|--------|--------|---------------|
+| `routers/health.py` | `/health`, `/api/health` | Service health check |
+| `routers/auth.py` | `/api/auth` | Login, logout, JWT sessions, 2FA setup/verify, recovery |
+| `routers/agents.py` | `/api/agents` | Agent CRUD, heartbeat, pause, resume, kill, retire |
+| `routers/fleet.py` | `/api/fleet` | Fleet listing, agent detail |
+| `routers/compliance.py` | `/api/compliance`, `/api/agents/{id}/compliance` | Compliance checks, gate, matrix |
+| `routers/audit.py` | `/api/audit` | Audit trail, export, verification, entry creation |
+| `routers/users.py` | `/api/users` | User CRUD, bootstrap |
+| `routers/tasks.py` | `/api/tasks` | Task CRUD |
+| `routers/approvals.py` | `/api/approvals` | Approval workflow (create, approve, reject) |
+| `routers/costs.py` | `/api/costs` | Cost tracking per agent |
+| `routers/budget.py` | `/api/budget` | Budget check and tracking |
+| `routers/pii.py` | `/api/pii` | PII filtering |
+| `routers/incidents.py` | `/api/incidents` | Incident CRUD |
+| `routers/workspace.py` | `/api/workspace` | Workspace mount/unmount |
+| `routers/dsgvo.py` | `/api/dsgvo` | DSGVO forget and export |
+| `routers/proxy.py` | `/api/proxy` | LLM proxy status, chat relay |
+| `routers/settings.py` | `/api/settings` | System settings |
+
+#### ORM Models
+
+| Model | Table | Description |
+|-------|-------|-------------|
+| `Agent` | `agents` | Agent registry with manifest, status, compliance state |
+| `AuditLog` | `audit_log` | Queryable index of audit chain entries |
+| `IncidentRecord` | `incidents` | Security and compliance incidents |
+| `User` | `users` | User accounts with roles and 2FA |
+| `Task` | `tasks` | Task assignments for agents |
+| `Approval` | `approvals` | Approval workflow records |
+| `ConfigRevision` | `config_revisions` | Configuration change history |
+| `AgentMemory` | `agent_memory` | Agent conversation/context memory |
+| `WorkspaceMount` | `workspace_mounts` | Mounted workspace directories |
+
+#### Auth Flow
+
+Two authentication mechanisms run in parallel:
+
+1. **JWT Cookie (browser)** — `POST /api/auth/login` returns a signed JWT in an HttpOnly cookie. The console uses this for all subsequent requests. Supports optional 2FA via TOTP.
+2. **X-NomOS-API-Key (plugin/service)** — The OpenClaw plugin and external services authenticate via an API key header. Configured per-environment.
+
 ### nomos-cli (Python CLI)
 
 The core library and command-line tool. Contains all business logic.
@@ -54,49 +106,57 @@ The core library and command-line tool. Contains all business logic.
 | `core/events.py` | Canonical event type definitions (14 event types) |
 | `cli.py` | Click CLI with 5 commands: hire, gate, verify, fleet, audit |
 
-Test coverage: 84 tests.
+### nomos-console (Next.js 15 / React 19)
 
-### nomos-api (FastAPI)
+Web dashboard with 20 pages, dark mode default, bilingual DE/EN.
 
-REST API wrapping the core library for remote access and fleet management.
+**Admin pages:** Dashboard, team, hire, approvals, costs, audit, compliance, diagnostics, incidents, users, tasks, settings.
 
-| Module | Responsibility |
-|--------|---------------|
-| `config.py` | Settings from NOMOS_ environment variables (Pydantic BaseSettings) |
-| `database.py` | AsyncSession factory (SQLAlchemy + asyncpg) |
-| `models.py` | ORM models: Agent, AuditLog |
-| `schemas.py` | Pydantic request/response schemas (8 models) |
-| `services/agent_service.py` | Agent creation: forge + persist to DB |
-| `services/fleet_service.py` | Fleet CRUD operations |
-| `routers/health.py` | GET /health |
-| `routers/agents.py` | POST /api/agents |
-| `routers/fleet.py` | GET /api/fleet, GET /api/fleet/{id} |
-| `routers/compliance.py` | GET /api/agents/{id}/compliance, POST /api/agents/{id}/gate |
-| `routers/audit.py` | GET /api/agents/{id}/audit, GET /api/audit/verify/{id} |
+**User pages:** Dashboard, chat, tasks, help.
 
-Test coverage: 14 tests.
-
-### nomos-console (Next.js 15)
-
-Web dashboard for visual fleet management:
-- Fleet overview with agent list
-- Agent detail view with manifest data
-- Compliance status and document check
-- Audit trail viewer
-
-Communicates with nomos-api via internal Docker network HTTP.
+Communicates with nomos-api via Next.js rewrites over the internal Docker network.
 
 ### nomos-plugin (TypeScript)
 
-OpenClaw gateway plugin providing `/nomos` commands for chat-based agent interaction.
+OpenClaw gateway plugin providing 11 hooks:
+
+| Hook | Purpose |
+|------|---------|
+| `before-agent-start` | Compliance gate check before agent activation |
+| `before-tool-call` | Policy enforcement before tool execution |
+| `after-tool-call` | Audit logging after tool execution |
+| `message-sending` | PII filtering on outbound messages |
+| `message-received` | Input validation on inbound messages |
+| `tool-result-persist` | Audit trail for tool results |
+| `gateway-start` | Plugin initialization |
+| `session-start` | Session tracking |
+| `session-end` | Session cleanup |
+| `agent-end` | Agent lifecycle completion |
+| `on-error` | Error reporting and incident creation |
 
 ### PostgreSQL 16 + pgvector
 
-Stores the agent registry and indexed audit entries. The database is the fleet registry; the JSONL files on disk are the source of truth for audit chains.
+Stores the agent registry, users, tasks, approvals, incidents, and indexed audit entries. The JSONL files on disk remain the source of truth for audit chain integrity.
+
+### Valkey
+
+BSD-3 licensed Redis replacement. Used for session caching, rate limiting, and ephemeral state.
 
 ---
 
 ## Data Flow
+
+### Console to API
+
+```
+Browser → Next.js (port 3040) → rewrite /api/* → FastAPI (port 8060) → PostgreSQL
+```
+
+### Console to LLM (Chat)
+
+```
+Browser → Next.js → API Proxy (/api/proxy/chat) → OpenClaw Gateway (port 8080) → LLM Provider
+```
 
 ### Agent Creation (nomos hire / POST /api/agents)
 
@@ -233,6 +293,12 @@ Modifying any field in any entry invalidates that entry's hash and breaks the ch
 
 ## Security Model
 
+### Authentication
+
+- **JWT Cookie** — HttpOnly, Secure, SameSite=Strict. Issued on login, checked by global middleware.
+- **API Key** — `X-NomOS-API-Key` header for plugin and service-to-service calls.
+- **2FA** — Optional TOTP-based two-factor authentication with recovery codes.
+
 ### Non-root Docker Container
 
 The API container creates a dedicated `nomos` user and runs as that user:
@@ -263,7 +329,7 @@ The manifest defines PII filter configuration:
 - `pii_filter.mask_addresses` — mask physical addresses
 - `pii_filter.keep_names` — whether to preserve names
 
-PII filtering requires the Honcho memory backend. With the local backend, the PII filter configuration is stored in the manifest but filtering is not active. The DPIA document clearly states this limitation.
+The `POST /api/pii/filter` endpoint applies these rules at runtime. The DPIA document states filtering limitations per backend.
 
 ### Manifest Integrity
 

@@ -4,365 +4,181 @@ Base URL: `http://localhost:8060`
 
 All endpoints return JSON. The API is built with FastAPI and provides automatic OpenAPI documentation at `/docs` (Swagger UI) and `/redoc` (ReDoc) when running.
 
+**Authentication:** Most endpoints require either a JWT cookie (browser sessions) or an `X-NomOS-API-Key` header (plugin/service calls). Exceptions are noted below.
+
 ---
 
 ## Health
 
-### GET /health
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | No | Service health check (status, service name, version) |
+| `GET` | `/api/health` | No | Alias — same response as `/health` |
 
-Check service health and version.
+---
 
-**Response:** `200 OK`
+## Auth
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | string | Service status (`"ok"`) |
-| `service` | string | Service name (`"NomOS Fleet API"`) |
-| `version` | string | API version (`"0.1.0"`) |
-
-**Example:**
-
-```bash
-curl http://localhost:8060/health
-```
-
-```json
-{
-  "status": "ok",
-  "service": "NomOS Fleet API",
-  "version": "0.1.0"
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/auth/login` | No | Authenticate with email + password, returns JWT cookie; includes `requires_2fa` flag |
+| `GET` | `/api/auth/me` | JWT | Return the currently authenticated user |
+| `POST` | `/api/auth/logout` | JWT | Clear the JWT cookie and end the session |
+| `POST` | `/api/auth/2fa/setup` | JWT | Generate TOTP secret and QR code for 2FA enrollment |
+| `POST` | `/api/auth/2fa/verify` | JWT | Verify a TOTP code to complete 2FA setup or login |
+| `POST` | `/api/auth/recovery` | No | Authenticate using a recovery code when 2FA device is unavailable |
 
 ---
 
 ## Agents
 
-### POST /api/agents
-
-Create a new AI agent. Generates the agent directory with manifest, compliance folder, and audit chain. Persists the agent to the database.
-
-**Request body:**
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | yes | — | Agent name (1-256 chars), e.g. `"Mani Ruf"` |
-| `role` | string | yes | — | Agent role (1-256 chars), e.g. `"external-secretary"` |
-| `company` | string | yes | — | Company name (1-256 chars), e.g. `"Acme GmbH"` |
-| `email` | string | yes | — | Contact email, e.g. `"mani@acme.at"` |
-| `risk_class` | string | no | `"limited"` | EU AI Act risk class: `"minimal"`, `"limited"`, or `"high"` |
-
-**Response:** `201 Created`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Generated agent ID (slugified from name) |
-| `name` | string | Agent name |
-| `role` | string | Agent role |
-| `company` | string | Company name |
-| `email` | string | Contact email |
-| `risk_class` | string | EU AI Act risk class |
-| `status` | string | Agent status (`"created"`) |
-| `manifest_hash` | string | SHA-256 hash of the agent manifest |
-| `compliance_status` | string | Current compliance status (`"pending"`, `"passed"`, `"blocked"`) |
-| `created_at` | string | ISO 8601 creation timestamp |
-| `updated_at` | string | ISO 8601 last update timestamp |
-
-**Error:** `400 Bad Request` if agent directory already exists or validation fails.
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:8060/api/agents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Mani Ruf",
-    "role": "external-secretary",
-    "company": "Acme GmbH",
-    "email": "mani@acme.at",
-    "risk_class": "limited"
-  }'
-```
-
-```json
-{
-  "id": "mani-ruf",
-  "name": "Mani Ruf",
-  "role": "external-secretary",
-  "company": "Acme GmbH",
-  "email": "mani@acme.at",
-  "risk_class": "limited",
-  "status": "created",
-  "manifest_hash": "a1b2c3d4e5f6...",
-  "compliance_status": "blocked",
-  "created_at": "2026-03-24T10:00:00+00:00",
-  "updated_at": "2026-03-24T10:00:00+00:00"
-}
-```
-
-Note: `compliance_status` is `"blocked"` after creation because compliance documents have not been generated yet. Run the compliance gate to generate them.
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/agents` | JWT/Key | Create a new agent (manifest, hash chain, DB record) |
+| `PATCH` | `/api/agents/{id}` | JWT/Key | Update agent fields (role, risk class, status, etc.) |
+| `POST` | `/api/agents/{id}/heartbeat` | JWT/Key | Record an agent heartbeat (marks agent as alive) |
+| `POST` | `/api/agents/{id}/pause` | JWT/Key | Pause a running agent |
+| `POST` | `/api/agents/{id}/resume` | JWT/Key | Resume a paused agent |
+| `POST` | `/api/agents/{id}/kill` | JWT/Key | Immediately terminate an agent (kill switch) |
+| `POST` | `/api/agents/{id}/retire` | JWT/Key | Retire an agent permanently |
 
 ---
 
 ## Fleet
 
-### GET /api/fleet
-
-List all agents in the fleet registry.
-
-**Response:** `200 OK`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `agents` | array | List of `AgentResponse` objects |
-| `total` | integer | Total number of agents |
-
-**Example:**
-
-```bash
-curl http://localhost:8060/api/fleet
-```
-
-```json
-{
-  "agents": [
-    {
-      "id": "mani-ruf",
-      "name": "Mani Ruf",
-      "role": "external-secretary",
-      "company": "Acme GmbH",
-      "email": "mani@acme.at",
-      "risk_class": "limited",
-      "status": "created",
-      "manifest_hash": "a1b2c3d4e5f6...",
-      "compliance_status": "passed",
-      "created_at": "2026-03-24T10:00:00+00:00",
-      "updated_at": "2026-03-24T10:15:00+00:00"
-    }
-  ],
-  "total": 1
-}
-```
-
-### GET /api/fleet/{agent_id}
-
-Get details for a single agent.
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agent_id` | string | Agent ID (e.g. `"mani-ruf"`) |
-
-**Response:** `200 OK` — `AgentResponse` object (same schema as in fleet list).
-
-**Error:** `404 Not Found` if agent does not exist.
-
-**Example:**
-
-```bash
-curl http://localhost:8060/api/fleet/mani-ruf
-```
-
-```json
-{
-  "id": "mani-ruf",
-  "name": "Mani Ruf",
-  "role": "external-secretary",
-  "company": "Acme GmbH",
-  "email": "mani@acme.at",
-  "risk_class": "limited",
-  "status": "created",
-  "manifest_hash": "a1b2c3d4e5f6...",
-  "compliance_status": "passed",
-  "created_at": "2026-03-24T10:00:00+00:00",
-  "updated_at": "2026-03-24T10:15:00+00:00"
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/fleet` | JWT/Key | List all agents in the fleet registry |
+| `GET` | `/api/fleet/{id}` | JWT/Key | Get details for a single agent |
 
 ---
 
 ## Compliance
 
-### GET /api/agents/{agent_id}/compliance
-
-Check compliance status for an agent. Reads the manifest and verifies all required documents exist.
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agent_id` | string | Agent ID |
-
-**Response:** `200 OK`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `agent_id` | string | Agent ID |
-| `status` | string | `"passed"`, `"warning"`, or `"blocked"` |
-| `missing_documents` | array | List of missing document names |
-| `errors` | array | Blocking error messages |
-| `warnings` | array | Non-blocking warning messages |
-
-**Error:** `404 Not Found` if agent does not exist. `400 Bad Request` if agent directory is invalid.
-
-**Example:**
-
-```bash
-curl http://localhost:8060/api/agents/mani-ruf/compliance
-```
-
-```json
-{
-  "agent_id": "mani-ruf",
-  "status": "blocked",
-  "missing_documents": [
-    "dpia",
-    "verarbeitungsverzeichnis",
-    "art50_transparency",
-    "art14_killswitch",
-    "art12_logging"
-  ],
-  "errors": [
-    "Missing 5 required document(s): dpia, verarbeitungsverzeichnis, art50_transparency, art14_killswitch, art12_logging"
-  ],
-  "warnings": []
-}
-```
-
-### POST /api/agents/{agent_id}/gate
-
-Generate all required compliance documents for an agent and re-check compliance. This is the API equivalent of `nomos gate`.
-
-**Path parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agent_id` | string | Agent ID |
-
-**Request body:** None.
-
-**Response:** `200 OK` — Same schema as `GET /api/agents/{agent_id}/compliance`.
-
-After successful generation, the response `status` will be `"passed"` and `missing_documents` will be empty.
-
-**Error:** `404 Not Found` if agent does not exist. `400 Bad Request` if agent directory is invalid.
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:8060/api/agents/mani-ruf/gate
-```
-
-```json
-{
-  "agent_id": "mani-ruf",
-  "status": "passed",
-  "missing_documents": [],
-  "errors": [],
-  "warnings": []
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/agents/{id}/compliance` | JWT/Key | Check compliance status for an agent |
+| `POST` | `/api/agents/{id}/gate` | JWT/Key | Generate compliance documents and re-check |
+| `GET` | `/api/compliance/matrix` | JWT/Key | Compliance matrix across all agents |
+| `POST` | `/api/compliance/gate` | JWT/Key | Alias — run compliance gate (plugin compatibility) |
 
 ---
 
 ## Audit
 
-### GET /api/agents/{agent_id}/audit
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/audit` | JWT/Key | List audit entries (filterable by agent, event type, date range) |
+| `GET` | `/api/agents/{id}/audit` | JWT/Key | Get the full audit trail for a specific agent |
+| `GET` | `/api/agents/{id}/audit/export` | JWT/Key | Export agent audit trail (downloadable format) |
+| `GET` | `/api/audit/verify/{id}` | JWT/Key | Cryptographically verify audit chain integrity for an agent |
+| `POST` | `/api/audit/entry` | JWT/Key | Manually append an entry to the audit trail |
 
-Get the full audit trail for an agent. Returns all entries from the database, ordered by sequence number.
+---
 
-**Path parameters:**
+## Users
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agent_id` | string | Agent ID |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/users` | JWT | List all users |
+| `POST` | `/api/users` | JWT | Create a new user account |
+| `PATCH` | `/api/users/{id}` | JWT | Update user fields (role, email, status) |
+| `DELETE` | `/api/users/{id}` | JWT | Delete a user account |
+| `POST` | `/api/users/bootstrap` | No | Create the initial admin user (only works when no users exist) |
 
-**Response:** `200 OK`
+---
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `agent_id` | string | Agent ID |
-| `entries` | array | List of audit entries |
-| `total` | integer | Total number of entries |
+## Tasks
 
-Each entry contains:
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/tasks` | JWT/Key | List tasks (filterable by agent, status) |
+| `GET` | `/api/tasks/{id}` | JWT/Key | Get a single task by ID |
+| `POST` | `/api/tasks` | JWT/Key | Create a new task assignment |
+| `PATCH` | `/api/tasks/{id}` | JWT/Key | Update task status or fields |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `sequence` | integer | Entry sequence number (0-based) |
-| `event_type` | string | Event type (e.g. `"agent.created"`) |
-| `agent_id` | string | Agent ID |
-| `data` | object | Event-specific data |
-| `chain_hash` | string | SHA-256 hash of this entry |
-| `timestamp` | string | ISO 8601 UTC timestamp |
+---
 
-**Error:** `404 Not Found` if agent does not exist.
+## Approvals
 
-**Example:**
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/approvals` | JWT | List pending and resolved approvals |
+| `POST` | `/api/approvals` | JWT/Key | Create a new approval request |
+| `POST` | `/api/approvals/{id}/approve` | JWT | Approve a pending request |
+| `POST` | `/api/approvals/{id}/reject` | JWT | Reject a pending request |
 
-```bash
-curl http://localhost:8060/api/agents/mani-ruf/audit
-```
+---
 
-```json
-{
-  "agent_id": "mani-ruf",
-  "entries": [
-    {
-      "sequence": 0,
-      "event_type": "agent.created",
-      "agent_id": "mani-ruf",
-      "data": {
-        "name": "Mani Ruf",
-        "role": "external-secretary",
-        "company": "Acme GmbH",
-        "risk_class": "limited",
-        "manifest_hash": "a1b2c3d4e5f6..."
-      },
-      "chain_hash": "e4f5a6b7c8d9...",
-      "timestamp": "2026-03-24T10:00:00.123456+00:00"
-    }
-  ],
-  "total": 1
-}
-```
+## Costs
 
-### GET /api/audit/verify/{agent_id}
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/costs` | JWT/Key | List cost records (filterable by agent, date range) |
+| `GET` | `/api/costs/{id}` | JWT/Key | Get cost details for a specific agent |
 
-Cryptographically verify the audit chain for an agent. Reads the JSONL chain file from disk, recomputes every hash, and verifies chain integrity.
+---
 
-**Path parameters:**
+## Budget
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agent_id` | string | Agent ID |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/budget/check` | JWT/Key | Check whether an action fits within the configured budget |
+| `POST` | `/api/budget/track` | JWT/Key | Record a cost event against the budget |
 
-**Response:** `200 OK`
+---
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `agent_id` | string | Agent ID |
-| `valid` | boolean | `true` if chain is intact, `false` if tampered |
-| `entries_checked` | integer | Number of entries verified |
-| `errors` | array | List of verification errors (empty if valid) |
+## PII
 
-**Error:** `404 Not Found` if agent does not exist. `400 Bad Request` if agent directory is invalid.
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/pii/filter` | JWT/Key | Apply PII masking rules to a text payload |
 
-**Example:**
+---
 
-```bash
-curl http://localhost:8060/api/audit/verify/mani-ruf
-```
+## Incidents
 
-```json
-{
-  "agent_id": "mani-ruf",
-  "valid": true,
-  "entries_checked": 1,
-  "errors": []
-}
-```
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/incidents` | JWT/Key | List incidents (filterable by severity, status) |
+| `POST` | `/api/incidents` | JWT/Key | Create a new incident record |
+| `PATCH` | `/api/incidents/{id}` | JWT/Key | Update incident status or resolution |
+
+---
+
+## Workspace
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/workspace/{id}` | JWT/Key | Get workspace mount details for an agent |
+| `POST` | `/api/workspace/mount` | JWT/Key | Mount a workspace directory for an agent |
+| `POST` | `/api/workspace/unmount` | JWT/Key | Unmount a workspace directory |
+
+---
+
+## DSGVO
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/dsgvo/forget` | JWT | DSGVO Art. 17 — erase all personal data for a subject |
+| `POST` | `/api/dsgvo/export` | JWT | DSGVO Art. 20 — export all personal data for a subject |
+
+---
+
+## Proxy
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/proxy/status` | JWT/Key | Check OpenClaw gateway connectivity |
+| `POST` | `/api/proxy/chat` | JWT/Key | Relay a chat message through the OpenClaw gateway to the LLM |
+
+---
+
+## Settings
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/settings` | JWT | Retrieve current system settings |
 
 ---
 
@@ -402,6 +218,8 @@ All error responses follow this format:
 | Status Code | Meaning |
 |-------------|---------|
 | `400` | Bad request (validation error, invalid directory) |
-| `404` | Resource not found (agent does not exist) |
+| `401` | Unauthorized (missing or invalid JWT/API key) |
+| `403` | Forbidden (insufficient permissions) |
+| `404` | Resource not found |
 | `422` | Validation error (invalid request body) |
 | `500` | Internal server error |

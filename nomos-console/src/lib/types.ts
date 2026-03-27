@@ -10,9 +10,10 @@ export interface Agent {
   company: string;
   email: string;
   risk_class: 'minimal' | 'limited' | 'high';
-  status: 'running' | 'paused' | 'killed' | 'deploying' | 'error';
+  status: 'created' | 'running' | 'paused' | 'killed' | 'retired' | 'deploying' | 'error';
   manifest_hash: string;
   compliance_status: string;
+  heartbeat_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -246,6 +247,10 @@ export function agentStatusToBadge(status: string): AgentBadgeStatus {
       return 'deploying';
     case 'error':
       return 'error';
+    case 'created':
+      return 'deploying';
+    case 'retired':
+      return 'offline';
     default:
       return 'offline';
   }

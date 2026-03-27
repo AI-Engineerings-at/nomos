@@ -32,8 +32,18 @@ logger = logging.getLogger("nomos-api.auth")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# In-memory rate limiter: 5 attempts, 15 min (900s) lockout
-_login_limiter = RateLimiter(max_attempts=5, window_seconds=900, lockout_seconds=900)
+_login_limiter: RateLimiter | None = None
+
+
+def _get_limiter() -> RateLimiter:
+    global _login_limiter
+    if _login_limiter is None:
+        from nomos_api.config import settings
+        _login_limiter = RateLimiter(
+            max_attempts=5, window_seconds=900, lockout_seconds=900,
+            valkey_url=settings.valkey_url,
+        )
+    return _login_limiter
 
 
 async def _get_current_user(
@@ -73,7 +83,7 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ) -> LoginResponse:
     # Rate limiting by email
-    if not _login_limiter.is_allowed(body.email):
+    if not await _get_limiter().is_allowed(body.email):
         logger.warning("Rate limit exceeded for %s", body.email)
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
 
@@ -81,12 +91,12 @@ async def login(
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(body.password, user.password_hash):
-        _login_limiter.record_attempt(body.email)
+        await _get_limiter().record_attempt(body.email)
         logger.info("Failed login attempt for %s", body.email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     # Successful login — reset rate limiter
-    _login_limiter.reset(body.email)
+    await _get_limiter().reset(body.email)
 
     payload = TokenPayload(user_id=user.id, email=user.email, role=user.role)
     token = create_token(payload, settings.jwt_secret, expires_hours=user.session_timeout_hours)

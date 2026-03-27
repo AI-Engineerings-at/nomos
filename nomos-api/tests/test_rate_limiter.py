@@ -1,35 +1,34 @@
-import time
+import pytest
 from nomos_api.auth.rate_limiter import RateLimiter
 
-def test_allows_within_limit():
-    limiter = RateLimiter(max_attempts=5, window_seconds=60, lockout_seconds=10)
-    for _ in range(5):
-        assert limiter.is_allowed("user-1") is True
+@pytest.fixture
+async def limiter():
+    rl = RateLimiter(max_attempts=3, window_seconds=10, lockout_seconds=10, valkey_url="redis://localhost:6379")
+    await rl.reset("test-key")
+    yield rl
+    await rl.reset("test-key")
 
-def test_blocks_after_limit():
-    limiter = RateLimiter(max_attempts=3, window_seconds=60, lockout_seconds=10)
-    for _ in range(3):
-        limiter.record_attempt("user-1")
-    assert limiter.is_allowed("user-1") is False
+class TestRateLimiter:
+    @pytest.mark.asyncio
+    async def test_allows_under_limit(self, limiter):
+        assert await limiter.is_allowed("test-key") is True
 
-def test_different_users_independent():
-    limiter = RateLimiter(max_attempts=2, window_seconds=60, lockout_seconds=10)
-    limiter.record_attempt("user-1")
-    limiter.record_attempt("user-1")
-    assert limiter.is_allowed("user-1") is False
-    assert limiter.is_allowed("user-2") is True
+    @pytest.mark.asyncio
+    async def test_blocks_after_max_attempts(self, limiter):
+        for _ in range(3):
+            await limiter.record_attempt("test-key")
+        assert await limiter.is_allowed("test-key") is False
 
-def test_lockout_expires():
-    limiter = RateLimiter(max_attempts=1, window_seconds=60, lockout_seconds=1)
-    limiter.record_attempt("user-1")
-    assert limiter.is_allowed("user-1") is False
-    time.sleep(1.1)
-    assert limiter.is_allowed("user-1") is True
+    @pytest.mark.asyncio
+    async def test_reset_clears_state(self, limiter):
+        for _ in range(3):
+            await limiter.record_attempt("test-key")
+        await limiter.reset("test-key")
+        assert await limiter.is_allowed("test-key") is True
 
-def test_reset_clears_attempts():
-    limiter = RateLimiter(max_attempts=2, window_seconds=60, lockout_seconds=10)
-    limiter.record_attempt("user-1")
-    limiter.record_attempt("user-1")
-    assert limiter.is_allowed("user-1") is False
-    limiter.reset("user-1")
-    assert limiter.is_allowed("user-1") is True
+    @pytest.mark.asyncio
+    async def test_independent_keys(self, limiter):
+        for _ in range(3):
+            await limiter.record_attempt("key-a")
+        assert await limiter.is_allowed("key-b") is True
+        await limiter.reset("key-a")

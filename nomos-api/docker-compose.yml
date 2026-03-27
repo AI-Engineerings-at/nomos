@@ -7,11 +7,14 @@ services:
       - "${NOMOS_API_PORT:-8060}:8000"
     environment:
       - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:-nomos}@postgres:5432/nomos
+      - NOMOS_VALKEY_URL=redis://valkey:6379
       - NOMOS_AGENTS_DIR=/data/agents
     volumes:
       - nomos-agents:/data/agents
     depends_on:
       postgres:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -35,11 +38,11 @@ services:
       retries: 5
     restart: unless-stopped
 
-  redis:
-    image: redis:8-alpine
+  valkey:
+    image: valkey/valkey:8-alpine
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5

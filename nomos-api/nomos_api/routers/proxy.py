@@ -29,7 +29,7 @@ async def _gateway_fetch(method: str, path: str, json_body: dict | None = None) 
     headers = {"Authorization": f"Bearer {settings.gateway_token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.request(method, url, json=json_body, headers=headers)
             return response.json()
     except (httpx.ConnectError, httpx.TimeoutException) as exc:

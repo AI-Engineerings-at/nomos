@@ -20,6 +20,7 @@ class EventType(str, Enum):
     AGENT_DEPLOYED = "agent.deployed"
     AGENT_STOPPED = "agent.stopped"
     AGENT_RETIRED = "agent.retired"
+    AGENT_ENDED = "agent.ended"
 
     # Compliance
     COMPLIANCE_CHECK_PASSED = "compliance.check.passed"
@@ -35,6 +36,7 @@ class EventType(str, Enum):
     # Tool Calls (from Plugin hooks)
     TOOL_CALL_ALLOWED = "tool.call_allowed"
     TOOL_CALL_BLOCKED = "tool.call_blocked"
+    TOOL_COMPLETED = "tool.completed"
 
     # Audit
     AUDIT_CHAIN_CREATED = "audit.chain.created"
@@ -72,6 +74,13 @@ class EventType(str, Enum):
     # Kill Switch
     KILL_SWITCH_ACTIVATED = "kill_switch.activated"
     KILL_SWITCH_USER_PAUSE = "kill_switch.user_pause"
+
+    # Messages (from Plugin hooks)
+    MESSAGE_AI_DISCLOSURE = "message.ai_disclosure"
+
+    # Sessions (from Plugin hooks)
+    SESSION_STARTED = "session.started"
+    SESSION_ENDED = "session.ended"
 
     # Data Lifecycle
     DATA_RETENTION_ENFORCED = "data.retention_enforced"

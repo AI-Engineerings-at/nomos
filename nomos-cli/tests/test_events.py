@@ -67,3 +67,17 @@ class TestValidateEventType:
 
     def test_custom_prefix_valid(self) -> None:
         assert validate_event_type("agent.custom_action") is False
+
+    def test_plugin_event_types_are_valid(self) -> None:
+        """All event types emitted by the NomOS plugin must be registered."""
+        plugin_events = [
+            "tool.call_allowed",
+            "tool.completed",
+            "message.ai_disclosure",
+            "session.started",
+            "session.ended",
+            "agent.ended",
+            "kill_switch.user_pause",
+        ]
+        for event in plugin_events:
+            assert validate_event_type(event), f"Plugin event {event!r} not registered in EventType enum"

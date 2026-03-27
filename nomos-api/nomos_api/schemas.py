@@ -94,6 +94,7 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     version: str
+    vault: str = "not_configured"
 
 
 # --- Auth Schemas ---

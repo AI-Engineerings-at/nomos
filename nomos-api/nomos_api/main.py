@@ -46,7 +46,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI):
     """Validate settings and create database tables on startup."""
     from nomos_api.config import validate_settings
-    validate_settings()
+    validate_settings(settings)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -98,10 +98,15 @@ app = FastAPI(title=settings.api_title, version=settings.api_version, lifespan=l
 app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
+# Build CORS origins
+cors_origins = list(settings.cors_origins)
+if settings.dev_mode:
+    cors_origins.append("http://localhost:3040")
+    cors_origins.append("http://localhost:3045")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^http://localhost(:\d+)?$",
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Accept", "X-NomOS-API-Key"],

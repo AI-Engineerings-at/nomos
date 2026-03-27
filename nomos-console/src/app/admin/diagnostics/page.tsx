@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
-import type { HealthResponse, HealthStatus, FleetResponse } from '@/lib/types';
+import type { HealthResponse, FleetResponse } from '@/lib/types';
 import { agentStatusToBadge } from '@/lib/types';
 
 function DiagnosticsSkeleton() {
@@ -54,97 +54,6 @@ function healthLabel(status: string, lang: 'de' | 'en'): string {
     case 'degraded': return t('diagnostics.degraded', lang);
     default: return t('diagnostics.unhealthy', lang);
   }
-}
-
-/** Format uptime seconds into human-readable string. */
-function formatUptime(seconds: number, lang: 'de' | 'en'): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const template = t('diagnostics.uptimeFormat', lang);
-  return template.replace('{days}', String(days)).replace('{hours}', String(hours));
-}
-
-/** A service health card. */
-function ServiceCard({
-  service,
-  lang,
-}: {
-  service: HealthStatus;
-  lang: 'de' | 'en';
-}) {
-  const badgeStatus = healthBadgeStatus(service.status);
-
-  return (
-    <Card>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <h4 className="text-sm font-bold text-[var(--color-text)] font-[family-name:var(--font-headline)]">
-            {service.service}
-          </h4>
-          <p className="text-xs text-[var(--color-muted)]">
-            {t('diagnostics.latency', lang)}: {service.latency_ms}ms
-          </p>
-        </div>
-        <Badge status={badgeStatus} label={healthLabel(service.status, lang)} />
-      </div>
-      {/* Status indicator bar */}
-      <div className="mt-3">
-        <div
-          className="w-full h-1.5 rounded-full overflow-hidden bg-[var(--color-hover)]"
-          role="presentation"
-          aria-hidden="true"
-        >
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: service.status === 'healthy' ? '100%' : service.status === 'degraded' ? '60%' : '20%',
-              backgroundColor: service.status === 'healthy'
-                ? 'var(--color-success)'
-                : service.status === 'degraded'
-                  ? 'var(--color-warning)'
-                  : 'var(--color-error)',
-            }}
-          />
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/** Resource usage bar (memory or CPU). */
-function ResourceBar({
-  value,
-  max,
-  label,
-}: {
-  value: number;
-  max: number;
-  label: string;
-}) {
-  const percent = max > 0 ? Math.min(Math.round((value / max) * 100), 100) : 0;
-  const color = percent > 80 ? 'var(--color-error)' : percent > 60 ? 'var(--color-warning)' : 'var(--color-success)';
-
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-[var(--color-muted)]">
-        <span>{label}</span>
-        <span className="font-[family-name:var(--font-mono)]">{percent}%</span>
-      </div>
-      <div
-        className="w-full h-2 rounded-full bg-[var(--color-hover)] overflow-hidden"
-        role="progressbar"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${label}: ${percent}%`}
-      >
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${percent}%`, backgroundColor: color }}
-        />
-      </div>
-    </div>
-  );
 }
 
 function DiagnosticsContent() {
@@ -192,7 +101,7 @@ function DiagnosticsContent() {
         </Button>
       </div>
 
-      {/* Overall status + uptime */}
+      {/* Overall status */}
       {healthData && (
         <Card>
           <div className="flex items-center justify-between">
@@ -201,8 +110,8 @@ function DiagnosticsContent() {
                 status={healthBadgeStatus(healthData.status)}
                 label={healthLabel(healthData.status, language)}
               />
-              <span className="text-sm text-[var(--color-muted)]">
-                {healthData.uptime_seconds != null && <>{t('diagnostics.uptime', language)}: {formatUptime(healthData.uptime_seconds, language)}</>}
+              <span className="text-sm text-[var(--color-text)] font-semibold">
+                {healthData.service}
               </span>
             </div>
             <span className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
@@ -212,24 +121,13 @@ function DiagnosticsContent() {
         </Card>
       )}
 
-      {/* Service Health Cards */}
-      <div>
-        <h2 className="text-lg font-bold text-[var(--color-text)] mb-3 font-[family-name:var(--font-headline)]">
-          {t('diagnostics.services', language)}
-        </h2>
-        {healthData && healthData.services && healthData.services.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" aria-label={t('a11y.systemHealth', language)}>
-            {healthData.services.map((service) => (
-              <ServiceCard key={service.service} service={service} lang={language} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            message={t('empty.diagnostics', language)}
-            description={t('empty.diagnosticsDescription', language)}
-          />
-        )}
-      </div>
+      {/* Services info */}
+      <Card>
+        <CardHeader title={t('diagnostics.services', language)} />
+        <p className="text-sm text-[var(--color-muted)] mt-2">
+          {language === 'de' ? 'Service-Status wird ueber den Health-Endpoint bereitgestellt.' : 'Service status is provided via the health endpoint.'}
+        </p>
+      </Card>
 
       {/* Heartbeat Board */}
       <Card padding="none">
@@ -271,7 +169,7 @@ function DiagnosticsContent() {
                     {/* Last seen */}
                     <div className="text-xs text-[var(--color-muted)] shrink-0 hidden sm:block">
                       <span className="font-semibold">{t('diagnostics.lastSeen', language)}:</span>{' '}
-                      {formatDate(agent.updated_at, language)}
+                      {agent.heartbeat_at ? formatDate(agent.heartbeat_at, language) : '—'}
                     </div>
                     {/* Status */}
                     <Badge status={badgeStatus} />

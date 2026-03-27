@@ -132,47 +132,11 @@ export interface ComplianceMatrixResponse {
   total: number;
 }
 
-/** Health status for a system component. */
-export interface HealthStatus {
-  service: string;
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  latency_ms: number;
-  last_check: string;
-  details: Record<string, unknown>;
-}
-
 /** Overall health response — matches GET /health. */
 export interface HealthResponse {
   status: string;
   service: string;
   version: string;
-  services?: HealthStatus[];
-  uptime_seconds?: number;
-}
-
-/** Agent heartbeat entry. */
-export interface HeartbeatEntry {
-  agent_id: string;
-  agent_name: string;
-  last_seen: string;
-  status: 'running' | 'paused' | 'killed' | 'deploying' | 'error';
-  memory_mb: number;
-  cpu_percent: number;
-}
-
-/** Daily cost data point for trend charts. */
-export interface DailyCostEntry {
-  date: string;
-  cost_eur: number;
-}
-
-/** Full cost response with daily breakdown. */
-export interface CostDetailResponse {
-  costs: CostEntry[];
-  total: number;
-  total_cost_eur: number;
-  budget_total_eur: number;
-  daily_trend: DailyCostEntry[];
 }
 
 /** NomOS user account for admin management. */

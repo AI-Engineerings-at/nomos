@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
-import type { CostDetailResponse, CostEntry } from '@/lib/types';
+import type { CostOverviewResponse, CostEntry } from '@/lib/types';
 
 function CostsSkeleton() {
   return (
@@ -85,62 +85,9 @@ function BudgetBar({ cost, lang }: { cost: CostEntry; lang: 'de' | 'en' }) {
   );
 }
 
-/** CSS-only daily cost trend bar chart. */
-function DailyTrendChart({
-  data,
-  lang,
-}: {
-  data: { date: string; cost_eur: number }[];
-  lang: 'de' | 'en';
-}) {
-  if (data.length === 0) return null;
-
-  const maxCost = Math.max(...data.map((d) => d.cost_eur), 1);
-
-  return (
-    <div aria-label={t('a11y.dailyCostChart', lang)} role="img">
-      <div className="flex items-end gap-1 h-32">
-        {data.map((entry) => {
-          const heightPercent = Math.max((entry.cost_eur / maxCost) * 100, 2);
-          const dayLabel = new Date(entry.date).toLocaleDateString(
-            lang === 'de' ? 'de-DE' : 'en-US',
-            { day: '2-digit', month: '2-digit' },
-          );
-          return (
-            <div
-              key={entry.date}
-              className="flex-1 flex flex-col items-center gap-1 group"
-              title={`${dayLabel}: ${formatEur(entry.cost_eur)}`}
-            >
-              <div
-                className="w-full rounded-t-sm bg-[var(--color-primary)] group-hover:bg-[var(--color-primary-hover)] transition-colors"
-                style={{ height: `${heightPercent}%`, minHeight: '2px' }}
-                role="presentation"
-                aria-hidden="true"
-              />
-            </div>
-          );
-        })}
-      </div>
-      {/* X-axis labels — show every 5th day */}
-      <div className="flex items-center gap-1 mt-1">
-        {data.map((entry, i) => (
-          <div key={entry.date} className="flex-1 text-center">
-            {i % 5 === 0 && (
-              <span className="text-[10px] text-[var(--color-muted)]">
-                {new Date(entry.date).getDate()}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function CostsContent() {
   const { language } = useNomosStore();
-  const costs = useFetch<CostDetailResponse>('/costs');
+  const costs = useFetch<CostOverviewResponse>('/costs');
 
   if (costs.loading) {
     return <CostsSkeleton />;
@@ -179,8 +126,7 @@ function CostsContent() {
     );
   }
 
-  const totalCost = data?.total_cost_eur ?? costEntries.reduce((sum, c) => sum + c.total_cost_eur, 0);
-  const dailyTrend = data?.daily_trend ?? [];
+  const totalCost = costEntries.reduce((sum, c) => sum + c.total_cost_eur, 0);
 
   return (
     <div className="space-y-6">
@@ -221,18 +167,6 @@ function CostsContent() {
         </div>
       </Card>
 
-      {/* Daily trend chart */}
-      {dailyTrend.length > 0 && (
-        <Card>
-          <CardHeader
-            title={t('costs.dailyTrend', language)}
-            description={t('costs.dailyTrendDescription', language)}
-          />
-          <div className="mt-4">
-            <DailyTrendChart data={dailyTrend} lang={language} />
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

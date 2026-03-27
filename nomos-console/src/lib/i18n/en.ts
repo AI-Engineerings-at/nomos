@@ -350,6 +350,8 @@ export const en: Record<TranslationKey, string> = {
   'compliance.lastUpdated': 'Last updated',
   'compliance.expiresAt': 'Expires at',
   'compliance.documentDetail': 'Document detail',
+  'compliance.missingDocs': 'Missing Documents',
+  'compliance.riskClass': 'Risk Class',
 
   // Audit Panel
   'audit.title': 'Audit Log',

@@ -117,22 +117,19 @@ export interface AgentCreateRequest {
   risk_class: 'minimal' | 'limited' | 'high';
 }
 
-/** Compliance matrix cell for one agent and one document. */
-export interface ComplianceMatrixCell {
+/** Compliance matrix entry — per-agent summary from API. */
+export interface ComplianceMatrixEntry {
   agent_id: string;
   agent_name: string;
-  document_type: string;
-  status: 'valid' | 'expiring' | 'missing';
-  last_updated: string | null;
-  expires_at: string | null;
+  status: string;
+  missing_docs: string[];
+  risk_class: string;
 }
 
-/** Full compliance matrix response from the API. */
+/** Compliance matrix response from GET /api/compliance/matrix. */
 export interface ComplianceMatrixResponse {
-  matrix: ComplianceMatrixCell[];
-  agents: string[];
-  document_types: string[];
-  health_score: number;
+  matrix: ComplianceMatrixEntry[];
+  total: number;
 }
 
 /** Health status for a system component. */

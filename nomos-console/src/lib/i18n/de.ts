@@ -348,6 +348,8 @@ export const de = {
   'compliance.lastUpdated': 'Zuletzt aktualisiert',
   'compliance.expiresAt': 'Laeuft ab am',
   'compliance.documentDetail': 'Dokumentdetail',
+  'compliance.missingDocs': 'Fehlende Dokumente',
+  'compliance.riskClass': 'Risikoklasse',
 
   // Audit Panel
   'audit.title': 'Protokoll',

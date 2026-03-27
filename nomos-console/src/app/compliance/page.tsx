@@ -1,6 +1,6 @@
 /**
  * NomOS — Compliance-Berichte (Officer Dashboard).
- * Read-only Compliance Matrix + Audit Trail viewer with export.
+ * Read-only per-agent compliance table + Audit Trail viewer with export.
  * No edit capabilities — officer has read-only access.
  * Data from: GET /api/compliance/matrix, GET /api/audit
  *
@@ -10,32 +10,17 @@
  */
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useNomosStore } from '@/lib/store';
 import { t } from '@/lib/i18n';
 import { useFetch, formatDate } from '@/lib/hooks';
-import { Card, CardHeader } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
-import type { ComplianceMatrixResponse, ComplianceMatrixCell, AuditEntry } from '@/lib/types';
-
-/** Status to visual mapping. */
-function statusLabel(status: ComplianceMatrixCell['status'], lang: 'de' | 'en'): string {
-  switch (status) {
-    case 'valid': return t('compliance.valid', lang);
-    case 'expiring': return t('compliance.expiring', lang);
-    case 'missing': return t('compliance.missing', lang);
-  }
-}
-
-const statusColors: Record<ComplianceMatrixCell['status'], { bg: string; border: string }> = {
-  valid: { bg: 'bg-[var(--color-success-light)]', border: 'border-[var(--color-success)]' },
-  expiring: { bg: 'bg-[var(--color-warning-light)]', border: 'border-[var(--color-warning)]' },
-  missing: { bg: 'bg-[var(--color-error-light)]', border: 'border-[var(--color-error)]' },
-};
+import type { ComplianceMatrixResponse, ComplianceMatrixEntry, AuditEntry } from '@/lib/types';
 
 function OfficerSkeleton() {
   return (
@@ -56,20 +41,6 @@ function OfficerContent() {
   // Show empty state gracefully until a global aggregation endpoint is implemented.
   const auditFetch = { data: null as { entries: AuditEntry[]; total: number } | null, loading: false, error: null as string | null, reload: () => { /* no-op */ } };
   const [activeTab, setActiveTab] = useState<'matrix' | 'audit'>('matrix');
-
-  // Build matrix lookup
-  const cellLookup = useMemo(() => {
-    const lookup = new Map<string, Map<string, ComplianceMatrixCell>>();
-    if (matrixFetch.data) {
-      for (const cell of matrixFetch.data.matrix) {
-        if (!lookup.has(cell.agent_id)) {
-          lookup.set(cell.agent_id, new Map());
-        }
-        lookup.get(cell.agent_id)!.set(cell.document_type, cell);
-      }
-    }
-    return lookup;
-  }, [matrixFetch.data]);
 
   const handleExportJsonl = useCallback(() => {
     const entries = auditFetch.data?.entries ?? [];
@@ -110,50 +81,6 @@ function OfficerContent() {
         </p>
       </div>
 
-      {/* Health Score */}
-      {matrixData && matrixData.agents.length > 0 && (
-        <Card>
-          <CardHeader
-            title={t('compliance.healthScore', language)}
-            description={t('compliance.healthScoreDescription', language)}
-          />
-          <div className="mt-4 flex items-center gap-4">
-            <span
-              className="text-4xl font-extrabold font-[family-name:var(--font-headline)]"
-              style={{
-                color: matrixData.health_score >= 80
-                  ? 'var(--color-success)'
-                  : matrixData.health_score >= 50
-                    ? 'var(--color-warning)'
-                    : 'var(--color-error)',
-              }}
-            >
-              {matrixData.health_score}%
-            </span>
-            <div
-              className="flex-1 h-3 bg-[var(--color-hover)] rounded-[var(--radius-full)] overflow-hidden"
-              role="progressbar"
-              aria-valuenow={matrixData.health_score}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={t('a11y.complianceScore', language)}
-            >
-              <div
-                className="h-full rounded-[var(--radius-full)] transition-all duration-500"
-                style={{
-                  width: `${Math.min(matrixData.health_score, 100)}%`,
-                  backgroundColor: matrixData.health_score >= 80
-                    ? 'var(--color-success)'
-                    : matrixData.health_score >= 50
-                      ? 'var(--color-warning)'
-                      : 'var(--color-error)',
-                }}
-              />
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Tabs */}
       <div
         className="flex gap-1 border-b border-[var(--color-border)]"
@@ -190,7 +117,7 @@ function OfficerContent() {
       >
         {activeTab === 'matrix' && (
           <>
-            {!matrixData || matrixData.agents.length === 0 ? (
+            {!matrixData || matrixData.matrix.length === 0 ? (
               <EmptyState
                 message={t('empty.compliance', language)}
                 description={t('empty.complianceDescription', language)}
@@ -208,48 +135,45 @@ function OfficerContent() {
                         >
                           {t('audit.agent', language)}
                         </th>
-                        {matrixData.document_types.map((docType) => (
-                          <th
-                            key={docType}
-                            scope="col"
-                            className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] font-[family-name:var(--font-headline)]"
-                          >
-                            {docType}
-                          </th>
-                        ))}
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] font-[family-name:var(--font-headline)]"
+                        >
+                          {t('users.status', language)}
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] font-[family-name:var(--font-headline)]"
+                        >
+                          {t('compliance.missingDocs', language)}
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] font-[family-name:var(--font-headline)]"
+                        >
+                          {t('compliance.riskClass', language)}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {matrixData.agents.map((agentId) => {
-                        const agentCells = cellLookup.get(agentId);
-                        const agentName = agentCells?.values().next().value?.agent_name ?? agentId;
-                        return (
-                          <tr key={agentId} className="border-b border-[var(--color-border)] last:border-b-0">
-                            <td className="px-4 py-3 font-semibold text-[var(--color-text)] whitespace-nowrap">
-                              {agentName}
-                            </td>
-                            {matrixData.document_types.map((docType) => {
-                              const cell = agentCells?.get(docType);
-                              const status = cell?.status ?? 'missing';
-                              const colors = statusColors[status];
-                              return (
-                                <td key={docType} className="px-4 py-3 text-center">
-                                  <span
-                                    className={[
-                                      'inline-flex items-center justify-center min-w-[80px] px-3 py-1.5 rounded-[var(--radius-sm)]',
-                                      'text-xs font-semibold border',
-                                      colors.bg, colors.border,
-                                    ].join(' ')}
-                                    aria-label={`${agentName}: ${docType} — ${statusLabel(status, language)}`}
-                                  >
-                                    {statusLabel(status, language)}
-                                  </span>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
+                      {matrixData.matrix.map((entry: ComplianceMatrixEntry) => (
+                        <tr key={entry.agent_id} className="border-b border-[var(--color-border)] last:border-b-0">
+                          <td className="px-4 py-3 font-semibold text-[var(--color-text)] whitespace-nowrap">
+                            {entry.agent_name}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge status={entry.status === 'passed' ? 'online' : 'error'} label={entry.status} />
+                          </td>
+                          <td className="px-4 py-3 text-[var(--color-muted)]">
+                            {entry.missing_docs.length === 0 ? '\u2014' : entry.missing_docs.join(', ')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-[var(--radius-full)] bg-[var(--color-hover)] text-[var(--color-text)]">
+                              {entry.risk_class}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

@@ -204,12 +204,12 @@ export interface SystemSettings {
 export interface TaskEntry {
   id: string;
   agent_id: string;
-  agent_name: string;
-  title: string;
   description: string;
-  status: 'queued' | 'assigned' | 'running' | 'review' | 'done';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  created_by: string;
+  status: 'queued' | 'assigned' | 'running' | 'review' | 'done' | 'failed';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  created_by: string | null;
+  timeout_minutes: number;
+  cost_eur: number;
   created_at: string;
   updated_at: string;
 }

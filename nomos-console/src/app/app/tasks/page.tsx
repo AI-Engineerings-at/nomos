@@ -45,6 +45,7 @@ function taskStatusBadge(status: TaskEntry['status']): BadgeStatus {
     case 'running': return 'online';
     case 'review': return 'paused';
     case 'done': return 'online';
+    case 'failed': return 'error';
   }
 }
 
@@ -55,23 +56,24 @@ function taskStatusLabel(status: TaskEntry['status'], lang: 'de' | 'en'): string
     case 'running': return t('tasks.running', lang);
     case 'review': return t('tasks.review', lang);
     case 'done': return t('tasks.done', lang);
+    case 'failed': return t('tasks.failed', lang);
   }
 }
 
 function priorityBadge(priority: TaskEntry['priority']): BadgeStatus {
   switch (priority) {
-    case 'critical': return 'error';
+    case 'urgent': return 'error';
     case 'high': return 'error';
-    case 'medium': return 'paused';
+    case 'normal': return 'paused';
     case 'low': return 'online';
   }
 }
 
 function priorityLabel(priority: TaskEntry['priority'], lang: 'de' | 'en'): string {
   switch (priority) {
-    case 'critical': return t('tasks.priorityCritical', lang);
+    case 'urgent': return t('tasks.priorityUrgent', lang);
     case 'high': return t('tasks.priorityHigh', lang);
-    case 'medium': return t('tasks.priorityMedium', lang);
+    case 'normal': return t('tasks.priorityNormal', lang);
     case 'low': return t('tasks.priorityLow', lang);
   }
 }
@@ -82,21 +84,20 @@ function UserTasksContent() {
   const fleetFetch = useFetch<FleetResponse>('/fleet');
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', agent_id: '' });
+  const [form, setForm] = useState({ description: '', agent_id: '' });
 
   const handleCreate = useCallback(async () => {
-    if (!form.title.trim()) return;
+    if (!form.description.trim()) return;
     setSaving(true);
     try {
       await api.post('/tasks', {
-        title: form.title,
         description: form.description,
         agent_id: form.agent_id || undefined,
-        priority: 'medium',
+        priority: 'normal',
       });
       addToast({ type: 'success', message: t('toast.taskCreated', language), duration: 4000 });
       setShowCreate(false);
-      setForm({ title: '', description: '', agent_id: '' });
+      setForm({ description: '', agent_id: '' });
       tasksFetch.reload();
     } catch (err) {
       const msg = err instanceof ApiError ? err.detail : t('error.serverError', language);
@@ -150,17 +151,14 @@ function UserTasksContent() {
                   <Badge status={priorityBadge(task.priority)} label={priorityLabel(task.priority, language)} />
                 </div>
 
-                {/* Title + description */}
+                {/* Description */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{task.title}</p>
-                  {task.description && (
-                    <p className="text-xs text-[var(--color-muted)] truncate">{task.description}</p>
-                  )}
+                  <p className="text-sm font-semibold text-[var(--color-text)] truncate">{task.description}</p>
                 </div>
 
                 {/* Agent + date */}
                 <div className="text-xs text-[var(--color-muted)] shrink-0 text-right space-y-0.5">
-                  <p className="font-semibold">{task.agent_name}</p>
+                  <p className="font-semibold">{task.agent_id}</p>
                   <p>{formatDate(task.created_at, language)}</p>
                 </div>
               </div>
@@ -179,7 +177,7 @@ function UserTasksContent() {
             <Button variant="secondary" onClick={() => setShowCreate(false)}>
               {t('action.cancel', language)}
             </Button>
-            <Button variant="primary" onClick={handleCreate} loading={saving} disabled={!form.title.trim()}>
+            <Button variant="primary" onClick={handleCreate} loading={saving} disabled={!form.description.trim()}>
               {t('action.create', language)}
             </Button>
           </>
@@ -187,15 +185,10 @@ function UserTasksContent() {
       >
         <div className="space-y-4">
           <Input
-            label={t('tasks.taskTitle', language)}
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-          />
-          <Input
             label={t('tasks.taskDescription', language)}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
+            required
           />
           <Select
             label={t('tasks.taskAgent', language)}

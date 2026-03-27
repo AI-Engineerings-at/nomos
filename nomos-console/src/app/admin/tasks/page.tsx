@@ -27,7 +27,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { SkeletonCard, Skeleton } from '@/components/ui/skeleton';
 import type { TaskListResponse, TaskEntry, FleetResponse } from '@/lib/types';
 
-const TASK_STATUSES: TaskEntry['status'][] = ['queued', 'assigned', 'running', 'review', 'done'];
+const TASK_STATUSES: TaskEntry['status'][] = ['queued', 'assigned', 'running', 'review', 'done', 'failed'];
 
 function TasksSkeleton() {
   return (
@@ -52,23 +52,24 @@ function statusColumnLabel(status: TaskEntry['status'], lang: 'de' | 'en'): stri
     case 'running': return t('tasks.running', lang);
     case 'review': return t('tasks.review', lang);
     case 'done': return t('tasks.done', lang);
+    case 'failed': return t('tasks.failed', lang);
   }
 }
 
 function priorityBadge(priority: TaskEntry['priority']): BadgeStatus {
   switch (priority) {
-    case 'critical': return 'error';
+    case 'urgent': return 'error';
     case 'high': return 'error';
-    case 'medium': return 'paused';
+    case 'normal': return 'paused';
     case 'low': return 'online';
   }
 }
 
 function priorityLabel(priority: TaskEntry['priority'], lang: 'de' | 'en'): string {
   switch (priority) {
-    case 'critical': return t('tasks.priorityCritical', lang);
+    case 'urgent': return t('tasks.priorityUrgent', lang);
     case 'high': return t('tasks.priorityHigh', lang);
-    case 'medium': return t('tasks.priorityMedium', lang);
+    case 'normal': return t('tasks.priorityNormal', lang);
     case 'low': return t('tasks.priorityLow', lang);
   }
 }
@@ -80,6 +81,7 @@ function statusColumnColor(status: TaskEntry['status']): string {
     case 'running': return 'var(--color-warning)';
     case 'review': return 'var(--color-accent)';
     case 'done': return 'var(--color-success)';
+    case 'failed': return 'var(--color-error)';
   }
 }
 
@@ -99,15 +101,12 @@ function TaskCard({
       <div className="flex items-center justify-between gap-2">
         <Badge status={priorityBadge(task.priority)} label={priorityLabel(task.priority, lang)} />
         <span className="text-[10px] text-[var(--color-muted)] font-[family-name:var(--font-mono)] truncate">
-          {task.agent_name}
+          {task.agent_id}
         </span>
       </div>
 
-      {/* Title + description */}
-      <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">{task.title}</p>
-      {task.description && (
-        <p className="text-xs text-[var(--color-muted)] line-clamp-2">{task.description}</p>
-      )}
+      {/* Description */}
+      <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">{task.description}</p>
 
       {/* Timestamp */}
       <p className="text-[10px] text-[var(--color-muted)]">
@@ -125,7 +124,7 @@ function TaskCard({
           ].join(' ')}
           value={task.status}
           onChange={(e) => onStatusChange(task.id, e.target.value as TaskEntry['status'])}
-          aria-label={`${t('tasks.changeStatus', lang)}: ${task.title}`}
+          aria-label={`${t('tasks.changeStatus', lang)}: ${task.description}`}
         >
           {TASK_STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -139,7 +138,6 @@ function TaskCard({
 }
 
 interface CreateTaskForm {
-  title: string;
   description: string;
   agent_id: string;
   priority: TaskEntry['priority'];
@@ -152,10 +150,9 @@ function TasksContent() {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<CreateTaskForm>({
-    title: '',
     description: '',
     agent_id: '',
-    priority: 'medium',
+    priority: 'normal',
   });
 
   // Group tasks by status
@@ -166,6 +163,7 @@ function TasksContent() {
       running: [],
       review: [],
       done: [],
+      failed: [],
     };
     for (const task of tasksFetch.data?.tasks ?? []) {
       groups[task.status].push(task);
@@ -185,18 +183,17 @@ function TasksContent() {
   }, [language, addToast, tasksFetch]);
 
   const handleCreate = useCallback(async () => {
-    if (!form.title.trim()) return;
+    if (!form.description.trim()) return;
     setSaving(true);
     try {
       await api.post('/tasks', {
-        title: form.title,
         description: form.description,
         agent_id: form.agent_id || undefined,
         priority: form.priority,
       });
       addToast({ type: 'success', message: t('toast.taskCreated', language), duration: 4000 });
       setShowCreate(false);
-      setForm({ title: '', description: '', agent_id: '', priority: 'medium' });
+      setForm({ description: '', agent_id: '', priority: 'normal' });
       tasksFetch.reload();
     } catch (err) {
       const msg = err instanceof ApiError ? err.detail : t('error.serverError', language);
@@ -284,7 +281,7 @@ function TasksContent() {
             <Button variant="secondary" onClick={() => setShowCreate(false)}>
               {t('action.cancel', language)}
             </Button>
-            <Button variant="primary" onClick={handleCreate} loading={saving} disabled={!form.title.trim()}>
+            <Button variant="primary" onClick={handleCreate} loading={saving} disabled={!form.description.trim()}>
               {t('action.create', language)}
             </Button>
           </>
@@ -292,15 +289,10 @@ function TasksContent() {
       >
         <div className="space-y-4">
           <Input
-            label={t('tasks.taskTitle', language)}
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-          />
-          <Input
             label={t('tasks.taskDescription', language)}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
+            required
           />
           <Select
             label={t('tasks.taskAgent', language)}
@@ -315,9 +307,9 @@ function TasksContent() {
             label={t('tasks.priority', language)}
             options={[
               { value: 'low', label: t('tasks.priorityLow', language) },
-              { value: 'medium', label: t('tasks.priorityMedium', language) },
+              { value: 'normal', label: t('tasks.priorityNormal', language) },
               { value: 'high', label: t('tasks.priorityHigh', language) },
-              { value: 'critical', label: t('tasks.priorityCritical', language) },
+              { value: 'urgent', label: t('tasks.priorityUrgent', language) },
             ]}
             value={form.priority}
             onChange={(e) => setForm({ ...form, priority: e.target.value as TaskEntry['priority'] })}

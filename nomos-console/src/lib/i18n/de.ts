@@ -422,6 +422,7 @@ export const de = {
   'users.roleAdmin': 'Administrator',
   'users.roleUser': 'Benutzer',
   'users.roleOfficer': 'Compliance-Beauftragter',
+  'users.sessionTimeout': 'Sitzungsdauer (Stunden)',
   'users.confirmDeactivate': 'Moechten Sie diesen Nutzer wirklich deaktivieren?',
   'users.noUsers': 'Noch keine Nutzer angelegt.',
   'users.noUsersDescription': 'Erstellen Sie den ersten Nutzer, um loszulegen.',

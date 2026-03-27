@@ -12,6 +12,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNomosStore } from '@/lib/store';
 import { t } from '@/lib/i18n';
+import { api, ApiError } from '@/lib/api';
 import { useFetch, formatDate } from '@/lib/hooks';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -102,10 +103,7 @@ function AuditContent() {
 
   const fleetFetch = useFetch<FleetResponse>('/fleet');
 
-  // Global /audit endpoint does not exist — aggregate from per-agent audit endpoints.
-  // For now, show empty state gracefully. When agents are loaded, we could fetch
-  // /agents/{id}/audit for each agent, but that is a feature addition, not a fix.
-  const auditFetch = { data: null as (AuditResponse & { entries: AuditEntry[]; total: number }) | null, loading: false, error: null as string | null, reload: () => { /* no-op */ } };
+  const auditFetch = useFetch<AuditResponse>('/audit');
 
   const entries = auditFetch.data?.entries ?? [];
 
@@ -128,50 +126,48 @@ function AuditContent() {
   }, [entries, agentFilter, eventFilter]);
 
   const handleVerifyChain = useCallback(async () => {
-    setVerifying(true);
-    // Verify hash chain by checking sequential hashes
-    let chainValid = true;
-    const sorted = [...filteredEntries].sort((a, b) => a.sequence - b.sequence);
-    for (let i = 1; i < sorted.length; i++) {
-      // In a real implementation, we would verify the hash links.
-      // The chain is valid if sequences are continuous.
-      if (sorted[i].sequence !== sorted[i - 1].sequence + 1) {
-        chainValid = false;
-        break;
-      }
+    if (!agentFilter) {
+      addToast({ type: 'warning', message: language === 'de' ? 'Bitte waehlen Sie einen Agenten aus' : 'Please select an agent first', duration: 4000 });
+      return;
     }
-    // Simulate verification delay for UX
-    await new Promise<void>((resolve) => { window.setTimeout(resolve, 800); });
-    setVerifying(false);
-    addToast({
-      type: chainValid ? 'success' : 'warning',
-      message: chainValid
-        ? t('audit.chainValid', language)
-        : t('audit.chainInvalid', language),
-      duration: 5000,
-    });
-  }, [filteredEntries, language, addToast]);
+    setVerifying(true);
+    try {
+      const result = await api.get<{ valid: boolean; entries_checked: number; errors: string[] }>(
+        `/audit/verify/${agentFilter}`
+      );
+      addToast({
+        type: result.valid ? 'success' : 'warning',
+        message: result.valid
+          ? t('audit.chainValid', language)
+          : `${t('audit.chainInvalid', language)}: ${result.errors.join(', ')}`,
+        duration: 5000,
+      });
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.detail : t('error.serverError', language);
+      addToast({ type: 'error', message: msg, duration: 6000 });
+    } finally {
+      setVerifying(false);
+    }
+  }, [agentFilter, language, addToast]);
 
   const handleExport = useCallback((format: 'jsonl' | 'pdf') => {
-    // Create JSONL export as downloadable file
     if (format === 'jsonl') {
-      const lines = filteredEntries.map((entry) => JSON.stringify(entry)).join('\n');
-      const blob = new Blob([lines], { type: 'application/x-jsonlines' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `nomos-audit-${new Date().toISOString().slice(0, 10)}.jsonl`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (agentFilter) {
+        window.open(`/api/agents/${agentFilter}/audit/export`, '_blank');
+      } else {
+        const lines = filteredEntries.map((entry) => JSON.stringify(entry)).join('\n');
+        const blob = new Blob([lines], { type: 'application/x-jsonlines' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nomos-audit-${new Date().toISOString().slice(0, 10)}.jsonl`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } else {
-      // PDF export — for now show toast that it is being prepared
-      addToast({
-        type: 'info',
-        message: t('toast.exportStarted', language),
-        duration: 3000,
-      });
+      addToast({ type: 'info', message: t('toast.exportStarted', language), duration: 3000 });
     }
-  }, [filteredEntries, language, addToast]);
+  }, [agentFilter, filteredEntries, language, addToast]);
 
   if (auditFetch.loading || fleetFetch.loading) {
     return <AuditSkeleton />;

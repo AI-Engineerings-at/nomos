@@ -145,6 +145,8 @@ export interface UserAccount {
   email: string;
   name: string;
   role: 'admin' | 'user' | 'officer';
+  totp_enabled: boolean;
+  session_timeout_hours: number;
   is_active: boolean;
   max_tasks: number;
   allowed_agents: string[];

@@ -157,7 +157,7 @@ function ProfileContent() {
 
   const agent = agentFetch.data;
   const badgeStatus = agentStatusToBadge(agent.status);
-  const isCompliant = agent.compliance_status === 'compliant';
+  const isCompliant = agent.compliance_status === 'passed';
   const costUsed = costFetch.data?.total_cost_eur ?? 0;
   const costLimit = costFetch.data?.budget_limit_eur ?? 0;
 

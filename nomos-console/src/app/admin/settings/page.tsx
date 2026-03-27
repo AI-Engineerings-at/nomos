@@ -1,31 +1,23 @@
 /**
  * NomOS — Einstellungen (Settings) admin panel.
  * Display system config: Gateway URL, Retention days, PII filter mode.
- * Read-only for now — API endpoints do not exist yet.
- * Uses hardcoded defaults while showing "loading" hint.
+ * Read-only display of server-side configuration via GET /api/settings.
  *
- * 4 States: Loading (Skeleton), Empty (CTA), Error (ErrorBoundary), Data
+ * 4 States: Loading (Skeleton), Empty (CTA), Error (retry), Data
  * WCAG 2.2 AA: focus-visible, aria-labels, keyboard nav
  * i18n: All text via translation keys
  */
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useNomosStore } from '@/lib/store';
 import { t } from '@/lib/i18n';
-import { api } from '@/lib/api';
+import { useFetch } from '@/lib/hooks';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SystemSettings } from '@/lib/types';
-
-/** Hardcoded defaults shown when API is unavailable. */
-const defaultSettings: SystemSettings = {
-  gateway_url: 'http://localhost:8080',
-  retention_days: 365,
-  pii_filter_mode: 'standard',
-};
 
 function SettingsSkeleton() {
   return (
@@ -82,45 +74,32 @@ function SettingsField({
 
 function SettingsContent() {
   const { language } = useNomosStore();
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [fromApi, setFromApi] = useState(false);
+  const settings = useFetch<SystemSettings>('/settings');
 
-  // Try to load from API, fall back to defaults
-  useEffect(() => {
-    let cancelled = false;
-    async function loadSettings() {
-      try {
-        const result = await api.get<SystemSettings>('/settings');
-        if (!cancelled) {
-          setSettings(result);
-          setFromApi(true);
-        }
-      } catch {
-        // API not available — use defaults
-        if (!cancelled) {
-          setSettings(defaultSettings);
-          setFromApi(false);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-    loadSettings();
-    return () => { cancelled = true; };
-  }, []);
-
-  if (loading) {
+  if (settings.loading) {
     return <SettingsSkeleton />;
   }
 
-  const config = settings ?? defaultSettings;
+  if (settings.error || !settings.data) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-extrabold text-[var(--color-text)] font-[family-name:var(--font-headline)]">
+          {t('settings.title', language)}
+        </h1>
+        <Card>
+          <p className="text-sm text-[var(--color-error)]">{settings.error ?? t('error.serverError', language)}</p>
+          <Button variant="secondary" onClick={settings.reload} className="mt-4">
+            {t('action.retry', language)}
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const config = settings.data;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-extrabold text-[var(--color-text)] font-[family-name:var(--font-headline)]">
           {t('settings.title', language)}
@@ -136,24 +115,14 @@ function SettingsContent() {
         <svg className="w-5 h-5 text-[var(--color-warning)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span>
-          {t('settings.readOnly', language)}
-          {!fromApi && (
-            <span className="ml-1 font-semibold">
-              ({t('settings.loadingConfig', language)})
-            </span>
-          )}
-        </span>
+        <span>{t('settings.readOnly', language)}</span>
       </div>
 
       {/* Connection section */}
       <Card>
         <CardHeader title={t('settings.section.gateway', language)} />
         <div className="mt-2">
-          <SettingsField
-            label={t('settings.gatewayUrl', language)}
-            value={config.gateway_url}
-          />
+          <SettingsField label={t('settings.gatewayUrl', language)} value={config.gateway_url} />
         </div>
       </Card>
 

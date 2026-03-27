@@ -71,7 +71,7 @@ function AgentCard({
   lang: 'de' | 'en';
 }) {
   const badgeStatus = agentStatusToBadge(agent.status);
-  const isCompliant = agent.compliance_status === 'compliant';
+  const isCompliant = agent.compliance_status === 'passed';
 
   return (
     <Card

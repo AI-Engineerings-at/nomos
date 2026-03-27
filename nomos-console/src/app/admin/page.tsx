@@ -512,10 +512,9 @@ function DashboardContent() {
   const costs = useFetch<CostOverviewResponse>('/costs');
   const approvals = useFetch<ApprovalListResponse>('/approvals');
   const incidents = useFetch<IncidentListResponse>('/incidents');
-  // Note: global /audit endpoint not available — activity feed uses fleet events for now
-  const audit = { data: null as { entries: AuditEntry[] } | null, loading: false, error: null };
+  const audit = useFetch<{ entries: AuditEntry[]; total: number }>('/audit?limit=10');
 
-  const isLoading = fleet.loading || costs.loading || approvals.loading || incidents.loading;
+  const isLoading = fleet.loading || costs.loading || approvals.loading || incidents.loading || audit.loading;
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -529,7 +528,7 @@ function DashboardContent() {
   const activeIncidents = incidents.data?.incidents.filter((i) => i.status !== 'resolved').length ?? 0;
 
   // Compliance health
-  const compliantCount = agents.filter((a) => a.compliance_status === 'compliant').length;
+  const compliantCount = agents.filter((a) => a.compliance_status === 'passed').length;
   const compliancePercent = agents.length > 0 ? Math.round((compliantCount / agents.length) * 100) : 0;
 
   // Cost map + budget map for status board

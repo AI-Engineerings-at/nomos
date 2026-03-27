@@ -424,6 +424,7 @@ export const en: Record<TranslationKey, string> = {
   'users.roleAdmin': 'Administrator',
   'users.roleUser': 'User',
   'users.roleOfficer': 'Compliance Officer',
+  'users.sessionTimeout': 'Session timeout (hours)',
   'users.confirmDeactivate': 'Are you sure you want to deactivate this user?',
   'users.noUsers': 'No users created yet.',
   'users.noUsersDescription': 'Create the first user to get started.',

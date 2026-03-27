@@ -54,11 +54,10 @@ function roleLabel(role: string, lang: 'de' | 'en'): string {
 }
 
 interface UserFormData {
-  name: string;
   email: string;
   password: string;
   role: 'admin' | 'user' | 'officer';
-  max_tasks: number;
+  session_timeout_hours: number;
 }
 
 function UsersContent() {
@@ -68,16 +67,15 @@ function UsersContent() {
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<UserFormData>({
-    name: '',
     email: '',
     password: '',
     role: 'user',
-    max_tasks: 10,
+    session_timeout_hours: 24,
   });
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof UserFormData, string>>>({});
 
   const resetForm = useCallback(() => {
-    setFormData({ name: '', email: '', password: '', role: 'user', max_tasks: 10 });
+    setFormData({ email: '', password: '', role: 'user', session_timeout_hours: 24 });
     setFormErrors({});
   }, []);
 
@@ -89,11 +87,10 @@ function UsersContent() {
 
   const openEdit = useCallback((user: UserAccount) => {
     setFormData({
-      name: user.name,
       email: user.email,
       password: '',
       role: user.role,
-      max_tasks: user.max_tasks,
+      session_timeout_hours: user.session_timeout_hours,
     });
     setFormErrors({});
     setEditingUser(user);
@@ -108,9 +105,10 @@ function UsersContent() {
 
   const validateForm = useCallback((): boolean => {
     const errors: Partial<Record<keyof UserFormData, string>> = {};
-    if (!formData.name.trim()) errors.name = t('error.validation', language);
-    if (!formData.email.trim() || !formData.email.includes('@')) errors.email = t('error.validation', language);
-    if (!editingUser && !formData.password.trim()) errors.password = t('error.validation', language);
+    if (!editingUser) {
+      if (!formData.email.trim() || !formData.email.includes('@')) errors.email = t('error.validation', language);
+      if (!formData.password.trim()) errors.password = t('error.validation', language);
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }, [formData, editingUser, language]);
@@ -120,24 +118,17 @@ function UsersContent() {
     setSaving(true);
     try {
       if (editingUser) {
-        const body: Record<string, unknown> = {
-          name: formData.name,
-          email: formData.email,
+        await api.patch(`/users/${editingUser.id}`, {
           role: formData.role,
-          max_tasks: formData.max_tasks,
-        };
-        if (formData.password.trim()) {
-          body.password = formData.password;
-        }
-        await api.patch(`/users/${editingUser.id}`, body);
+          session_timeout_hours: formData.session_timeout_hours,
+          is_active: editingUser.is_active,
+        });
         addToast({ type: 'success', message: t('toast.userUpdated', language), duration: 4000 });
       } else {
         await api.post('/users', {
-          name: formData.name,
           email: formData.email,
           password: formData.password,
           role: formData.role,
-          max_tasks: formData.max_tasks,
         });
         addToast({ type: 'success', message: t('toast.userCreated', language), duration: 4000 });
       }
@@ -209,19 +200,18 @@ function UsersContent() {
                   style={{ backgroundColor: user.is_active ? 'var(--color-primary)' : 'var(--color-muted)' }}
                   aria-hidden="true"
                 >
-                  {(user.name ?? user.email ?? '?').charAt(0).toUpperCase()}
+                  {(user.email ?? '?').charAt(0).toUpperCase()}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-[var(--color-text)]">{user.name ?? user.email}</span>
+                    <span className="text-sm font-semibold text-[var(--color-text)]">{user.email}</span>
                     <Badge status={roleBadgeStatus(user.role)} label={roleLabel(user.role, language)} />
                     {!user.is_active && (
                       <Badge status="offline" label={t('users.inactive', language)} />
                     )}
                   </div>
-                  <p className="text-xs text-[var(--color-muted)]">{user.email}</p>
                   <p className="text-xs text-[var(--color-muted)]">
                     {t('users.maxTasks', language)}: {user.max_tasks} | {t('users.createdAt', language)}: {formatDate(user.created_at, language)}
                   </p>
@@ -233,7 +223,7 @@ function UsersContent() {
                     variant="ghost"
                     size="sm"
                     onClick={() => openEdit(user)}
-                    aria-label={`${t('action.edit', language)}: ${user.name ?? user.email}`}
+                    aria-label={`${t('action.edit', language)}: ${user.email}`}
                   >
                     {t('action.edit', language)}
                   </Button>
@@ -241,7 +231,7 @@ function UsersContent() {
                     variant={user.is_active ? 'danger' : 'secondary'}
                     size="sm"
                     onClick={() => handleToggleActive(user)}
-                    aria-label={`${user.is_active ? t('users.deactivate', language) : t('users.activate', language)}: ${user.name ?? user.email}`}
+                    aria-label={`${user.is_active ? t('users.deactivate', language) : t('users.activate', language)}: ${user.email}`}
                   >
                     {user.is_active ? t('users.deactivate', language) : t('users.activate', language)}
                   </Button>
@@ -269,30 +259,31 @@ function UsersContent() {
         }
       >
         <div className="space-y-4">
-          <Input
-            label={t('users.name', language)}
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            error={formErrors.name}
-            required
-          />
-          <Input
-            label={t('users.email', language)}
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            error={formErrors.email}
-            required
-          />
-          <Input
-            label={t('users.password', language)}
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            error={formErrors.password}
-            required={!editingUser}
-            hint={editingUser ? (language === 'de' ? 'Leer lassen, um das Passwort nicht zu aendern' : 'Leave empty to keep current password') : undefined}
-          />
+          {!editingUser && (
+            <Input
+              label={t('users.email', language)}
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              error={formErrors.email}
+              required
+            />
+          )}
+          {editingUser && (
+            <p className="text-sm text-[var(--color-muted)]">
+              {t('users.email', language)}: <span className="font-semibold text-[var(--color-text)]">{formData.email}</span>
+            </p>
+          )}
+          {!editingUser && (
+            <Input
+              label={t('users.password', language)}
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              error={formErrors.password}
+              required
+            />
+          )}
           <Select
             label={t('users.role', language)}
             options={[
@@ -303,12 +294,15 @@ function UsersContent() {
             value={formData.role}
             onChange={(e) => setFormData({ ...formData, role: e.target.value as UserFormData['role'] })}
           />
-          <Input
-            label={t('users.maxTasks', language)}
-            type="number"
-            value={String(formData.max_tasks)}
-            onChange={(e) => setFormData({ ...formData, max_tasks: parseInt(e.target.value, 10) || 0 })}
-          />
+          {editingUser && (
+            <Input
+              label={t('users.sessionTimeout', language)}
+              type="number"
+              value={String(formData.session_timeout_hours)}
+              onChange={(e) => setFormData({ ...formData, session_timeout_hours: parseInt(e.target.value, 10) || 1 })}
+              hint={language === 'de' ? 'Sitzungsdauer in Stunden' : 'Session duration in hours'}
+            />
+          )}
         </div>
       </Modal>
     </div>

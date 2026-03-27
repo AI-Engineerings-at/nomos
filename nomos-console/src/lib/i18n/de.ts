@@ -440,7 +440,17 @@ export const de = {
   'settings.section.gateway': 'Verbindung',
   'settings.section.data': 'Datenhaltung',
   'settings.section.privacy': 'Datenschutz',
-  'settings.readOnly': 'Nur-Lese-Ansicht. Aenderungen ueber die API vornehmen.',
+  'settings.section.llmKeys': 'LLM API-Schluessel',
+  'settings.openaiKey': 'OpenAI',
+  'settings.openaiKeyNew': 'Neuer OpenAI API-Schluessel',
+  'settings.anthropicKey': 'Anthropic',
+  'settings.anthropicKeyNew': 'Neuer Anthropic API-Schluessel',
+  'settings.nvidiaKey': 'NVIDIA',
+  'settings.nvidiaKeyNew': 'Neuer NVIDIA API-Schluessel',
+  'settings.keyConfigured': 'Konfiguriert',
+  'settings.keyNotConfigured': 'Nicht konfiguriert',
+  'settings.saving': 'Speichern...',
+  'toast.settingsSaved': 'Einstellungen erfolgreich gespeichert.',
 
   // Incidents Panel
   'incidents.title': 'Vorfaelle',

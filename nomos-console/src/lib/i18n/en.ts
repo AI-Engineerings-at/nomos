@@ -442,7 +442,17 @@ export const en: Record<TranslationKey, string> = {
   'settings.section.gateway': 'Connection',
   'settings.section.data': 'Data Management',
   'settings.section.privacy': 'Privacy',
-  'settings.readOnly': 'Read-only view. Make changes via the API.',
+  'settings.section.llmKeys': 'LLM API Keys',
+  'settings.openaiKey': 'OpenAI',
+  'settings.openaiKeyNew': 'New OpenAI API Key',
+  'settings.anthropicKey': 'Anthropic',
+  'settings.anthropicKeyNew': 'New Anthropic API Key',
+  'settings.nvidiaKey': 'NVIDIA',
+  'settings.nvidiaKeyNew': 'New NVIDIA API Key',
+  'settings.keyConfigured': 'Configured',
+  'settings.keyNotConfigured': 'Not configured',
+  'settings.saving': 'Saving...',
+  'toast.settingsSaved': 'Settings saved successfully.',
 
   // Incidents Panel
   'incidents.title': 'Incidents',

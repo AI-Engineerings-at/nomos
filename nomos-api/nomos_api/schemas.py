@@ -418,3 +418,28 @@ class BudgetTrackResponse(BaseModel):
     agent_id: str
     budget_used_eur: float
     budget_limit_eur: float
+
+
+# --- Settings Schemas ---
+
+
+class SystemSettingsResponse(BaseModel):
+    """System settings — config values in cleartext, secrets masked."""
+
+    gateway_url: str
+    retention_days: int
+    pii_filter_mode: str
+    openai_api_key_set: bool = False
+    anthropic_api_key_set: bool = False
+    nvidia_api_key_set: bool = False
+
+
+class SettingsUpdateRequest(BaseModel):
+    """Partial update — only provided fields are changed."""
+
+    gateway_url: str | None = None
+    retention_days: int | None = None
+    pii_filter_mode: str | None = None
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    nvidia_api_key: str | None = None

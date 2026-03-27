@@ -163,7 +163,20 @@ export interface UserListResponse {
 export interface SystemSettings {
   gateway_url: string;
   retention_days: number;
-  pii_filter_mode: 'strict' | 'standard' | 'off';
+  pii_filter_mode: string;
+  openai_api_key_set: boolean;
+  anthropic_api_key_set: boolean;
+  nvidia_api_key_set: boolean;
+}
+
+/** Partial settings update — only provided fields are changed. */
+export interface SettingsUpdateRequest {
+  gateway_url?: string;
+  retention_days?: number;
+  pii_filter_mode?: string;
+  openai_api_key?: string;
+  anthropic_api_key?: string;
+  nvidia_api_key?: string;
 }
 
 /** Task entry. */

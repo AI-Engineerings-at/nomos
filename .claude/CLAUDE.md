@@ -12,7 +12,8 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 
 # NomOS — EU AI Act Compliance Control Plane
 
-> Standalone Docker-Produkt. Kunden starten `docker compose up -d` auf IHREM Server.
+> Enterprise Docker-Produkt mit 3 Deployment-Tiers: Enterprise VPS (managed), Docker Self-Hosted, Open-Source.
+> Kunden starten `docker compose up -d` auf ihrem Server. Secret Management via HashiCorp Vault.
 > LLM-provider-agnostic. FCL: 3 Agents gratis, ab 4 kommerziell.
 > Leitsatz: *"Jeder entwickelt fuer sich, wir fuer alle."*
 

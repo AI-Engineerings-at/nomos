@@ -43,7 +43,8 @@ Dein Job: Schwachstellen finden bevor sie ausgenutzt werden.
 ### Docker Security
 - Kein `privileged: true`
 - Kein root-User im Container
-- Secrets ueber Environment Variables, nicht in docker-compose.yml
+- Secrets via HashiCorp Vault (KV v2). ENV nur als Fallback in dev_mode.
+- Pruefregel: Kein Secret darf als Default-Wert in config.py oder docker-compose.yml stehen.
 - Minimale Port-Exposition
 
 ## Report Format

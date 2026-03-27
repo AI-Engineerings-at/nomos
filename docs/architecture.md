@@ -142,6 +142,10 @@ Stores the agent registry, users, tasks, approvals, incidents, and indexed audit
 
 BSD-3 licensed Redis replacement. Used for session caching, rate limiting, and ephemeral state.
 
+### HashiCorp Vault
+
+Secret management layer (KV v2). All credentials (DB passwords, JWT secrets, API keys) are stored in Vault. The API fetches secrets at startup. ENV vars are accepted as fallback in dev mode only.
+
 ---
 
 ## Data Flow
@@ -343,17 +347,28 @@ The hash chain is append-only. Each entry's hash depends on all previous entries
 
 ## Configuration
 
-All API settings are configured via environment variables with the `NOMOS_` prefix:
+All secrets are managed via HashiCorp Vault KV v2. ENV vars serve as fallback in dev mode only.
+No secret may appear as a default value in `config.py` or `docker-compose.yml`.
+
+### Vault Secret Paths
+
+| Secret Path | Description |
+|-------------|-------------|
+| `secret/nomos/db` | PostgreSQL credentials (`url`, `password`) |
+| `secret/nomos/api` | API key for plugin/service-to-service auth |
+| `secret/nomos/jwt` | JWT signing secret |
+
+### Runtime ENV Variables (non-secret)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NOMOS_DATABASE_URL` | `postgresql+asyncpg://nomos:nomos@localhost:5432/nomos` | Database connection string |
 | `NOMOS_API_HOST` | `0.0.0.0` | API bind address |
 | `NOMOS_API_PORT` | `8000` | API internal port (mapped to 8060 via Docker) |
 | `NOMOS_API_TITLE` | `NomOS Fleet API` | API title |
 | `NOMOS_API_VERSION` | `0.1.0` | API version |
 | `NOMOS_CORS_ORIGINS` | `["http://localhost:3040"]` | Allowed CORS origins |
 | `NOMOS_AGENTS_DIR` | `./data/agents` | Agent file storage directory |
-| `NOMOS_DB_PASSWORD` | `nomos` | PostgreSQL password |
 | `NOMOS_API_PORT` (docker-compose) | `8060` | External API port |
 | `NOMOS_CONSOLE_PORT` (docker-compose) | `3040` | External console port |
+
+> All secrets managed via HashiCorp Vault KV v2. ENV vars as fallback in dev mode only.

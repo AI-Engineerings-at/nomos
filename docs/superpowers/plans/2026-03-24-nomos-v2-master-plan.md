@@ -1120,7 +1120,7 @@ Neue Commands (rufen alle die API auf):
 
 ---
 
-## Sub-Projekt 5b: Console MVP (6 Kern-Panels)
+## Sub-Projekt 5b: Console v1 (6 Kern-Panels)
 
 **Plan-Dokument:** `docs/superpowers/plans/2026-03-25-sub-5b-mvp.md`
 **PDCA Checkpoint am Ende**

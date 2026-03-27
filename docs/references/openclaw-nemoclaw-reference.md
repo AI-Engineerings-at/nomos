@@ -354,7 +354,7 @@ NemoClaw ist OPTIONAL und nur sinnvoll wenn:
 - NVIDIA Hardware/Services verfuegbar sind
 - Alpha-Status akzeptabel ist
 
-Fuer NomOS v2 MVP: OpenClaw Gateway OHNE NemoClaw starten.
+Fuer NomOS v2: OpenClaw Gateway OHNE NemoClaw starten.
 NemoClaw als optionales Add-on in spaeterer Phase.
 
 ---

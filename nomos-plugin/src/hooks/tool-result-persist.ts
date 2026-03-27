@@ -14,6 +14,8 @@ export function createToolResultPersistHook(): (
   ctx: Record<string, unknown>,
 ) => HookToolResultPersistResult | void {
   return (event, _ctx) => {
+    // content can be string or array of content blocks — only filter strings
+    if (typeof event.message.content !== "string") return undefined;
     let content = event.message.content;
     let modified = false;
 

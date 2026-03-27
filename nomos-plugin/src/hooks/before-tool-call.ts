@@ -18,11 +18,28 @@ export function createBeforeToolCallHook(
 
     // 1. Budget check
     const budget = await client.checkBudget(agentId, 0.01);
-    if (!budget.allowed) {
-      return {
-        block: true,
-        blockReason: `Budget ueberschritten (${agentId}). Remaining: EUR ${budget.remaining}. Agent wird pausiert.`,
-      };
+    if (budget.error) {
+      // API error — log and continue (don't block on transient failures)
+      client.addAuditEntry({
+        agent_id: agentId,
+        event_type: "tool.call_allowed",
+        payload: { tool: event.toolName, budget_error: budget.error },
+      });
+    } else if (!budget.allowed) {
+      const reason = budget.reason || "budget_exceeded";
+      if (budget.status === "unknown_agent") {
+        // Unknown agent — log warning, don't block
+        client.addAuditEntry({
+          agent_id: agentId,
+          event_type: "tool.call_allowed",
+          payload: { tool: event.toolName, budget_warning: "unknown_agent" },
+        });
+      } else {
+        return {
+          block: true,
+          blockReason: `Budget ueberschritten (${agentId}). Remaining: EUR ${budget.remaining ?? 0}. Agent wird pausiert.`,
+        };
+      }
     }
 
     // 2. Destructive tool check — requires approval

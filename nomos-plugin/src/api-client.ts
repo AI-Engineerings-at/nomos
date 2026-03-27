@@ -22,6 +22,8 @@ export interface BudgetResult {
   allowed: boolean;
   remaining: number;
   error?: string;
+  status?: string;   // "normal" | "warning" | "exceeded" | "unknown_agent"
+  reason?: string;
 }
 
 export interface AuditResult {
@@ -86,6 +88,9 @@ export class NomOSApiClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agent_id: agentId, estimated_cost: estimatedCost }),
       });
+      if (!res.ok) {
+        return { allowed: false, remaining: 0, error: `HTTP ${res.status}` };
+      }
       return await res.json() as BudgetResult;
     } catch {
       return { allowed: false, remaining: 0, error: "API unreachable" };

@@ -17,10 +17,16 @@ async def budget_check(
     request: BudgetCheckRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Check if agent has budget for estimated cost. Returns 404 if agent unknown."""
+    """Check if agent has budget. Unknown agents get restrictive default (fail-closed)."""
     result = await check_budget(db, request.agent_id, request.estimated_cost)
     if result is None:
-        raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
+        return {
+            "allowed": False,
+            "remaining": 0,
+            "status": "unknown_agent",
+            "reason": f"Agent {request.agent_id!r} not registered. Register the agent first.",
+            "agent_id": request.agent_id,
+        }
     return result
 
 

@@ -88,7 +88,7 @@ async def test_budget_check_warning(client) -> None:
 
 
 async def test_budget_check_unknown_agent(client) -> None:
-    """Unknown agent -> 404."""
+    """Unknown agent -> restrictive default (fail-closed), not 404."""
     resp = await client.post(
         "/api/budget/check",
         json={
@@ -96,7 +96,27 @@ async def test_budget_check_unknown_agent(client) -> None:
             "estimated_cost": 1.0,
         },
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 200  # Not 404 — fail-closed, not error
+    data = resp.json()
+    assert data["allowed"] is False
+    assert data["status"] == "unknown_agent"
+    assert "reason" in data
+
+
+async def test_budget_check_unknown_agent_returns_restrictive(client) -> None:
+    """Unknown agent returns fail-closed response with correct fields."""
+    resp = await client.post(
+        "/api/budget/check",
+        json={
+            "agent_id": "nonexistent-agent",
+            "estimated_cost": 0.01,
+        },
+    )
+    assert resp.status_code == 200  # Not 404
+    data = resp.json()
+    assert data["allowed"] is False
+    assert data["status"] == "unknown_agent"
+    assert "reason" in data
 
 
 async def test_budget_track_persists(client) -> None:

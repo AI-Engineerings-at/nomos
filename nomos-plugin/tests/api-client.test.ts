@@ -36,7 +36,8 @@ describe("NomOSApiClient", () => {
   it("filters PII from text", async () => {
     const result = await client.filterPII("Email: max@example.com");
     expect(result.filtered).not.toContain("max@example.com");
-    expect(result.found.length).toBeGreaterThan(0);
+    expect(result.matches.length).toBeGreaterThan(0);
+    expect(result.pii_count).toBeGreaterThan(0);
   });
 
   it("checks budget — allowed", async () => {

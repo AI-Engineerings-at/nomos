@@ -14,7 +14,8 @@ export interface ComplianceResult {
 
 export interface PIIFilterResult {
   filtered: string;
-  found: Array<{ type: string; position: number[] }>;
+  pii_count: number;
+  matches: Array<{ type: string; start: number; end: number }>;
 }
 
 export interface BudgetResult {
@@ -39,7 +40,14 @@ export class NomOSApiClient {
         body: JSON.stringify({ agent_id: agentId }),
       });
       if (!res.ok) return { passed: false, missing: [], error: `HTTP ${res.status}` };
-      return await res.json() as ComplianceResult;
+      const data = await res.json();
+      // API returns ComplianceResponse { status, missing_documents, errors, warnings }
+      // Map to internal ComplianceResult format
+      return {
+        passed: data.status === "passed",
+        missing: data.missing_documents ?? [],
+        error: data.errors?.length > 0 ? data.errors.join(", ") : undefined,
+      };
     } catch (err) {
       return { passed: false, missing: [], error: String(err) };
     }
@@ -67,7 +75,7 @@ export class NomOSApiClient {
       });
       return await res.json() as PIIFilterResult;
     } catch {
-      return { filtered: text, found: [] };
+      return { filtered: text, pii_count: 0, matches: [] };
     }
   }
 

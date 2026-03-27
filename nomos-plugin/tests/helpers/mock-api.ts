@@ -12,14 +12,15 @@ export function createMockApiServer(port: number) {
       res.setHeader("Content-Type", "application/json");
 
       if (url.includes("/api/compliance/gate")) {
-        res.end(JSON.stringify({ passed: true, missing: [] }));
+        res.end(JSON.stringify({ status: "passed", missing_documents: [], errors: [], warnings: [] }));
       } else if (url.includes("/api/audit/entry")) {
         res.end(JSON.stringify({ hash: "abc123def456", id: "audit-1" }));
       } else if (url.includes("/api/pii/filter")) {
         const parsed = JSON.parse(body);
         const filtered = (parsed.text as string).replace(/[\w.+-]+@[\w.-]+\.\w+/g, "[EMAIL_REDACTED]");
-        const found = filtered !== parsed.text ? [{ type: "email", position: [0, 0] }] : [];
-        res.end(JSON.stringify({ filtered, found }));
+        const hasMatch = filtered !== parsed.text;
+        const matches = hasMatch ? [{ type: "email", start: 7, end: 22 }] : [];
+        res.end(JSON.stringify({ filtered, pii_count: matches.length, matches }));
       } else if (url.includes("/api/budget/check")) {
         res.end(JSON.stringify({ allowed: true, remaining: 45.50 }));
       } else if (url.includes("/api/agents") && url.includes("/pause")) {

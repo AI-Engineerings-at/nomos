@@ -42,7 +42,6 @@ jobs:
       - name: Console typecheck
         working-directory: nomos-console
         run: npm ci && npx tsc --noEmit
-        continue-on-error: true  # Console may not exist yet
 
   # ──────────────────────────────────────
   # Stage 2: Unit Tests (per package)
@@ -132,7 +131,6 @@ jobs:
           node-version: "22"
       - run: npm ci
       - run: npx vitest run --reporter=junit --outputFile=../test-results/console.xml
-        continue-on-error: true  # Console tests may not exist yet
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -162,7 +160,7 @@ jobs:
           fi
           # Check TypeScript code
           if grep -rn "TODO\|FIXME\|HACK\|coming soon\|placeholder" \
-            nomos-plugin/src/ 2>/dev/null; then
+            nomos-plugin/src/ nomos-console/src/ 2>/dev/null; then
             VIOLATIONS="$VIOLATIONS TypeScript S9 violations found"
           fi
           if [ -n "$VIOLATIONS" ]; then
@@ -213,7 +211,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [quality-gate, docker-build]
+    needs: [lint-python, lint-typescript, test-cli, test-api, test-plugin, test-console, quality-gate, docker-build]
     if: always()
     steps:
       - name: Summary
@@ -222,9 +220,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Lint | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CLI Tests | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Tests | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Plugin Tests | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Lint | ${{ needs.lint-python.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| TS Lint | ${{ needs.lint-typescript.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Tests | ${{ needs.test-cli.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.test-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plugin Tests | ${{ needs.test-plugin.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Console Tests | ${{ needs.test-console.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Quality Gate | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docker Build | ${{ needs.docker-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

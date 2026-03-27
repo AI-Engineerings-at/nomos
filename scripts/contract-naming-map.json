@@ -1,0 +1,10 @@
+{
+  "AgentResponse": "Agent",
+  "CostResponse": "CostEntry",
+  "ApprovalResponse": "ApprovalEntry",
+  "IncidentResponse": "IncidentEntry",
+  "AuditEntryResponse": "AuditEntry",
+  "ComplianceResponse": "ComplianceEntry",
+  "UserResponse": "UserAccount",
+  "TaskResponse": "TaskEntry"
+}

@@ -138,6 +138,23 @@ jobs:
           name: test-results-console
           path: test-results/
 
+  contract-check:
+    name: Contract Check (schemas.py vs types.ts)
+    runs-on: ubuntu-latest
+    needs: [lint-python, lint-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install pydantic pydantic-settings
+      - run: python scripts/export-schemas.py > schemas.json
+      - run: npm install ts-morph typescript
+      - run: npx tsx scripts/check-contracts.ts
+
   # ──────────────────────────────────────
   # Stage 3: Quality Gate (blocks merge)
   # ──────────────────────────────────────
@@ -145,7 +162,7 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
-    needs: [test-cli, test-api, test-plugin]
+    needs: [test-cli, test-api, test-plugin, test-console, contract-check]
     steps:
       - uses: actions/checkout@v4
 
@@ -211,7 +228,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint-python, lint-typescript, test-cli, test-api, test-plugin, test-console, quality-gate, docker-build]
+    needs: [lint-python, lint-typescript, test-cli, test-api, test-plugin, test-console, contract-check, quality-gate, docker-build]
     if: always()
     steps:
       - name: Summary
@@ -226,5 +243,6 @@ jobs:
           echo "| API Tests | ${{ needs.test-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Plugin Tests | ${{ needs.test-plugin.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Console Tests | ${{ needs.test-console.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Contract Check | ${{ needs.contract-check.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Quality Gate | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docker Build | ${{ needs.docker-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

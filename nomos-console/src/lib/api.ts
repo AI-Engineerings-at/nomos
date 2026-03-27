@@ -89,8 +89,13 @@ export async function apiFetch<T>(
       let detail = response.statusText;
       let code: string | undefined;
       try {
-        const errorBody = (await response.json()) as ApiErrorResponse;
-        detail = errorBody.detail || detail;
+        const errorBody = await response.json();
+        // Pydantic validation errors return detail as array of objects
+        if (Array.isArray(errorBody.detail)) {
+          detail = errorBody.detail.map((e: { msg?: string }) => e.msg || '').join(', ') || detail;
+        } else if (typeof errorBody.detail === 'string') {
+          detail = errorBody.detail;
+        }
         code = errorBody.code;
       } catch {
         // Response body was not JSON — use statusText

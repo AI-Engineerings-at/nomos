@@ -39,3 +39,15 @@ Thumbs.db
 *.log
 coverage/
 htmlcov/
+
+# Claude Code / MCP / Tools
+.claude/worktrees/
+.bg-shell/
+.gsd/
+.playwright-mcp/
+
+# Archive (historisch, nicht aktiv)
+_archive/
+
+# Build artifacts
+tsconfig.tsbuildinfo

@@ -44,7 +44,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create database tables on startup, dispose engine on shutdown."""
+    """Validate settings and create database tables on startup."""
+    from nomos_api.config import validate_settings
+    validate_settings()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

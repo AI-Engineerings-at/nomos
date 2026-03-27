@@ -43,6 +43,21 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 | Postmortem | `docs/reports/2026-03-25-session-postmortem.md` |
 | Sub-Plaene | `docs/superpowers/plans/2026-03-25-sub-*.md` |
 
+## Learnings (27.03.2026)
+
+1. **Types von API ableiten, nicht erfinden** — Frontend-Types die nicht zur API passen crashen React
+2. **Nicht raten, Doku lesen** — OpenClaw Endpoints, NVIDIA Model-Namen, Gateway Config
+3. **Kein Feature auf Fake-Fundament** — 8 In-Memory Services haben alles instabil gemacht
+4. **Ein Feld-Mismatch = ein Crash** — `title` statt `description`, `compliant` statt `passed`
+5. **Rate Limiter ist In-Memory** — bei API-Restart reset, bei zu vielen Tests lockt man sich selbst aus
+6. **`is_active = false` unsichtbar** — User deaktiviert → Login 401 ohne klare Fehlermeldung
+7. **Next.js rewrites sind Build-time** — `NOMOS_API_URL` muss beim Build gesetzt werden
+8. **Windows Bind-Mounts = mode 777** — OpenClaw blockiert world-writable Plugins
+9. **Plugin Event-Types muessen registriert sein** — audit.py validiert, unbekannte Events werden abgelehnt
+
+## Aktiver Plan
+- Stabilisierung v2: `docs/superpowers/plans/2026-03-27-stabilization-v2-plan.md`
+
 ## Sprache
 - Code + Commits: Englisch
 - Dokumentation: Bilingual DE/EN

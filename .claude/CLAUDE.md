@@ -44,20 +44,30 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 | Postmortem | `docs/reports/2026-03-25-session-postmortem.md` |
 | Sub-Plaene | `docs/superpowers/plans/2026-03-25-sub-*.md` |
 
-## Learnings (27.03.2026)
+## Learnings (27-28.03.2026)
 
+### Session 27.03 (Stabilisierung v2)
 1. **Types von API ableiten, nicht erfinden** — Frontend-Types die nicht zur API passen crashen React
 2. **Nicht raten, Doku lesen** — OpenClaw Endpoints, NVIDIA Model-Namen, Gateway Config
 3. **Kein Feature auf Fake-Fundament** — 8 In-Memory Services haben alles instabil gemacht
 4. **Ein Feld-Mismatch = ein Crash** — `title` statt `description`, `compliant` statt `passed`
-5. **Rate Limiter ist In-Memory** — bei API-Restart reset, bei zu vielen Tests lockt man sich selbst aus
+5. **Rate Limiter ist Distributed** — Valkey-backed, persistiert bei API-Restart
 6. **`is_active = false` unsichtbar** — User deaktiviert → Login 401 ohne klare Fehlermeldung
 7. **Next.js rewrites sind Build-time** — `NOMOS_API_URL` muss beim Build gesetzt werden
 8. **Windows Bind-Mounts = mode 777** — OpenClaw blockiert world-writable Plugins
 9. **Plugin Event-Types muessen registriert sein** — audit.py validiert, unbekannte Events werden abgelehnt
 
+### Session 28.03 (Phase 2.1 Vitest + NSS Discovery)
+10. **Compliance ist Architektur, nicht Feature** — NomOS ist eine "Compliance Control Plane" (Design Spec), aber Phase 2.1 testete nur UI. Guardian Shield (MARS, SENTINEL, APEX, SHIELD, VIGIL), EU AI Act, GDPR sind nicht optional, sind das Produkt.
+11. **Test Factory Pattern skaliert** — 4-state coverage factory reduzierte boilerplate von 100+ auf 13 Zeilen pro Page-Test. Einfache Patterns sind mächtig.
+12. **Fixtures als Kontrakt** — Mock-Daten die API-Schemas matchen verhindern zukünftige Type Mismatches. Fixtures sind erste Linie der Defense.
+13. **Security Audit Early** — NVIDIA_API_KEY in `.env` (local, gitignored, aber real). Rotation jetzt ist besser als später.
+14. **Plan vs. Product Spec Mismatch** — Plan sagte "Control Plane" aber Tests waren "UI Panel". Align Testplan mit Product-Definition von Anfang an.
+
 ## Aktiver Plan
-- Stabilisierung v2: `docs/superpowers/plans/2026-03-27-stabilization-v2-plan.md`
+- Phase 2.1: `docs/superpowers/plans/2026-03-27-enterprise-hardening-plan.md:1614` (✅ COMPLETE)
+- Nächste Entscheidung: Phase 2.2 (E2E) oder Phase 2.1b (Compliance Tests)?
+- Session Report: `docs/reports/2026-03-28-session-report.md`
 
 ## Sprache
 - Code + Commits: Englisch

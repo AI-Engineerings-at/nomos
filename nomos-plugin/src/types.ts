@@ -103,6 +103,23 @@ export interface HookGatewayEvent {
   version?: string;
 }
 
+// === Plugin Entry Point (v2026.3.22+) ===
+
+export interface PluginEntryDefinition {
+  id: string;
+  name: string;
+  version?: string;
+  register: (api: OpenClawPluginApi) => void;
+}
+
+/**
+ * New plugin entry point required since OpenClaw v2026.3.22.
+ * Replaces `export default function register(api)`.
+ */
+export function definePluginEntry(entry: PluginEntryDefinition): PluginEntryDefinition {
+  return entry;
+}
+
 // === Plugin API ===
 
 export type HookHandler<E = unknown, R = void> =

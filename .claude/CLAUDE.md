@@ -64,10 +64,26 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 13. **Security Audit Early** — NVIDIA_API_KEY in `.env` (local, gitignored, aber real). Rotation jetzt ist besser als später.
 14. **Plan vs. Product Spec Mismatch** — Plan sagte "Control Plane" aber Tests waren "UI Panel". Align Testplan mit Product-Definition von Anfang an.
 
+### Session 01.04 (Leak-Analyse + OpenClaw Update)
+15. **Claude Code Leak: 90% irrelevant fuer NomOS** — Unterschiedliche Produktkategorie (CLI Agent vs. Control Plane). Nuetzlich: Schema-first bestaetigt, Hook-Blaupause (155 Files)
+16. **OpenClaw Releases pruefen BEVOR man weiterbaut** — v2026.3.22 hatte 13 Breaking Changes, unser Plugin Entry Point war veraltet. Immer Image pinnen, nie `latest`.
+17. **definePluginEntry() ist Pflicht seit v2026.3.22** — Altes `export default function register()` wird deprecated
+18. **Projekt Genesis: Nur paths-Frontmatter ist sinnvoll** — Worktree-Script, Coordinator, Scratchpad, Microcompaction sind bereits in Claude Code eingebaut
+
 ## Aktiver Plan
-- Phase 2.1: `docs/superpowers/plans/2026-03-27-enterprise-hardening-plan.md:1614` (✅ COMPLETE)
-- Nächste Entscheidung: Phase 2.2 (E2E) oder Phase 2.1b (Compliance Tests)?
-- Session Report: `docs/reports/2026-03-28-session-report.md`
+- Phase 2.1 Vitest: COMPLETE
+- **OpenClaw v2026.3.28 Kompatibilitaet**: DONE (Entry Point, Image Pin, Types) — TASK-2026-00529
+- Naechste Schritte (Reihenfolge):
+  1. Contract-Alignment (Stabilisierung v2, Tasks A1-A6, B1-B5)
+  2. Enterprise Hardening Phase 0 (Vault, Rate Limiter, CORS)
+  3. E2E Tests (Playwright Suite)
+- Enterprise Hardening Plan: `docs/superpowers/plans/2026-03-27-enterprise-hardening-plan.md`
+
+## OpenClaw Versionsstand (01.04.2026)
+- **Gepinnt auf:** v2026.3.28 (Dockerfile.gateway)
+- **Entry Point:** `definePluginEntry()` (v2026.3.22+ Pattern)
+- **Neue Features verfuegbar:** `requireApproval`, `prependSystemContext`, ContextEngine Plugin Slot
+- **NemoClaw:** Alpha, optional, kein Handlungsbedarf
 
 ## Sprache
 - Code + Commits: Englisch

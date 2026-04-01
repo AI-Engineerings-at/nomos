@@ -1,124 +1,224 @@
-# NomOS
+<p align="center">
+  <img src="docs/images/nomos-logo.png" alt="NomOS Logo" width="200">
+</p>
 
-> The agentic framework that enforces EU AI Act compliance — not by recommendation, but by design.
+<h1 align="center">NomOS</h1>
+
+<p align="center">
+  <strong>EU AI Act Compliance Control Plane for AI Agents</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/EU_AI_Act-Compliant-blue?style=for-the-badge" alt="EU AI Act">
+  <img src="https://img.shields.io/badge/DSGVO-Enforced-blue?style=for-the-badge" alt="DSGVO">
+  <img src="https://img.shields.io/badge/License-Fair_Core-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/Tests-770+-brightgreen?style=for-the-badge" alt="Tests">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/OpenClaw-2026.3.28-orange" alt="OpenClaw">
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker">
+</p>
+
+---
+
+> *"Jeder entwickelt fuer sich, wir fuer alle."*
+>
+> NomOS enforces EU AI Act compliance not by recommendation, but by design. Every requirement maps to an enforceable software control. Agents that don't comply don't deploy.
+
+---
 
 ## Quick Start
 
 ```bash
+git clone https://github.com/AI-Engineerings-at/nomos.git
+cd nomos
 cp .env.example .env
-# Set NVIDIA_API_KEY or your LLM provider key
+# Set your LLM provider key (NVIDIA, OpenAI, Anthropic, etc.)
 docker compose up -d
-# Open http://localhost:3040 — Login: admin@nomos.local
 ```
+
+Open **http://localhost:3040** — Login: `admin@nomos.local`
+
+---
 
 ## What is NomOS?
 
-NomOS maps every requirement of the EU AI Act to an enforceable software control. It generates the compliance documents regulators expect, blocks deployment until those documents exist, and maintains a cryptographically verifiable audit trail. Built for organizations that deploy AI agents and need to prove compliance.
+NomOS is a **Compliance Control Plane** that wraps [OpenClaw](https://openclaw.ai) and [NemoClaw](https://github.com/NVIDIA/NemoClaw) headless. The customer opens a browser, sees NomOS, and nothing else.
 
-## Features
+```
+                        +------------------+
+                        |    Browser       |
+                        |  localhost:3040  |
+                        +--------+---------+
+                                 |
+                    +------------+------------+
+                    |     NomOS Console       |
+                    |    (Next.js 15)         |
+                    +------------+------------+
+                                 |
+              +------------------+------------------+
+              |                                     |
+   +----------+----------+            +-------------+-------------+
+   |    NomOS API        |            |   OpenClaw Gateway        |
+   |   (FastAPI)         |            |   (headless, Plugin)      |
+   |   17 Routers        |            |   11 Runtime Hooks        |
+   |   47+ Endpoints     |            |   Compliance Gate         |
+   +----------+----------+            +-------------+-------------+
+              |                                     |
+   +----------+----------+            +-------------+-------------+
+   |   PostgreSQL 16     |            |   LLM Provider            |
+   |   + pgvector        |            |   (any: NVIDIA, OpenAI,   |
+   +---------------------+            |    Anthropic, local)      |
+   |   Valkey (Cache)    |            +---------------------------+
+   +---------------------+
+   |   HashiCorp Vault   |
+   +---------------------+
+```
 
-- **17 API routers** covering agents, fleet, compliance, audit, auth, users, tasks, approvals, costs, budget, PII, incidents, workspace, DSGVO, proxy, settings, health
-- **20 Console pages** — Admin dashboard, team, hire, approvals, costs, audit, compliance, diagnostics, incidents, users, tasks, settings + User dashboard, chat, tasks, help
-- **11 OpenClaw Plugin hooks** — before-agent-start, before-tool-call, after-tool-call, message-sending, message-received, tool-result-persist, gateway-start, session-start, session-end, agent-end, on-error
-- **770+ tests** across all packages
-- **Dark mode default**, bilingual DE/EN UI
-- **Compliance Gate** — generates 5 required documents (DPIA, Art. 30, Art. 50, Art. 14, Art. 12), blocks deployment until signed
-- **Hash Chain Audit** — SHA-256 tamper-evident trail, cryptographically verifiable
-- **Fair Core License** — 3 agents free, full functionality; commercial license from 4+ agents
+## Key Features
+
+### Compliance Engine
+- **Compliance Gate** — Generates 5 required EU AI Act documents (DPIA, Art. 30, Art. 50, Art. 14, Art. 12). Agents are blocked from deployment until all documents are signed.
+- **Hash Chain Audit** — SHA-256 tamper-evident audit trail. Every action is cryptographically chained and verifiable.
+- **PII Filter** — Real-time detection and redaction of personal data in agent communications (DSGVO Art. 6).
+- **Budget Control** — Per-agent cost limits with automatic pause on threshold breach (Art. 14 risk management).
+
+### Operations
+- **Fleet Management** — Hire, pause, resume, terminate agents through the Console.
+- **Real-time Chat** — Talk to your agents through NomOS. Every message passes through compliance hooks.
+- **Incident Management** — Automatic incident creation on agent errors with Art. 14 EU AI Act classification.
+- **Task Dispatch** — Assign tasks to agents with deadline tracking and approval workflows.
+
+### Security
+- **HashiCorp Vault** integration for all secrets (JWT, API keys, gateway tokens).
+- **Rate Limiting** — Valkey-backed distributed rate limiter.
+- **RBAC** — Role-based access control (admin, compliance_officer, user).
+- **11 OpenClaw Hooks** — Every agent action passes through compliance, audit, PII, and budget checks before execution.
 
 ## Architecture
 
 ```
 nomos/
-├── nomos-api        Python 3.12 FastAPI — 17 routers, 47+ endpoints
-├── nomos-cli        Python CLI — 5 commands, 6 core modules
-├── nomos-console    Next.js 15 / React 19 — 20 pages (admin + user dashboard)
-├── nomos-plugin     TypeScript — OpenClaw gateway plugin, 11 hooks
-├── schemas/         YAML schema templates for agent manifests
-└── templates/       Agent role templates (external-secretary, etc.)
+ |- nomos-api/        Python 3.12 FastAPI — 17 routers, 47+ endpoints
+ |- nomos-cli/        Python CLI — 5 commands, 6 core modules
+ |- nomos-console/    Next.js 15 / React 19 — 20 pages (admin + user)
+ |- nomos-plugin/     TypeScript — OpenClaw gateway plugin, 11 hooks
+ |- schemas/          YAML schema templates for agent manifests
+ +- templates/        Agent role templates
 ```
 
-**Data flow:**
+### Data Flow
+
 ```
-Console → Next.js rewrite → FastAPI → PostgreSQL
-Console → API Proxy → OpenClaw Gateway → LLM Provider
+User --> Console --> Next.js rewrite --> FastAPI --> PostgreSQL
+User --> Console --> API Proxy --> OpenClaw Gateway (+NomOS Plugin) --> LLM
+                                       |
+                                  11 Hooks fire:
+                                  - Compliance Gate
+                                  - PII Filter
+                                  - Budget Check
+                                  - Audit Entry
+                                  - Heartbeat
 ```
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.12 (FastAPI, Pydantic v2, SQLAlchemy async) |
-| Frontend | TypeScript strict (Next.js 15, React 19) |
-| Database | PostgreSQL 16 + pgvector |
-| Cache | Valkey (BSD-3 Redis replacement) |
-| Gateway | OpenClaw (LLM provider agnostic) |
-| Voice (optional) | Piper TTS (MIT) + Whisper.cpp (MIT) |
-| Deployment | Docker Compose |
-| CI/CD | GitHub Actions |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Backend | Python 3.12, FastAPI, Pydantic v2 | API, compliance logic, audit |
+| Frontend | TypeScript strict, Next.js 15, React 19 | Console UI (dark mode default) |
+| Database | PostgreSQL 16 + pgvector | Persistent storage + embeddings |
+| Cache | Valkey (BSD-3 Redis replacement) | Rate limiting, sessions, events |
+| Secrets | HashiCorp Vault | JWT, API keys, gateway tokens |
+| Gateway | OpenClaw v2026.3.28 | LLM-provider-agnostic agent runtime |
+| Sandbox | NemoClaw (optional) | Container isolation for agents |
+| Voice | Piper TTS + Whisper.cpp (optional) | Speech I/O (MIT licensed) |
+| CI/CD | GitHub Actions | 5-stage pipeline (lint, test, quality, build, summary) |
 
 ## CLI
 
 ```bash
-# Create a new agent
-nomos hire --name "Mani Ruf" --role external-secretary \
-  --company "Acme GmbH" --email mani@acme.at \
-  --output-dir ./data/agents/mani-ruf
-
-# Generate required compliance documents
-nomos gate --agent-dir ./data/agents/mani-ruf
-
-# Verify full compliance (schema + docs + hash + chain)
-nomos verify --agent-dir ./data/agents/mani-ruf
-
-# List all agents
-nomos fleet --agents-dir ./data/agents
-
-# Show audit trail
-nomos audit --agent-dir ./data/agents/mani-ruf
-
-# Verify audit chain integrity
-nomos audit --agent-dir ./data/agents/mani-ruf --verify
+nomos hire    --name "Mani" --role external-secretary   # Create agent
+nomos gate    --agent-dir ./data/agents/mani            # Generate compliance docs
+nomos verify  --agent-dir ./data/agents/mani            # Verify full compliance
+nomos fleet   --agents-dir ./data/agents                # List all agents
+nomos audit   --agent-dir ./data/agents/mani --verify   # Verify audit chain
 ```
 
 ## API
 
 Base URL: `http://localhost:8060`
 
-See [API Reference](docs/api-reference.md) for all 47+ endpoints grouped by domain (health, auth, agents, fleet, compliance, audit, users, tasks, approvals, costs, budget, PII, incidents, workspace, DSGVO, proxy, settings).
+| Domain | Endpoints | Description |
+|--------|-----------|-------------|
+| Auth | `/api/auth/*` | JWT login, 2FA, recovery keys |
+| Agents | `/api/agents/*` | CRUD, hire, pause, resume, terminate |
+| Fleet | `/api/fleet/*` | Fleet overview, status aggregation |
+| Compliance | `/api/compliance/*` | Gate checks, document generation |
+| Audit | `/api/audit/*` | Hash chain entries, verification |
+| Users | `/api/users/*` | RBAC user management |
+| Tasks | `/api/tasks/*` | Task dispatch and tracking |
+| Approvals | `/api/approvals/*` | Human-in-the-loop approval workflow |
+| Costs | `/api/costs/*` | Per-agent cost tracking |
+| Budget | `/api/budget/*` | Budget limits and alerts |
+| PII | `/api/pii/*` | Personal data detection and filtering |
+| Incidents | `/api/incidents/*` | Incident management (Art. 14) |
+| DSGVO | `/api/dsgvo/*` | Right to erasure (Art. 17) |
+| Settings | `/api/settings` | System configuration |
+| Health | `/api/health` | Service health + Vault status |
 
-## Pricing (FCL — Fair Core License)
+See [API Reference](docs/api-reference.md) for all 47+ endpoints.
 
-| Plan | Agents | Details |
-|------|--------|---------|
-| Free | Up to 3 | Full functionality, all features |
-| Commercial | 4+ | Commercial license required |
+## Pricing
+
+| Plan | Agents | Price |
+|------|--------|-------|
+| **Free** | Up to 3 | All features included |
+| **Commercial** | 4+ | [Contact us](https://ai-engineering.at) |
+
+Fair Core License (FCL) — full functionality at every tier. No feature gating.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Quickstart](docs/quickstart.md) | Get running in 5 minutes |
-| [API Reference](docs/api-reference.md) | Complete REST API documentation (47+ endpoints) |
-| [CLI Reference](docs/cli-reference.md) | All 5 CLI commands with flags and examples |
-| [Architecture](docs/architecture.md) | System design, data flow, database schema, security model |
-| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage — what's implemented, what's not |
+| [API Reference](docs/api-reference.md) | Complete REST API (47+ endpoints) |
+| [CLI Reference](docs/cli-reference.md) | All 5 commands with examples |
+| [Architecture](docs/architecture.md) | System design, data flow, security |
+| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage |
 
 **Deutsch:**
 
 | Dokument | Beschreibung |
 |----------|-------------|
 | [Schnellstart](docs/de/schnellstart.md) | In 5 Minuten starten |
-| [API-Referenz](docs/de/api-referenz.md) | Vollstaendige REST API Dokumentation |
-| [CLI-Referenz](docs/de/cli-referenz.md) | Alle 5 CLI-Befehle mit Flags und Beispielen |
-| [Architektur](docs/de/architektur.md) | System-Design, Datenfluss, Datenbank-Schema, Sicherheitsmodell |
-| [Compliance-Leitfaden](docs/de/compliance-leitfaden.md) | EU AI Act + DSGVO Abdeckung |
+| [API-Referenz](docs/de/api-referenz.md) | Vollstaendige REST API |
+| [CLI-Referenz](docs/de/cli-referenz.md) | Alle 5 Befehle |
+| [Architektur](docs/de/architektur.md) | System-Design und Sicherheit |
+| [Compliance-Leitfaden](docs/de/compliance-leitfaden.md) | EU AI Act + DSGVO |
+
+## Deployment Tiers
+
+| Tier | Target | How |
+|------|--------|-----|
+| **Enterprise VPS** | Managed hosting | We deploy and maintain |
+| **Docker Self-Hosted** | Your server | `docker compose up -d` |
+| **Open Source** | Community | Fork and customize |
 
 ## License
 
-Fair Source License v1.0 — free for up to 3 AI Agents.
-Commercial license required for 4+. See [LICENSE](LICENSE) for details.
+**Fair Source License v1.0** — Free for up to 3 AI Agents. Commercial license required for 4+.
 
-## Built by
+See [LICENSE](LICENSE) for details.
 
-[AI Engineering](https://ai-engineering.at) — Vienna, Austria.
+---
+
+<p align="center">
+  Built with discipline by <a href="https://ai-engineering.at"><strong>AI Engineering</strong></a> — Vienna, Austria.
+</p>

@@ -61,11 +61,19 @@ async def record_heartbeat(
     return HeartbeatResponse(agent_id=result["agent_id"], status=result["status"])
 
 
-@router.patch("/agents/{agent_id}", response_model=dict)
-async def patch_agent(agent_id: str, request: AgentPatchRequest) -> dict:
+@router.patch("/agents/{agent_id}", response_model=AgentResponse)
+async def patch_agent(
+    agent_id: str,
+    request: AgentPatchRequest,
+    db: AsyncSession = Depends(get_db),
+) -> AgentResponse:
     if request.status is None:
         raise HTTPException(status_code=400, detail="No update fields provided")
-    return {"agent_id": agent_id, "status": request.status, "updated": True}
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    agent = await update_agent_status(db, agent_id, request.status)
+    return AgentResponse.model_validate(agent, from_attributes=True)
 
 
 @router.post("/agents/{agent_id}/pause", response_model=AgentResponse)

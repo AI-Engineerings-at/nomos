@@ -41,7 +41,7 @@ export interface ApprovalEntry {
   agent_id: string;
   action: string;
   description: string;
-  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  status: 'pending' | 'approved' | 'denied' | 'expired';
   requested_at: string;
   resolved_at: string | null;
   resolved_by: string | null;
@@ -137,6 +137,7 @@ export interface HealthResponse {
   status: string;
   service: string;
   version: string;
+  vault: string;
 }
 
 /** NomOS user account for admin management. */

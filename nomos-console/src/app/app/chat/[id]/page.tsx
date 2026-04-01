@@ -161,7 +161,7 @@ function ChatContent() {
   const handlePause = async () => {
     setPauseLoading(true);
     try {
-      await api.patch(`/fleet/${agentId}`, { status: 'paused' });
+      await api.post(`/agents/${agentId}/pause`);
       addToast({ type: 'success', message: t('toast.agentPaused', language), duration: 4000 });
       agentFetch.reload();
     } catch (err) {

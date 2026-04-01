@@ -164,8 +164,8 @@ function ProfileContent() {
   const handlePause = async () => {
     setPauseLoading(true);
     try {
-      const newStatus = agent.status === 'paused' ? 'running' : 'paused';
-      await api.patch(`/fleet/${agentId}`, { status: newStatus });
+      const action = agent.status === 'paused' ? 'resume' : 'pause';
+      await api.post(`/agents/${agentId}/${action}`);
       addToast({
         type: 'success',
         message: newStatus === 'paused'

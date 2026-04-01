@@ -67,7 +67,7 @@ export const mockCostEntry: CostEntry = {
   agent_id: 'agent-001',
   total_cost_eur: 42.5,
   budget_limit_eur: 100,
-  budget_status: 'ok',
+  budget_status: 'normal',
   percent_used: 42.5,
 };
 
@@ -78,7 +78,7 @@ export const mockCosts: CostOverviewResponse = {
       agent_id: 'agent-002',
       total_cost_eur: 18.0,
       budget_limit_eur: 50,
-      budget_status: 'ok',
+      budget_status: 'normal',
       percent_used: 36,
     },
   ],

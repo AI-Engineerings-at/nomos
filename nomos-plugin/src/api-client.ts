@@ -28,7 +28,7 @@ export interface BudgetResult {
 
 export interface AuditResult {
   hash: string;
-  id?: string;
+  id?: number;
 }
 
 export class NomOSApiClient {
@@ -102,7 +102,7 @@ export class NomOSApiClient {
       const res = await fetch(`${this.baseUrl}/api/agents/${agentId}/heartbeat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(status),
+        body: JSON.stringify({ metrics: status }),
       });
       return res.ok;
     } catch {

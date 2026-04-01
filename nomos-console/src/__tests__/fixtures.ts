@@ -246,4 +246,5 @@ export const mockHealth: HealthResponse = {
   status: 'healthy',
   service: 'nomos-api',
   version: '0.1.0',
+  vault: 'healthy',
 };

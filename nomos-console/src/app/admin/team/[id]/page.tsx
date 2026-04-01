@@ -168,7 +168,7 @@ function ProfileContent() {
       await api.post(`/agents/${agentId}/${action}`);
       addToast({
         type: 'success',
-        message: newStatus === 'paused'
+        message: action === 'pause'
           ? t('toast.agentPaused', language)
           : t('toast.agentResumed', language),
         duration: 4000,

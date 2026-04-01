@@ -89,6 +89,8 @@ async def pause_agent(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    if agent.status in ("paused", "killed", "retired"):
+        raise HTTPException(status_code=409, detail=f"Agent is already {agent.status}")
 
     agent = await update_agent_status(db, agent_id, "paused")
 

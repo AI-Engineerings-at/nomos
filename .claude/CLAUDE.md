@@ -64,11 +64,15 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 13. **Security Audit Early** — NVIDIA_API_KEY in `.env` (local, gitignored, aber real). Rotation jetzt ist besser als später.
 14. **Plan vs. Product Spec Mismatch** — Plan sagte "Control Plane" aber Tests waren "UI Panel". Align Testplan mit Product-Definition von Anfang an.
 
-### Session 01.04 (Leak-Analyse + OpenClaw Update)
+### Session 01.04 (Leak-Analyse + OpenClaw Update + Full Audit)
 15. **Claude Code Leak: 90% irrelevant fuer NomOS** — Unterschiedliche Produktkategorie (CLI Agent vs. Control Plane). Nuetzlich: Schema-first bestaetigt, Hook-Blaupause (155 Files)
 16. **OpenClaw Releases pruefen BEVOR man weiterbaut** — v2026.3.22 hatte 13 Breaking Changes, unser Plugin Entry Point war veraltet. Immer Image pinnen, nie `latest`.
 17. **definePluginEntry() ist Pflicht seit v2026.3.22** — Altes `export default function register()` wird deprecated
 18. **Projekt Genesis: Nur paths-Frontmatter ist sinnvoll** — Worktree-Script, Coordinator, Scratchpad, Microcompaction sind bereits in Claude Code eingebaut
+19. **NACH JEDEM RENAME: grep nach dem alten Namen** — `newStatus` → `action` Rename in team/[id] liess eine Referenz stehen → ReferenceError. IMMER `grep -r "alteName"` nach jedem Rename.
+20. **NACH JEDER TYPE-AENDERUNG: alle Fixtures/Mocks pruefen** — `vault` Feld zu HealthResponse hinzugefuegt aber mockHealth Fixture vergessen. IMMER `grep -r "TypeName"` und alle Instanzen aktualisieren.
+21. **NACH JEDEM FIX: alle Tests laufen lassen SOFORT** — Nicht erst am Ende. Jeder einzelne Fix → Test Run. Haette test_health Drift sofort aufgedeckt.
+22. **Kleine Gaps = grosse Fehler** — Ein vergessenes Rename, eine vergessene Fixture, ein fehlender Guard — jedes davon ist ein Runtime-Crash fuer den Kunden. Null Toleranz.
 
 ## Aktiver Plan
 - Phase 2.1 Vitest: COMPLETE

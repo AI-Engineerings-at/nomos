@@ -19,6 +19,7 @@ dependencies = [
     "pyotp>=2.9",
     "hvac>=2.1",
     "valkey>=6.0",
+    "alembic>=1.13",
 ]
 
 [project.optional-dependencies]

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import jwt
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -15,8 +19,24 @@ from starlette.responses import JSONResponse, Response
 
 from nomos_api.config import settings
 from nomos_api.database import engine
-from nomos_api.models import Base
-from nomos_api.routers import agents, approvals, audit, auth, budget, compliance, costs, dsgvo, fleet, health, incidents, pii, proxy, tasks, users, workspace
+from nomos_api.routers import (
+    agents,
+    approvals,
+    audit,
+    auth,
+    budget,
+    compliance,
+    costs,
+    dsgvo,
+    fleet,
+    health,
+    incidents,
+    pii,
+    proxy,
+    tasks,
+    users,
+    workspace,
+)
 from nomos_api.routers import settings as settings_router
 
 logging.basicConfig(
@@ -42,13 +62,21 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _run_alembic_upgrade() -> None:
+    """Run Alembic migrations synchronously (called via run_in_executor)."""
+    alembic_ini = Path(__file__).resolve().parent.parent / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini))
+    command.upgrade(alembic_cfg, "head")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Validate settings and create database tables on startup."""
+    """Validate settings and run Alembic migrations on startup."""
     from nomos_api.config import validate_settings
+
     validate_settings(settings)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _run_alembic_upgrade)
     yield
     await engine.dispose()
 

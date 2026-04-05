@@ -443,3 +443,21 @@ class SettingsUpdateRequest(BaseModel):
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
     nvidia_api_key: str | None = None
+
+
+# --- System Status Schemas ---
+
+
+class SystemStatusResponse(BaseModel):
+    """Response for GET /api/system/status — public, no auth required."""
+
+    initialized: bool
+    vault_status: str
+    admin_exists: bool
+    setup_required: bool
+
+
+class UnsealKeyResponse(BaseModel):
+    """Response for GET /api/system/unseal-key — one-time retrieval."""
+
+    unseal_key: str

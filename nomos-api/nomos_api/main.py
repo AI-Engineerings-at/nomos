@@ -33,6 +33,7 @@ from nomos_api.routers import (
     incidents,
     pii,
     proxy,
+    system,
     tasks,
     users,
     workspace,
@@ -93,6 +94,8 @@ PUBLIC_PATHS = {
     "/api/auth/login",
     "/api/auth/recovery",
     "/api/users/bootstrap",
+    "/api/system/status",
+    "/api/system/unseal-key",
     "/docs",
     "/openapi.json",
 }
@@ -146,6 +149,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(system.router)
 app.include_router(fleet.router)
 app.include_router(agents.router)
 app.include_router(compliance.router)

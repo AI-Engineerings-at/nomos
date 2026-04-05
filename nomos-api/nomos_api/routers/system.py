@@ -1,0 +1,142 @@
+"""System status and unseal-key endpoints for the setup wizard.
+
+GET /api/system/status — public, returns system initialization state.
+GET /api/system/unseal-key — public, one-time unseal key retrieval.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from nomos_api.database import get_db
+from nomos_api.models import User
+from nomos_api.schemas import SystemStatusResponse, UnsealKeyResponse
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/system", tags=["system"])
+
+# In-memory flag: once the unseal key has been served, it cannot be retrieved again.
+_unseal_key_served: bool = False
+
+
+def _get_init_file_path() -> Path:
+    """Return the path to the Vault init marker file.
+
+    Extracted as a function to allow test patching without touching the filesystem.
+    """
+    return Path("/vault/init/initialized")
+
+
+def _get_unseal_key_paths() -> list[Path]:
+    """Return candidate paths for the unseal key, in priority order.
+
+    First match wins. Extracted for test patching.
+    """
+    return [
+        Path("/vault/init/unseal-key"),
+        Path("/vault/file/init-output.json"),
+    ]
+
+
+def _get_vault_status() -> str:
+    """Return Vault health status string."""
+    from nomos_api.config import settings
+
+    if not settings.vault_role_id or not settings.vault_secret_id:
+        return "unavailable"
+
+    try:
+        from nomos_api.vault_source import _get_vault_client
+
+        client = _get_vault_client()
+        if not client.connected:
+            return "unavailable"
+        status = client.health_status()
+        # Map 'degraded' to 'sealed' for the setup wizard context
+        if status == "degraded":
+            return "sealed"
+        return status
+    except Exception:
+        return "unavailable"
+
+
+async def _admin_exists(db: AsyncSession) -> bool:
+    """Check if at least one admin user exists in the database."""
+    result = await db.execute(select(func.count()).select_from(User).where(User.role == "admin"))
+    count = result.scalar_one()
+    return count > 0
+
+
+def _read_unseal_key(paths: list[Path]) -> str | None:
+    """Read the unseal key from the first existing candidate path.
+
+    Supports two formats:
+    - Plain text file (first path) — content is the key.
+    - JSON file (init-output.json) — key is in unseal_keys_b64[0].
+    """
+    for path in paths:
+        if not path.exists():
+            continue
+
+        content = path.read_text().strip()
+
+        if path.name == "init-output.json":
+            try:
+                data = json.loads(content)
+                keys = data.get("unseal_keys_b64", [])
+                if keys:
+                    return keys[0]
+            except (json.JSONDecodeError, KeyError, IndexError):
+                logger.warning("Failed to parse unseal key from %s", path)
+                continue
+        else:
+            return content
+
+    return None
+
+
+@router.get("/status", response_model=SystemStatusResponse)
+async def system_status(db: AsyncSession = Depends(get_db)) -> SystemStatusResponse:
+    """Return system initialization status. Public endpoint, no auth required."""
+    init_file = _get_init_file_path()
+    initialized = init_file.exists()
+    vault_status = _get_vault_status()
+    admin = await _admin_exists(db)
+    setup_required = not initialized or not admin
+
+    return SystemStatusResponse(
+        initialized=initialized,
+        vault_status=vault_status,
+        admin_exists=admin,
+        setup_required=setup_required,
+    )
+
+
+@router.get("/unseal-key", response_model=UnsealKeyResponse)
+async def get_unseal_key() -> UnsealKeyResponse:
+    """Return the Vault unseal key. One-time retrieval only.
+
+    - First call: returns the key and sets the served flag.
+    - Subsequent calls: 410 Gone.
+    - File not found: 404 Not Found.
+    """
+    global _unseal_key_served
+
+    if _unseal_key_served:
+        raise HTTPException(status_code=410, detail="Unseal key has already been served")
+
+    paths = _get_unseal_key_paths()
+    key = _read_unseal_key(paths)
+
+    if key is None:
+        raise HTTPException(status_code=404, detail="Unseal key file not found")
+
+    _unseal_key_served = True
+    return UnsealKeyResponse(unseal_key=key)

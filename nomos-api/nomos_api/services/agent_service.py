@@ -15,6 +15,7 @@ from nomos_api.models import Agent, AuditLog
 from nomos.core.forge import forge_agent, _slugify
 from nomos.core.hash_chain import HashChain
 from nomos.core.compliance_engine import check_compliance
+from nomos.core.gate import generate_compliance_docs
 from nomos.core.manifest_validator import load_manifest
 
 # ---------------------------------------------------------------------------
@@ -78,7 +79,26 @@ async def create_agent(
         return CreateAgentResult(success=False, error=forge_result.error)
 
     manifest = load_manifest(forge_result.output_dir / "manifest.yaml")
-    compliance_result = check_compliance(manifest, forge_result.output_dir / "compliance")
+
+    # Auto-set kill_switch_authority to creating user (Art. 14 EU AI Act)
+    import yaml
+    manifest_path = forge_result.output_dir / "manifest.yaml"
+    manifest_raw = yaml.safe_load(manifest_path.read_text())
+    if "governance" not in manifest_raw:
+        manifest_raw["governance"] = {}
+    if not manifest_raw["governance"].get("kill_switch_authority"):
+        manifest_raw["governance"]["kill_switch_authority"] = [email]
+    manifest_path.write_text(yaml.dump(manifest_raw, default_flow_style=False, allow_unicode=True, sort_keys=False))
+
+    # Re-load manifest after kill_switch update
+    manifest = load_manifest(manifest_path)
+
+    # Auto-generate compliance docs (zero-friction onboarding)
+    compliance_dir = forge_result.output_dir / "compliance"
+    compliance_dir.mkdir(exist_ok=True)
+    generate_compliance_docs(manifest, compliance_dir, llm_location="eu")
+
+    compliance_result = check_compliance(manifest, compliance_dir)
 
     agent = Agent(
         id=manifest.agent.id,

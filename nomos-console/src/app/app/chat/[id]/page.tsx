@@ -188,9 +188,31 @@ function ChatContent() {
 
   const badgeStatus = agentStatusToBadge(agent.status);
   const isOffline = agent.status !== 'running';
+  const isBlocked = agent.compliance_status === 'blocked';
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height)-3rem)] bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-lg)] overflow-hidden" data-tour="chat">
+      {/* Compliance Banner */}
+      {isBlocked && (
+        <div className="px-4 py-3 bg-[var(--color-warning-bg,#3d2e00)] border-b border-[var(--color-warning,#f59e0b)] text-sm">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-[var(--color-warning,#f59e0b)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <span className="text-[var(--color-warning,#f59e0b)] font-medium">
+              {language === 'de'
+                ? `${agent.name} ist noch nicht einsatzbereit. Compliance-Dokumente fehlen.`
+                : `${agent.name} is not yet ready. Compliance documents are missing.`}
+            </span>
+            <button
+              onClick={() => router.push(`/admin/team/${agent.id}`)}
+              className="ml-auto text-xs font-semibold text-[var(--color-primary)] hover:underline"
+            >
+              {language === 'de' ? 'Compliance pruefen' : 'Check compliance'}
+            </button>
+          </div>
+        </div>
+      )}
       {/* Chat Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-card)]">
         <div className="flex items-center gap-3">

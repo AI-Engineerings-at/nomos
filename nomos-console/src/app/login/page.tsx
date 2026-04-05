@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { useNomosStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { api } from '@/lib/api';
 import { LoginForm } from '@/components/auth/login-form';
 import { TotpInput } from '@/components/auth/totp-input';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
@@ -22,6 +23,19 @@ export default function LoginPage() {
   const { language, theme } = useNomosStore();
   const { user, loading } = useAuth();
   const [step, setStep] = useState<LoginStep>('credentials');
+
+  // Check if first-time setup is required
+  useEffect(() => {
+    api.get<{ setup_required: boolean }>('/system/status')
+      .then((data) => {
+        if (data.setup_required) {
+          router.push('/setup');
+        }
+      })
+      .catch(() => {
+        // Ignore -- if system/status fails, proceed with login
+      });
+  }, [router]);
 
   // Redirect if already logged in
   useEffect(() => {

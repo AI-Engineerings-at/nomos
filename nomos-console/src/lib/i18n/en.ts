@@ -605,4 +605,64 @@ export const en: Record<TranslationKey, string> = {
   'deploy.step.runTests': 'Running self-tests',
   'deploy.step.startHeartbeat': 'Starting activity monitoring',
   'deploy.step.ready': 'Employee is ready',
+
+  // Setup Wizard
+  'setup.title': 'Set up NomOS',
+  'setup.subtitle': 'A few steps to get your system ready.',
+  'setup.stepLabel': 'Step',
+
+  // Step 1: Vault Unseal Key
+  'setup.step1.title': 'Security Key',
+  'setup.step1.description': 'This key is needed to unseal the Vault. Save it securely — it will only be shown once.',
+  'setup.step1.warning': 'Store this key in a safe place. Without it, the Vault cannot be restored.',
+  'setup.step1.checkbox': 'I have securely saved the key',
+  'setup.step1.copy': 'Copy',
+  'setup.step1.copied': 'Copied',
+
+  // Step 2: Admin Account
+  'setup.step2.title': 'Create Administrator Account',
+  'setup.step2.email': 'Email address',
+  'setup.step2.password': 'Password',
+  'setup.step2.passwordHint': 'At least 12 characters, upper/lowercase, digit and special character',
+  'setup.step2.confirm': 'Confirm password',
+  'setup.step2.recoveryTitle': 'Recovery Key',
+  'setup.step2.recoveryWarning': 'Save this key securely. It is needed if you forget your password.',
+  'setup.step2.recoveryCheckbox': 'I have saved the recovery key',
+  'setup.step2.errorEmailRequired': 'Please enter an email address.',
+  'setup.step2.errorPasswordLength': 'Password must be at least 12 characters long.',
+  'setup.step2.errorPasswordMismatch': 'Passwords do not match.',
+  'setup.step2.strengthWeak': 'Weak',
+  'setup.step2.strengthFair': 'Fair',
+  'setup.step2.strengthGood': 'Good',
+  'setup.step2.strengthStrong': 'Strong',
+  'setup.step2.strengthExcellent': 'Excellent',
+
+  // Step 2b: 2FA
+  'setup.step2b.title': 'Two-Factor Authentication',
+  'setup.step2b.description': 'Add an extra layer of security with an authenticator app.',
+  'setup.step2b.activate': 'Activate now',
+  'setup.step2b.skip': 'Later',
+  'setup.step2b.code': 'Verification code',
+  'setup.step2b.verify': 'Verify',
+  'setup.step2b.verified': 'Two-factor authentication successfully activated.',
+  'setup.step2b.qrAlt': 'QR code for authenticator app',
+
+  // Step 3: LLM Provider
+  'setup.step3.title': 'Configure LLM Provider',
+  'setup.step3.description': 'Connect NomOS to an AI provider. NVIDIA is recommended for EU compliance.',
+  'setup.step3.recommended': 'recommended',
+  'setup.step3.apiKeyLabel': 'API Key',
+  'setup.step3.test': 'Test connection',
+  'setup.step3.testSuccess': 'Connection established successfully.',
+  'setup.step3.testFail': 'Connection failed. Please check the API key.',
+  'setup.step3.skip': 'Configure later',
+
+  // Step 4: Done
+  'setup.step4.title': 'Setup Complete',
+  'setup.step4.vault': 'Vault key secured',
+  'setup.step4.admin': 'Administrator account created',
+  'setup.step4.twofa': 'Two-factor authentication',
+  'setup.step4.provider': 'LLM Provider',
+  'setup.step4.start': 'Start NomOS',
+  'setup.step4.autoUnseal': 'Auto-unseal is enabled. The Vault will be automatically unlocked on startup.',
 };

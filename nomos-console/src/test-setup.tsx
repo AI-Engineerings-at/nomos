@@ -93,16 +93,33 @@ if (typeof window !== 'undefined') {
 // ---------------------------------------------------------------------------
 
 // Mock @/lib/api — Prevent real network calls
-vi.mock('@/lib/api', () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
-  fetcher: vi.fn(),
-}));
+vi.mock('@/lib/api', () => {
+  class ApiError extends Error {
+    status: number;
+    statusText: string;
+    detail: string;
+    code?: string;
+    constructor(status: number, statusText: string, detail: string, code?: string) {
+      super(detail);
+      this.name = 'ApiError';
+      this.status = status;
+      this.statusText = statusText;
+      this.detail = detail;
+      this.code = code;
+    }
+  }
+  return {
+    api: {
+      get: vi.fn().mockResolvedValue({}),
+      post: vi.fn().mockResolvedValue({}),
+      put: vi.fn().mockResolvedValue({}),
+      patch: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue({}),
+    },
+    ApiError,
+    fetcher: vi.fn(),
+  };
+});
 
 // Mock @/lib/auth
 vi.mock('@/lib/auth', () => ({

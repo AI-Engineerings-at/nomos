@@ -603,6 +603,66 @@ export const de = {
   'deploy.step.runTests': 'Selbsttests werden ausgeführt',
   'deploy.step.startHeartbeat': 'Aktivitätsüberwachung wird gestartet',
   'deploy.step.ready': 'Mitarbeiter ist einsatzbereit',
+
+  // Setup Wizard
+  'setup.title': 'NomOS einrichten',
+  'setup.subtitle': 'In wenigen Schritten ist Ihr System einsatzbereit.',
+  'setup.stepLabel': 'Schritt',
+
+  // Step 1: Vault Unseal Key
+  'setup.step1.title': 'Sicherheitsschlüssel',
+  'setup.step1.description': 'Dieser Schlüssel wird benötigt, um den Vault zu entsperren. Speichern Sie ihn sicher ab — er wird nur einmal angezeigt.',
+  'setup.step1.warning': 'Bewahren Sie diesen Schlüssel an einem sicheren Ort auf. Ohne ihn können Sie den Vault nicht wiederherstellen.',
+  'setup.step1.checkbox': 'Ich habe den Schlüssel sicher gespeichert',
+  'setup.step1.copy': 'Kopieren',
+  'setup.step1.copied': 'Kopiert',
+
+  // Step 2: Admin Account
+  'setup.step2.title': 'Administrator-Konto erstellen',
+  'setup.step2.email': 'E-Mail-Adresse',
+  'setup.step2.password': 'Passwort',
+  'setup.step2.passwordHint': 'Mindestens 12 Zeichen, Groß-/Kleinbuchstaben, Zahl und Sonderzeichen',
+  'setup.step2.confirm': 'Passwort bestätigen',
+  'setup.step2.recoveryTitle': 'Wiederherstellungsschlüssel',
+  'setup.step2.recoveryWarning': 'Speichern Sie diesen Schlüssel sicher ab. Er wird benötigt, falls Sie Ihr Passwort vergessen.',
+  'setup.step2.recoveryCheckbox': 'Ich habe den Wiederherstellungsschlüssel gespeichert',
+  'setup.step2.errorEmailRequired': 'Bitte geben Sie eine E-Mail-Adresse ein.',
+  'setup.step2.errorPasswordLength': 'Das Passwort muss mindestens 12 Zeichen lang sein.',
+  'setup.step2.errorPasswordMismatch': 'Die Passwörter stimmen nicht überein.',
+  'setup.step2.strengthWeak': 'Schwach',
+  'setup.step2.strengthFair': 'Mäßig',
+  'setup.step2.strengthGood': 'Gut',
+  'setup.step2.strengthStrong': 'Stark',
+  'setup.step2.strengthExcellent': 'Ausgezeichnet',
+
+  // Step 2b: 2FA
+  'setup.step2b.title': 'Zwei-Faktor-Authentifizierung',
+  'setup.step2b.description': 'Schützen Sie Ihr Konto zusätzlich mit einer Authenticator-App.',
+  'setup.step2b.activate': 'Jetzt aktivieren',
+  'setup.step2b.skip': 'Später',
+  'setup.step2b.code': 'Bestätigungscode',
+  'setup.step2b.verify': 'Verifizieren',
+  'setup.step2b.verified': 'Zwei-Faktor-Authentifizierung erfolgreich aktiviert.',
+  'setup.step2b.qrAlt': 'QR-Code für Authenticator-App',
+
+  // Step 3: LLM Provider
+  'setup.step3.title': 'LLM-Provider konfigurieren',
+  'setup.step3.description': 'Verbinden Sie NomOS mit einem KI-Anbieter. NVIDIA wird für EU-Compliance empfohlen.',
+  'setup.step3.recommended': 'empfohlen',
+  'setup.step3.apiKeyLabel': 'API-Schlüssel',
+  'setup.step3.test': 'Verbindung testen',
+  'setup.step3.testSuccess': 'Verbindung erfolgreich hergestellt.',
+  'setup.step3.testFail': 'Verbindung fehlgeschlagen. Bitte prüfen Sie den API-Schlüssel.',
+  'setup.step3.skip': 'Später konfigurieren',
+
+  // Step 4: Done
+  'setup.step4.title': 'Einrichtung abgeschlossen',
+  'setup.step4.vault': 'Vault-Schlüssel gesichert',
+  'setup.step4.admin': 'Administrator-Konto erstellt',
+  'setup.step4.twofa': 'Zwei-Faktor-Authentifizierung',
+  'setup.step4.provider': 'LLM-Provider',
+  'setup.step4.start': 'NomOS starten',
+  'setup.step4.autoUnseal': 'Auto-Unseal ist aktiviert. Der Vault wird beim Start automatisch entsperrt.',
 } as const;
 
 export type TranslationKey = keyof typeof de;

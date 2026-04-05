@@ -127,7 +127,7 @@ function AuditContent() {
 
   const handleVerifyChain = useCallback(async () => {
     if (!agentFilter) {
-      addToast({ type: 'warning', message: language === 'de' ? 'Bitte waehlen Sie einen Agenten aus' : 'Please select an agent first', duration: 4000 });
+      addToast({ type: 'warning', message: t('audit.selectAgentFirst', language), duration: 4000 });
       return;
     }
     setVerifying(true);

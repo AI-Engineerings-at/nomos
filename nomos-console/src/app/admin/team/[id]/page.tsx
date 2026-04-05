@@ -393,7 +393,7 @@ function ProfileContent() {
           <Card>
             <CardHeader
               title={t('profile.complianceChecklist', language)}
-              description={`${COMPLIANCE_DOCS.length} ${language === 'de' ? 'Dokumente erforderlich' : 'documents required'}`}
+              description={t('profile.documentsRequired', language).replace('{count}', String(COMPLIANCE_DOCS.length))}
             />
             <div className="mt-4">
               <ComplianceChecklist

@@ -212,15 +212,13 @@ function ChatContent() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <span className="text-[var(--color-warning,#f59e0b)] font-medium">
-              {language === 'de'
-                ? `${agent.name} ist noch nicht einsatzbereit. Compliance-Dokumente fehlen.`
-                : `${agent.name} is not yet ready. Compliance documents are missing.`}
+              {t('chat.complianceBanner', language).replace('{name}', agent.name)}
             </span>
             <button
               onClick={() => router.push(`/admin/team/${agent.id}`)}
               className="ml-auto text-xs font-semibold text-[var(--color-primary)] hover:underline"
             >
-              {language === 'de' ? 'Compliance pruefen' : 'Check compliance'}
+              {t('chat.checkCompliance', language)}
             </button>
           </div>
         </div>

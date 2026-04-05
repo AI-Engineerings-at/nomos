@@ -143,10 +143,10 @@ function HireWizardContent() {
   const validateStep1 = (): boolean => {
     const errors: Record<string, string> = {};
     if (!formData.name.trim()) {
-      errors.name = language === 'de' ? 'Bitte geben Sie einen Namen ein.' : 'Please enter a name.';
+      errors.name = t('hire.validation.nameRequired', language);
     }
     if (!formData.roleId) {
-      errors.roleId = language === 'de' ? 'Bitte waehlen Sie eine Rolle.' : 'Please select a role.';
+      errors.roleId = t('hire.validation.roleRequired', language);
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -155,7 +155,7 @@ function HireWizardContent() {
   const validateStep2 = (): boolean => {
     const errors: Record<string, string> = {};
     if (formData.capabilities.length === 0) {
-      errors.capabilities = language === 'de' ? 'Bitte waehlen Sie mindestens eine Faehigkeit.' : 'Please select at least one capability.';
+      errors.capabilities = t('hire.validation.capabilitiesRequired', language);
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -575,7 +575,7 @@ function HireWizardContent() {
           )}
           <Button onClick={goNext} disabled={fclAtLimit && step === 3}>
             {step === 3
-              ? (language === 'de' ? 'Einarbeitung starten' : 'Start onboarding')
+              ? t('hire.startOnboarding', language)
               : t('action.next', language)}
           </Button>
         </div>

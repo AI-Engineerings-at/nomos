@@ -300,7 +300,7 @@ function UsersContent() {
               type="number"
               value={String(formData.session_timeout_hours)}
               onChange={(e) => setFormData({ ...formData, session_timeout_hours: parseInt(e.target.value, 10) || 1 })}
-              hint={language === 'de' ? 'Sitzungsdauer in Stunden' : 'Session duration in hours'}
+              hint={t('users.sessionTimeoutHint', language)}
             />
           )}
         </div>

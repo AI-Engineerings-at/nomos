@@ -125,7 +125,7 @@ function DiagnosticsContent() {
       <Card>
         <CardHeader title={t('diagnostics.services', language)} />
         <p className="text-sm text-[var(--color-muted)] mt-2">
-          {language === 'de' ? 'Service-Status wird ueber den Health-Endpoint bereitgestellt.' : 'Service status is provided via the health endpoint.'}
+          {t('diagnostics.servicesInfo', language)}
         </p>
       </Card>
 

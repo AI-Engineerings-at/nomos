@@ -13,6 +13,7 @@ services:
       - "${NOMOS_GATEWAY_PORT:-3050}:18789"
     environment:
       - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:?Set NOMOS_PLUGIN_API_KEY in .env}
+      - NOMOS_GATEWAY_TOKEN=${NOMOS_GATEWAY_TOKEN:?Set NOMOS_GATEWAY_TOKEN in .env}
       - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -35,25 +36,25 @@ services:
   # ─── HashiCorp Vault (Secret Management) ──────────────
 
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.17
     cap_add:
       - IPC_LOCK
     ports:
       - "${VAULT_PORT:-8200}:8200"
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
+      - 'VAULT_LOCAL_CONFIG={"storage":{"file":{"path":"/vault/file"}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}},"disable_mlock":true,"ui":true}'
     volumes:
       - nomos-vault:/vault/file
-      - ./vault/config:/vault/config:ro
       - ./vault/policies:/vault/policies:ro
       - ./vault/init.sh:/vault/init.sh:ro
-    command: server -config=/vault/config/vault.hcl
+    command: server
     healthcheck:
-      test: ["CMD", "sh", "-c", "vault status || [ $? -eq 1 ]"]
+      test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200 || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   # ─── NomOS Control Plane ───────────────────────────────

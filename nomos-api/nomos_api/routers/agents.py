@@ -68,6 +68,7 @@ async def record_heartbeat(
 async def patch_agent(
     agent_id: str,
     request: AgentPatchRequest,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
     if request.status is None:
@@ -75,6 +76,7 @@ async def patch_agent(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    check_agent_access(user, agent, "patch")
     agent = await update_agent_status(db, agent_id, request.status)
     return AgentResponse.model_validate(agent, from_attributes=True)
 

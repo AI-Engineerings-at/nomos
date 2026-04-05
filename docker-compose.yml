@@ -122,6 +122,12 @@ services:
       vault:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import arq; print('ok')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   nomos-console:
     build:

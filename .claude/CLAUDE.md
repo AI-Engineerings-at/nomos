@@ -80,12 +80,12 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 - Contract-Alignment: DONE (9 Fixes) — TASK-2026-00535
 - Alembic DB-Migrationen: DONE — TASK-2026-00542
 - Full Audit P0 Fixes: DONE (API-Key Header, Test Count, Broken Tests)
-- **Naechste Schritte (Reihenfolge):**
-  1. TASK-00545: Auth auf State-Change Endpoints (3-4h)
-  2. TASK-00546: Compliance-Dokumente 5→14 (2-3h)
-  3. TASK-00544: Background Worker ARQ (5-6h)
-  4. TASK-00543: TLS via Caddy (4-5h) — MUSS letzter sein (Cookie secure=True braucht TLS)
-- Production Readiness Plan: Detailliert in dieser Session entworfen (Architect Agent)
+- TASK-00545: Auth auf State-Change Endpoints: DONE (RBAC, 15 Tests)
+- TASK-00546: Compliance-Dokumente 5→14: DONE (20 Tests, risikoklassenabhaengig)
+- TASK-00544: Background Worker ARQ: DONE (4 Cron-Jobs, 9 Tests)
+- TASK-00543: TLS via Caddy: DONE (Reverse Proxy, Cookie Hardening, 3 Tests)
+- **Production Readiness: ~8/10** (war 5/10)
+- **Naechste Schritte:** Final Validation, Docker Stack E2E Test, Deployment Guide
 
 ## OpenClaw Versionsstand (01.04.2026)
 - **Gepinnt auf:** v2026.3.28 (Dockerfile.gateway)

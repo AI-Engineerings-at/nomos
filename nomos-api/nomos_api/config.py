@@ -16,11 +16,12 @@ from pydantic_settings import BaseSettings
 logger = logging.getLogger(__name__)
 
 # Insecure defaults that MUST be overridden in production.
-_INSECURE_DEFAULTS: dict[str, str] = {
-    "jwt_secret": "change-me-in-production",
-    "plugin_api_key": "nomos-plugin-dev",
-    "gateway_token": "nomos-dev-token",
-    "db_password": "nomos",
+# Includes both legacy dev defaults and the Vault-pending sentinel.
+_INSECURE_DEFAULTS: dict[str, set[str]] = {
+    "jwt_secret": {"change-me-in-production", "vault-pending"},
+    "plugin_api_key": {"nomos-plugin-dev", "vault-pending"},
+    "gateway_token": {"nomos-dev-token", "vault-pending"},
+    "db_password": {"nomos", "vault-pending"},
 }
 
 
@@ -35,12 +36,14 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3040"]
     agents_dir: Path = Path("./data/agents")
 
-    # Secrets — MUST be overridden via Vault or ENV
-    jwt_secret: str
-    plugin_api_key: str
+    # Secrets — overridden via Vault (auto) or ENV.
+    # "vault-pending" means Vault has not yet injected the real value.
+    # validate_settings() blocks this in production.
+    jwt_secret: str = "vault-pending"
+    plugin_api_key: str = "vault-pending"
     gateway_url: str = "http://openclaw-gateway:18789"
-    gateway_token: str
-    db_password: str
+    gateway_token: str = "vault-pending"
+    db_password: str = "vault-pending"
 
     # Vault connection
     vault_addr: str = "http://vault:8200"
@@ -92,9 +95,9 @@ def validate_settings(s: Settings) -> None:
         return
 
     violations: list[str] = []
-    for field, insecure_value in _INSECURE_DEFAULTS.items():
+    for field, insecure_values in _INSECURE_DEFAULTS.items():
         actual = getattr(s, field, None)
-        if actual == insecure_value:
+        if actual in insecure_values:
             violations.append(field)
 
     if violations:

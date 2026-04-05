@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 
 from nomos_api.config import Settings, validate_settings
@@ -62,4 +60,36 @@ class TestConfigValidation:
             dev_mode=False,
         )
         # Should NOT exit
+        validate_settings(s)
+
+    def test_vault_pending_default_causes_exit(self):
+        """vault-pending sentinel must be rejected in production."""
+        s = Settings(
+            jwt_secret="vault-pending",
+            plugin_api_key="vault-pending",
+            gateway_token="vault-pending",
+            db_password="vault-pending",
+            dev_mode=False,
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            validate_settings(s)
+        assert exc_info.value.code == 1
+
+    def test_single_vault_pending_field_causes_exit(self):
+        """Even one vault-pending field must block startup."""
+        s = Settings(
+            jwt_secret="vault-pending",
+            plugin_api_key="prod-plugin-key-abc123",
+            gateway_token="prod-gateway-token-xyz789",
+            db_password="strong-db-password-2024",
+            dev_mode=False,
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            validate_settings(s)
+        assert exc_info.value.code == 1
+
+    def test_vault_pending_allowed_in_dev_mode(self):
+        """vault-pending is fine in dev mode — Vault may not be running."""
+        s = Settings(dev_mode=True)
+        # defaults are vault-pending, but dev_mode skips validation
         validate_settings(s)

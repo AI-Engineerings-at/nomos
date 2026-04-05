@@ -145,6 +145,12 @@ services:
       nomos-api:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ─── Data ──────────────────────────────────────────────
 
@@ -193,7 +199,7 @@ services:
       nomos-api:
         condition: service_healthy
       nomos-console:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]

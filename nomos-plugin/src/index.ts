@@ -23,7 +23,7 @@ export default definePluginEntry({
 
   register(api: OpenClawPluginApi): void {
     const config = getPluginConfig(api);
-    const client = new NomOSApiClient(config.apiUrl);
+    const client = new NomOSApiClient(config.apiUrl, config.apiKey);
     const logger = api.logger;
     const wrapOpts = { client, logger };
 

@@ -32,13 +32,20 @@ export interface AuditResult {
 }
 
 export class NomOSApiClient {
-  constructor(private readonly baseUrl: string) {}
+  private readonly headers: Record<string, string>;
+
+  constructor(private readonly baseUrl: string, apiKey?: string) {
+    this.headers = {
+      "Content-Type": "application/json",
+      ...(apiKey ? { "X-NomOS-API-Key": apiKey } : {}),
+    };
+  }
 
   async checkCompliance(agentId: string): Promise<ComplianceResult> {
     try {
       const res = await fetch(`${this.baseUrl}/api/compliance/gate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
         body: JSON.stringify({ agent_id: agentId }),
       });
       if (!res.ok) return { passed: false, missing: [], error: `HTTP ${res.status}` };
@@ -59,7 +66,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/api/audit/entry`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
         body: JSON.stringify(entry),
       });
       return await res.json() as AuditResult;
@@ -72,7 +79,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/api/pii/filter`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
         body: JSON.stringify({ text }),
       });
       return await res.json() as PIIFilterResult;
@@ -85,7 +92,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/api/budget/check`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
         body: JSON.stringify({ agent_id: agentId, estimated_cost: estimatedCost }),
       });
       if (!res.ok) {
@@ -101,7 +108,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/api/agents/${agentId}/heartbeat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
         body: JSON.stringify({ metrics: status }),
       });
       return res.ok;
@@ -114,7 +121,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/health`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
       });
       return res.ok;
     } catch {
@@ -126,7 +133,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/api/agents/${agentId}/pause`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
       });
       return res.ok;
     } catch {
@@ -138,7 +145,7 @@ export class NomOSApiClient {
     try {
       const res = await fetch(`${this.baseUrl}/api/incidents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.headers,
         body: JSON.stringify({
           log_entry: description,
           agent_id: agentId,

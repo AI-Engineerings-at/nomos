@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/EU_AI_Act-Compliant-blue?style=for-the-badge" alt="EU AI Act">
   <img src="https://img.shields.io/badge/DSGVO-Enforced-blue?style=for-the-badge" alt="DSGVO">
   <img src="https://img.shields.io/badge/License-Fair_Core-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Tests-770+-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-324+-brightgreen?style=for-the-badge" alt="Tests">
 </p>
 
 <p align="center">

@@ -24,10 +24,12 @@ async def users_client(users_engine, tmp_path, monkeypatch):
     from nomos_api.config import settings
     from nomos_api.database import get_db
     from nomos_api.main import app
-    from nomos_api.routers.auth import _login_limiter
-
-    _login_limiter._attempts.clear()
-    _login_limiter._lockouts.clear()
+    from unittest.mock import AsyncMock, patch
+    # Rate limiter is Valkey-backed since v2026.3.27 — mock it for unit tests
+    mock_limiter = AsyncMock()
+    mock_limiter.is_allowed = AsyncMock(return_value=True)
+    mock_limiter.record_attempt = AsyncMock()
+    mock_limiter.reset = AsyncMock()
 
     factory = async_sessionmaker(users_engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -38,6 +40,7 @@ async def users_client(users_engine, tmp_path, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setattr(settings, "agents_dir", tmp_path / "agents")
     monkeypatch.setattr(settings, "jwt_secret", "test-secret-key")
+    monkeypatch.setattr("nomos_api.routers.auth._login_limiter", mock_limiter)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -165,10 +168,7 @@ async def test_non_admin_cannot_list_users(users_client, users_engine, admin_use
         "role": "user",
     }, cookies=cookies)
 
-    # Login as regular user
-    from nomos_api.routers.auth import _login_limiter
-    _login_limiter._attempts.clear()
-    _login_limiter._lockouts.clear()
+    # Login as regular user (rate limiter is mocked via fixture)
 
     login_resp = await users_client.post("/api/auth/login", json={
         "email": "regular@nomos.local",

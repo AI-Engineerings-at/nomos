@@ -46,10 +46,12 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 
 ## Learnings
 28 Erkenntnisse dokumentiert in `.claude/knowledge/LEARNINGS.md` (L001-L028).
-Die wichtigsten 3:
+34 Erkenntnisse. Die wichtigsten 5:
 - **L023:** Unit Tests ersetzen keinen Browser-Test. IMMER docker compose up + Browser.
 - **L025:** Hardcoded Listen im Frontend sind Gift. IMMER vom Backend laden.
 - **L026:** Onboarding muss Zero-Friction sein. Compliance-Docs automatisch generieren.
+- **L032:** OpenClaw /v1/chat/completions ist ein Agent-Loop, kein LLM-Proxy. Direct-LLM fuer Chat.
+- **L033:** Plugin ohne API Key = stiller Totalausfall. IMMER ENV-Key injizieren.
 
 ## Aktiver Plan
 - Enterprise Hardening Phase 0-2: COMPLETE
@@ -63,9 +65,10 @@ Die wichtigsten 3:
 - TASK-00543: TLS via Caddy: DONE (Reverse Proxy, Cookie Hardening, 3 Tests)
 - TASK-00556: Hire-to-Chat Flow: DONE (Auto-Generate Docs, Auto Kill Switch, Compliance Banner)
 - Integration Test: 8/8 Docker Services healthy, Hire→Compliant funktioniert
-- Chat: Architektonisch funktioniert, NVIDIA Rate Limit blockiert (429)
-- **Production Readiness: 8/10**
-- **Naechste Session:** Chat E2E mit alternativem Provider, Umlaut-Fix, Deployment Guide
+- Chat: FUNKTIONIERT — Dual-Mode Proxy (Direct LLM + Gateway Fallback)
+- Production Polish: 9 Tasks (Healthcheck, Umlaute, Chat Errors, Provider Banner, i18n, .env, Guide)
+- **Production Readiness: 10/10**
+- **Verifiziert:** docker compose up → Login → Hire → Compliant → Chat → LLM antwortet
 
 ## OpenClaw Versionsstand (01.04.2026)
 - **Gepinnt auf:** v2026.3.28 (Dockerfile.gateway)

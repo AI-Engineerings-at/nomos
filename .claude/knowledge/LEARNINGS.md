@@ -105,3 +105,12 @@ Token Auth gibt nicht automatisch alle Scopes. Workaround: `x-openclaw-scopes` H
 
 ### L031 — OpenClaw Chat Model muss "openclaw" sein
 `/v1/chat/completions` erwartet `model: "openclaw"`, NICHT den Provider-Model-Namen direkt.
+
+### L032 — OpenClaw /v1/chat/completions ist ein AGENT-LOOP, kein LLM-Proxy
+Jeder Request durchlaeuft System-Prompt, Tools, Sessions, Memory. Fuer einfachen Chat: Direct-LLM-Proxy bauen der die Provider-API direkt aufruft.
+
+### L033 — Plugin ohne API Key = stiller Totalausfall
+before-agent-start Hook prueft Compliance via API. Ohne API Key: 401 → Hook injiziert "STOP" in System-Prompt → LLM verweigert Antwort. Kein Error sichtbar, nur "No reply from agent". IMMER API Key via ENV injizieren.
+
+### L034 — Dual-Mode Proxy ist die Loesung
+Direct-LLM fuer Chat (~2s, zuverlaessig). Gateway Agent-Loop fuer agentic Workflows (Tools, Approval). Beides parallel, Fallback-Kette.

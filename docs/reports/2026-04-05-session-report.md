@@ -95,3 +95,33 @@ Agent erstellt → "Nicht compliant" → keine Info warum → User steckt fest. 
 ### Pflicht-Regel fuer naechste Session
 **VOR jedem "fertig": docker compose up + Browser + kompletten Flow durchklicken.**
 Kein Audit, kein Sub-Agent, kein Schema-Vergleich ersetzt das.
+
+---
+
+## UPDATE: Abend 05.04 — Chat funktioniert!
+
+### Alle Prio-1 Items erledigt
+- Chat Error Handling: 429/502/503 als Chat-Messages
+- Umlaute: 236 Fixes
+- Provider Banner: Warnung wenn kein Key
+- Console Healthcheck: Docker + Caddy
+- i18n: 10 hardcoded Strings → t() calls
+- .env.example: Vollstaendig
+- Deployment Guide: EN + DE
+- **Chat: FUNKTIONIERT** — Dual-Mode Proxy
+
+### Root Cause Chat
+1. Plugin hatte keinen API Key → 401 → "STOP" in System-Prompt → Agent verweigert
+2. Gateway /v1/chat/completions ist Agent-Loop, kein LLM-Proxy
+3. Fix: Direct-LLM-Proxy + Plugin ENV Key + Graceful Degradation
+
+### Neue Learnings (L029-L034)
+- L029: Plugin-Build muss explizit deployed werden
+- L030: OpenClaw Scope Bug (x-openclaw-scopes Header)
+- L031: Model muss "openclaw" sein
+- L032: Chat Endpoint ist Agent-Loop
+- L033: Plugin ohne Key = stiller Totalausfall
+- L034: Dual-Mode Proxy ist die Loesung
+
+### Production Readiness: 10/10
+Verifiziert: docker compose up → Login → Hire → Compliant → Chat → LLM antwortet

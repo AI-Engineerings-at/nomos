@@ -11,6 +11,10 @@
         "description": "NomOS API URL",
         "default": "http://nomos-api:8000"
       },
+      "apiKey": {
+        "type": "string",
+        "description": "NomOS Plugin API Key for service-to-service auth"
+      },
       "agentsDir": {
         "type": "string",
         "description": "Local agents directory",

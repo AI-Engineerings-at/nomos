@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     vault_role_id: str = ""
     vault_secret_id: str = ""
 
+    # LLM Provider (direct passthrough, bypasses OpenClaw agent loop)
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = ""
+
     # Runtime
     dev_mode: bool = False
     cookie_secure: bool = True

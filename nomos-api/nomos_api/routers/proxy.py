@@ -1,4 +1,11 @@
-"""Gateway proxy — forwards chat to OpenClaw /v1/chat/completions (OpenAI-compatible)."""
+"""Gateway proxy — forwards chat to LLM provider.
+
+Two modes:
+1. Direct LLM: If NOMOS_LLM_BASE_URL is set, bypasses OpenClaw agent loop
+   and calls the provider API directly. Best for simple chat.
+2. Gateway Agent: Falls back to OpenClaw /v1/chat/completions (agent loop
+   with tools, memory, sessions). Best for agentic workflows.
+"""
 
 from __future__ import annotations
 
@@ -23,6 +30,11 @@ logger = logging.getLogger("nomos-api")
 router = APIRouter(prefix="/api", tags=["proxy"])
 
 
+def _has_direct_llm() -> bool:
+    """Check if direct LLM provider is configured."""
+    return bool(settings.llm_base_url and settings.llm_api_key and settings.llm_model)
+
+
 async def _gateway_fetch(method: str, path: str, json_body: dict | None = None) -> dict | None:
     """HTTP request to OpenClaw Gateway. Returns parsed JSON or None on failure."""
     url = f"{settings.gateway_url.rstrip('/')}/{path.lstrip('/')}"
@@ -43,9 +55,54 @@ async def _gateway_fetch(method: str, path: str, json_body: dict | None = None) 
         return None
 
 
+async def _direct_llm_chat(messages: list[dict], model: str | None = None) -> dict | None:
+    """Direct LLM API call (OpenAI-compatible). Bypasses OpenClaw agent loop."""
+    url = f"{settings.llm_base_url.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {settings.llm_api_key}",
+        "Content-Type": "application/json",
+    }
+    body = {
+        "model": model or settings.llm_model,
+        "messages": messages,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(url, json=body, headers=headers)
+            if response.status_code == 429:
+                logger.warning("LLM rate limit reached (429)")
+                return {"error": {"message": "Rate limit reached. Please try again later."}}
+            response.raise_for_status()
+            return response.json()
+    except httpx.TimeoutException:
+        logger.warning("LLM provider timeout at %s", url)
+        return None
+    except httpx.HTTPStatusError as exc:
+        logger.warning("LLM provider error %d: %s", exc.response.status_code, exc.response.text[:200])
+        return {"error": {"message": f"LLM provider error: {exc.response.status_code}"}}
+    except Exception as exc:
+        logger.warning("LLM provider error at %s: %s", url, exc)
+        return None
+
+
 @router.get("/proxy/status", response_model=ProxyStatusResponse)
 async def gateway_status() -> ProxyStatusResponse:
-    """Check OpenClaw Gateway health."""
+    """Check LLM provider / Gateway health."""
+    if _has_direct_llm():
+        # Test direct LLM provider
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    f"{settings.llm_base_url.rstrip('/')}/models",
+                    headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+                )
+                if response.status_code < 500:
+                    return ProxyStatusResponse(status="online", version="direct-llm")
+        except Exception:
+            pass
+        return ProxyStatusResponse(status="offline")
+
     result = await _gateway_fetch("GET", "/healthz")
     if result is None:
         return ProxyStatusResponse(status="offline")
@@ -61,15 +118,15 @@ async def gateway_status() -> ProxyStatusResponse:
 async def proxy_chat(
     request: ProxyChatRequest, db: AsyncSession = Depends(get_db)
 ) -> ProxyChatResponse:
-    """Proxy chat to OpenClaw Gateway via OpenAI-compatible /v1/chat/completions.
+    """Proxy chat to LLM.
 
-    Model is derived from agent manifest (llm_provider). If no provider is
-    configured, the gateway default is used. Customer chooses their own LLM.
+    Uses direct LLM provider if configured (NOMOS_LLM_BASE_URL),
+    otherwise falls back to OpenClaw Gateway agent loop.
     """
     session_id = request.session_id or str(uuid.uuid4())
 
     # Resolve model from agent manifest if available
-    model = "openclaw"
+    model = None
     agent = await db.get(Agent, request.agent_id)
     if agent and agent.manifest_data:
         manifest = agent.manifest_data if isinstance(agent.manifest_data, dict) else {}
@@ -77,22 +134,44 @@ async def proxy_chat(
         if llm_provider:
             model = llm_provider
 
-    # OpenAI-compatible chat completions format
+    messages = [{"role": "user", "content": request.message}]
+
+    # Mode 1: Direct LLM (preferred for chat)
+    if _has_direct_llm():
+        result = await _direct_llm_chat(messages, model=model)
+
+        if result is None:
+            raise HTTPException(
+                status_code=502,
+                detail="LLM-Provider ist nicht erreichbar. Bitte pruefen Sie die Konfiguration.",
+            )
+
+        if "error" in result:
+            error_msg = result["error"].get("message", "Unbekannter LLM-Fehler")
+            raise HTTPException(status_code=502, detail=error_msg)
+
+        choices = result.get("choices", [])
+        response_text = ""
+        if choices:
+            response_text = choices[0].get("message", {}).get("content", "")
+
+        return ProxyChatResponse(response=response_text, session_id=session_id)
+
+    # Mode 2: Gateway agent loop (fallback)
+    gateway_model = model or "openclaw"
     result = await _gateway_fetch("POST", "/v1/chat/completions", {
-        "model": model,
-        "messages": [{"role": "user", "content": request.message}],
+        "model": gateway_model,
+        "messages": messages,
     })
 
     if result is None:
         raise HTTPException(
             status_code=502,
-            detail="OpenClaw Gateway ist nicht erreichbar. Stellen Sie sicher, dass der Gateway-Dienst läuft.",
+            detail="OpenClaw Gateway ist nicht erreichbar. Stellen Sie sicher, dass der Gateway-Dienst laeuft.",
         )
 
-    # Handle error response from gateway (e.g. no API key configured)
     if "error" in result:
         error_msg = result["error"].get("message", "Unbekannter Gateway-Fehler")
-        # Gateway masks auth errors as "internal error" — check logs for details
         if "internal error" in error_msg.lower() or "No API key" in error_msg or "auth" in error_msg.lower():
             raise HTTPException(
                 status_code=503,
@@ -100,13 +179,9 @@ async def proxy_chat(
             )
         raise HTTPException(status_code=502, detail=error_msg)
 
-    # Extract response from OpenAI format
     choices = result.get("choices", [])
     response_text = ""
     if choices:
         response_text = choices[0].get("message", {}).get("content", "")
 
-    return ProxyChatResponse(
-        response=response_text,
-        session_id=session_id,
-    )
+    return ProxyChatResponse(response=response_text, session_id=session_id)

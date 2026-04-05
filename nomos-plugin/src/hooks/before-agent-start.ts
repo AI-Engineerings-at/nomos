@@ -9,6 +9,18 @@ export function createBeforeAgentStartHook(
     const agentId = (ctx["agentId"] as string) ?? "unknown";
     const result = await client.checkCompliance(agentId);
 
+    // API errors (401, network, timeout) should NOT block the agent.
+    // Only block when compliance genuinely failed with specific missing documents.
+    if (result.error) {
+      return {
+        prependContext: [
+          "**[NomOS Compliance — Degraded]**",
+          `Compliance API unreachable (${result.error}). Agent runs with reduced oversight.`,
+          "Alle Aktionen werden lokal protokolliert.",
+        ].join("\n"),
+      };
+    }
+
     if (!result.passed) {
       return {
         prependContext: [

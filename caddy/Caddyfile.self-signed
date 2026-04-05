@@ -1,0 +1,27 @@
+# Self-signed TLS for Docker Compose self-hosted deployments without a domain.
+# Usage: cp caddy/Caddyfile.self-signed caddy/Caddyfile
+
+:443 {
+	tls internal
+
+	handle /api/* {
+		reverse_proxy nomos-api:8000
+	}
+
+	handle /health {
+		reverse_proxy nomos-api:8000
+	}
+
+	handle {
+		reverse_proxy nomos-console:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+}

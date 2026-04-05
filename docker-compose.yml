@@ -167,6 +167,31 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ─── Reverse Proxy (TLS) ──────────────────────────────
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "${NOMOS_HTTP_PORT:-80}:80"
+      - "${NOMOS_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - nomos-caddy-data:/data
+      - nomos-caddy-config:/config
+    environment:
+      - NOMOS_DOMAIN=${NOMOS_DOMAIN:-localhost}
+    depends_on:
+      nomos-api:
+        condition: service_healthy
+      nomos-console:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ─── TTS/STT (optional) ───────────────────────────────
 
   piper-tts:
@@ -198,5 +223,7 @@ volumes:
   nomos-agents:
   nomos-valkey:
   nomos-vault:
+  nomos-caddy-data:
+  nomos-caddy-config:
   nomos-piper:
   nomos-whisper:

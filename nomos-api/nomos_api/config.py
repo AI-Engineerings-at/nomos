@@ -36,11 +36,11 @@ class Settings(BaseSettings):
     agents_dir: Path = Path("./data/agents")
 
     # Secrets — MUST be overridden via Vault or ENV
-    jwt_secret: str = "change-me-in-production"
-    plugin_api_key: str = "nomos-plugin-dev"
+    jwt_secret: str
+    plugin_api_key: str
     gateway_url: str = "http://openclaw-gateway:18789"
-    gateway_token: str = "nomos-dev-token"
-    db_password: str = "nomos"
+    gateway_token: str
+    db_password: str
 
     # Vault connection
     vault_addr: str = "http://vault:8200"
@@ -49,7 +49,8 @@ class Settings(BaseSettings):
 
     # Runtime
     dev_mode: bool = False
-    valkey_url: str = "redis://valkey:6379"
+    cookie_secure: bool = True
+    valkey_url: str = "valkey://valkey:6379"
     retention_days: int = 365
     pii_filter_mode: str = "standard"
 
@@ -102,3 +103,4 @@ def validate_settings(s: Settings) -> None:
 
 
 settings = Settings()
+validate_settings(settings)

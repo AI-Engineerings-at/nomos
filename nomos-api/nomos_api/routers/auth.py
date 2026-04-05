@@ -112,8 +112,8 @@ async def login(
         key="nomos_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,  # set True in production behind TLS
+        samesite="strict" if settings.cookie_secure else "lax",
+        secure=settings.cookie_secure,
         max_age=user.session_timeout_hours * 3600,
     )
 
@@ -135,7 +135,11 @@ async def login(
 
 @router.post("/logout", response_model=LogoutResponse)
 async def logout(response: Response) -> LogoutResponse:
-    response.delete_cookie("nomos_token")
+    response.delete_cookie(
+        "nomos_token",
+        samesite="strict" if settings.cookie_secure else "lax",
+        secure=settings.cookie_secure,
+    )
     return LogoutResponse(message="Logged out")
 
 

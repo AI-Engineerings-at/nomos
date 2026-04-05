@@ -21,6 +21,7 @@ class EventType(str, Enum):
     AGENT_STOPPED = "agent.stopped"
     AGENT_RETIRED = "agent.retired"
     AGENT_ENDED = "agent.ended"
+    AGENT_STALE = "agent.stale"
 
     # Compliance
     COMPLIANCE_CHECK_PASSED = "compliance.check.passed"
@@ -57,6 +58,7 @@ class EventType(str, Enum):
     APPROVAL_REQUESTED = "approval.requested"
     APPROVAL_GRANTED = "approval.granted"
     APPROVAL_DENIED = "approval.denied"
+    APPROVAL_EXPIRED = "approval.expired"
 
     # Config revision
     CONFIG_CHANGED = "config.changed"
@@ -66,6 +68,7 @@ class EventType(str, Enum):
     INCIDENT_DETECTED = "incident.detected"
     INCIDENT_REPORTED = "incident.reported"
     INCIDENT_RESOLVED = "incident.resolved"
+    INCIDENT_ESCALATED = "incident.escalated"
 
     # PII
     PII_FILTERED = "pii.filtered"

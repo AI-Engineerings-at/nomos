@@ -70,7 +70,7 @@ services:
       - NOMOS_CORS_ORIGINS=["http://localhost:3040","http://localhost:3045"]
       - NOMOS_GATEWAY_URL=http://openclaw-gateway:18789
       - NOMOS_GATEWAY_TOKEN=${NOMOS_GATEWAY_TOKEN:?Set NOMOS_GATEWAY_TOKEN in .env}
-      - NOMOS_VALKEY_URL=redis://valkey:6379
+      - NOMOS_VALKEY_URL=valkey://valkey:6379
       - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:?Set NOMOS_JWT_SECRET in .env}
       - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:?Set NOMOS_PLUGIN_API_KEY in .env}
       - NOMOS_DEV_MODE=${NOMOS_DEV_MODE:-false}
@@ -93,6 +93,35 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  nomos-worker:
+    build:
+      context: .
+      dockerfile: nomos-api/Dockerfile
+    command: ["python", "-m", "arq", "nomos_api.worker.main.WorkerSettings"]
+    environment:
+      - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:?Set NOMOS_DB_PASSWORD in .env}@postgres:5432/nomos
+      - NOMOS_AGENTS_DIR=/data/agents
+      - NOMOS_GATEWAY_URL=http://openclaw-gateway:18789
+      - NOMOS_GATEWAY_TOKEN=${NOMOS_GATEWAY_TOKEN:?Set NOMOS_GATEWAY_TOKEN in .env}
+      - NOMOS_VALKEY_URL=valkey://valkey:6379
+      - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:?Set NOMOS_JWT_SECRET in .env}
+      - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:?Set NOMOS_PLUGIN_API_KEY in .env}
+      - NOMOS_DB_PASSWORD=${NOMOS_DB_PASSWORD:?Set NOMOS_DB_PASSWORD in .env}
+      - NOMOS_DEV_MODE=${NOMOS_DEV_MODE:-false}
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_ROLE_ID=${VAULT_ROLE_ID:-}
+      - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
+    volumes:
+      - nomos-agents:/data/agents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    restart: unless-stopped
 
   nomos-console:
     build:

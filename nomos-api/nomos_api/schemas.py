@@ -4,7 +4,31 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+_SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+
+
+def validate_password_strength(password: str) -> None:
+    """Validate password complexity. Raises ValueError on failure.
+
+    Requirements:
+    - At least 12 characters
+    - At least 1 uppercase letter
+    - At least 1 lowercase letter
+    - At least 1 digit
+    - At least 1 special character from: !@#$%^&*()_+-=[]{}|;:,.<>?
+    """
+    if len(password) < 12:
+        raise ValueError("Password must be at least 12 characters long")
+    if not any(c.isupper() for c in password):
+        raise ValueError("Password must contain at least one Uppercase letter")
+    if not any(c.islower() for c in password):
+        raise ValueError("Password must contain at least one Lowercase letter")
+    if not any(c.isdigit() for c in password):
+        raise ValueError("Password must contain at least one Digit")
+    if not any(c in _SPECIAL_CHARS for c in password):
+        raise ValueError("Password must contain at least one Special character")
 
 
 class AgentCreateRequest(BaseModel):
@@ -139,7 +163,13 @@ class TotpVerifyResponse(BaseModel):
 class RecoveryRequest(BaseModel):
     email: str
     recovery_phrase: str
-    new_password: str = Field(..., min_length=12)
+    new_password: str = Field(..., min_length=1)
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, v: str) -> str:
+        validate_password_strength(v)
+        return v
 
 
 class RecoveryResponse(BaseModel):
@@ -151,8 +181,14 @@ class RecoveryResponse(BaseModel):
 
 class UserCreateRequest(BaseModel):
     email: str = Field(..., examples=["user@nomos.local"])
-    password: str = Field(..., min_length=12)
+    password: str = Field(..., min_length=1)
     role: str = Field(default="user", pattern="^(admin|user|officer)$")
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        validate_password_strength(v)
+        return v
 
 
 class UserCreateResponse(BaseModel):

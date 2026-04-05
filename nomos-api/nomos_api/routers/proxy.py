@@ -26,7 +26,10 @@ router = APIRouter(prefix="/api", tags=["proxy"])
 async def _gateway_fetch(method: str, path: str, json_body: dict | None = None) -> dict | None:
     """HTTP request to OpenClaw Gateway. Returns parsed JSON or None on failure."""
     url = f"{settings.gateway_url.rstrip('/')}/{path.lstrip('/')}"
-    headers = {"Authorization": f"Bearer {settings.gateway_token}"}
+    headers = {
+        "Authorization": f"Bearer {settings.gateway_token}",
+        "x-openclaw-scopes": "operator.read,operator.write,operator.admin",
+    }
 
     try:
         async with httpx.AsyncClient(timeout=90.0) as client:
@@ -66,7 +69,7 @@ async def proxy_chat(
     session_id = request.session_id or str(uuid.uuid4())
 
     # Resolve model from agent manifest if available
-    model = "openclaw/default"
+    model = "openclaw"
     agent = await db.get(Agent, request.agent_id)
     if agent and agent.manifest_data:
         manifest = agent.manifest_data if isinstance(agent.manifest_data, dict) else {}

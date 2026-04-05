@@ -82,6 +82,9 @@ class EventType(str, Enum):
     SESSION_STARTED = "session.started"
     SESSION_ENDED = "session.ended"
 
+    # Admin
+    ADMIN_ACTION = "admin.action"
+
     # Data Lifecycle
     DATA_RETENTION_ENFORCED = "data.retention_enforced"
     DATA_ERASED = "data.erased"

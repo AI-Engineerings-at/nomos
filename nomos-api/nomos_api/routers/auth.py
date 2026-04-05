@@ -39,8 +39,11 @@ def _get_limiter() -> RateLimiter:
     global _login_limiter
     if _login_limiter is None:
         from nomos_api.config import settings
+
         _login_limiter = RateLimiter(
-            max_attempts=5, window_seconds=900, lockout_seconds=900,
+            max_attempts=5,
+            window_seconds=900,
+            lockout_seconds=900,
             valkey_url=settings.valkey_url,
         )
     return _login_limiter
@@ -61,6 +64,10 @@ async def _get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
     return user
+
+
+# Public alias for use by other routers (e.g. agents.py)
+get_current_user = _get_current_user
 
 
 @router.get("/me")

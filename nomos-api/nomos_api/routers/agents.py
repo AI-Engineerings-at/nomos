@@ -5,8 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import check_agent_access
 from nomos_api.database import get_db
-from nomos_api.models import Agent
+from nomos_api.models import Agent, User
+from nomos_api.routers.auth import get_current_user
 from nomos_api.schemas import (
     AgentCreateRequest,
     AgentPatchRequest,
@@ -30,6 +32,7 @@ async def create_new_agent(
 ) -> AgentResponse:
     # FCL Check — max 3 agents free
     from sqlalchemy import select, func
+
     count_result = await db.execute(select(func.count()).select_from(Agent).where(Agent.status != "killed"))
     active_count = count_result.scalar() or 0
     allowed, msg = check_fcl_limit_with_message(active_count)
@@ -79,6 +82,7 @@ async def patch_agent(
 @router.post("/agents/{agent_id}/pause", response_model=AgentResponse)
 async def pause_agent(
     agent_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
     """Pause an agent. Any authenticated user can pause their own agents.
@@ -89,16 +93,28 @@ async def pause_agent(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    check_agent_access(user, agent, "pause")
     if agent.status in ("paused", "killed", "retired"):
         raise HTTPException(status_code=409, detail=f"Agent is already {agent.status}")
 
     agent = await update_agent_status(db, agent_id, "paused")
 
     await _write_audit_event(
-        db, agent, agent_id,
+        db,
+        agent,
+        agent_id,
         EventType.KILL_SWITCH_USER_PAUSE,
         {"reason": "kill_switch.user_pause", "status": "paused"},
     )
+
+    if user.role == "admin" and agent.email != user.email:
+        await _write_audit_event(
+            db,
+            agent,
+            agent_id,
+            EventType.ADMIN_ACTION,
+            {"action": "pause", "admin_email": user.email, "agent_owner": agent.email},
+        )
 
     return AgentResponse.model_validate(agent)
 
@@ -106,6 +122,7 @@ async def pause_agent(
 @router.post("/agents/{agent_id}/resume", response_model=AgentResponse)
 async def resume_agent(
     agent_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
     """Resume a paused agent. Only allowed when agent is currently paused.
@@ -115,6 +132,7 @@ async def resume_agent(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    check_agent_access(user, agent, "resume")
 
     if agent.status != "paused":
         raise HTTPException(
@@ -125,10 +143,21 @@ async def resume_agent(
     agent = await update_agent_status(db, agent_id, "running")
 
     await _write_audit_event(
-        db, agent, agent_id,
+        db,
+        agent,
+        agent_id,
         EventType.AGENT_DEPLOYED,
         {"reason": "agent.resumed", "status": "running", "previous_status": "paused"},
     )
+
+    if user.role == "admin" and agent.email != user.email:
+        await _write_audit_event(
+            db,
+            agent,
+            agent_id,
+            EventType.ADMIN_ACTION,
+            {"action": "resume", "admin_email": user.email, "agent_owner": agent.email},
+        )
 
     return AgentResponse.model_validate(agent)
 
@@ -136,6 +165,7 @@ async def resume_agent(
 @router.post("/agents/{agent_id}/kill", response_model=AgentResponse)
 async def kill_agent(
     agent_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
     """Permanently stop an agent via kill switch.
@@ -146,14 +176,26 @@ async def kill_agent(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    check_agent_access(user, agent, "kill")
 
     agent = await update_agent_status(db, agent_id, "killed")
 
     await _write_audit_event(
-        db, agent, agent_id,
+        db,
+        agent,
+        agent_id,
         EventType.KILL_SWITCH_ACTIVATED,
         {"reason": "kill_switch.activated", "status": "killed"},
     )
+
+    if user.role == "admin" and agent.email != user.email:
+        await _write_audit_event(
+            db,
+            agent,
+            agent_id,
+            EventType.ADMIN_ACTION,
+            {"action": "kill", "admin_email": user.email, "agent_owner": agent.email},
+        )
 
     return AgentResponse.model_validate(agent)
 
@@ -161,6 +203,7 @@ async def kill_agent(
 @router.post("/agents/{agent_id}/retire", response_model=AgentResponse)
 async def retire_agent(
     agent_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
     """Gracefully retire an agent — revoke access, unmount collections, archive.
@@ -171,13 +214,25 @@ async def retire_agent(
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    check_agent_access(user, agent, "retire")
 
     agent = await update_agent_status(db, agent_id, "retired")
 
     await _write_audit_event(
-        db, agent, agent_id,
+        db,
+        agent,
+        agent_id,
         EventType.AGENT_RETIRED,
         {"reason": "agent.retired", "status": "retired"},
     )
+
+    if user.role == "admin" and agent.email != user.email:
+        await _write_audit_event(
+            db,
+            agent,
+            agent_id,
+            EventType.ADMIN_ACTION,
+            {"action": "retire", "admin_email": user.email, "agent_owner": agent.email},
+        )
 
     return AgentResponse.model_validate(agent)

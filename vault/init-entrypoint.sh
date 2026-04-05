@@ -102,9 +102,7 @@ if [ ! -f "${INITIALIZED_MARKER}" ]; then
     password="${NOMOS_DB_PASSWORD:-changeme}"
 else
   echo "==> System secrets already exist (marker found). Verifying..."
-  if vault kv get nomos/secrets/system > /dev/null 2>&1; then
-    echo "==> System secrets verified in Vault."
-  else
+  if ! vault kv get nomos/secrets/system > /dev/null 2>&1; then
     echo "WARNING: Marker exists but secrets not found. Re-creating..."
     JWT_SECRET=$(openssl rand -base64 48)
     PLUGIN_API_KEY="npk-$(openssl rand -hex 24)"
@@ -117,8 +115,25 @@ else
 
     vault kv put nomos/secrets/database \
       password="${NOMOS_DB_PASSWORD:-changeme}"
+  else
+    echo "==> System secrets verified in Vault."
   fi
 fi
+
+# ─── Phase 7b: Write secret files for sidecar containers ───
+# Gateway and other containers that cannot use Vault AppRole read secrets from files.
+# Always extract from Vault to ensure files are up-to-date.
+echo "==> Writing secret files for sidecar containers..."
+GATEWAY_TOKEN=$(vault kv get -format=json nomos/secrets/system | jq -r '.data.data.gateway_token')
+PLUGIN_API_KEY=$(vault kv get -format=json nomos/secrets/system | jq -r '.data.data.plugin_api_key')
+
+echo "${GATEWAY_TOKEN}" > "${INIT_DIR}/gateway-token"
+chmod 600 "${INIT_DIR}/gateway-token"
+
+echo "${PLUGIN_API_KEY}" > "${INIT_DIR}/plugin-api-key"
+chmod 600 "${INIT_DIR}/plugin-api-key"
+
+echo "==> Secret files written to ${INIT_DIR}/"
 
 # ─── Phase 8: Get AppRole credentials ───────────────────────
 ROLE_ID=$(vault read -format=json auth/approle/role/nomos-api/role-id | jq -r '.data.role_id')

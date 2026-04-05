@@ -1,52 +1,75 @@
 # NomOS Schnellstart
 
-NomOS in 5 Minuten starten und den ersten compliant AI Agent erstellen.
+NomOS in 5 Minuten zum Laufen bringen.
 
 ## Voraussetzungen
 
-- Docker und Docker Compose
-- Python 3.11+ (nur fuer CLI)
-- curl (zum Testen)
+- Docker Desktop (Windows/Mac) oder Docker Engine + Docker Compose v2 (Linux)
+- Mindestens 4 GB RAM für Docker
+- Ports 80 und 443 verfügbar (oder eigene Ports in `.env` konfigurieren)
 
-## 1. Repository klonen
+## 1. Klonen und konfigurieren
 
 ```bash
 git clone https://github.com/ai-engineering-at/nomos.git
 cd nomos
-```
-
-## 2. Umgebung konfigurieren
-
-```bash
 cp .env.example .env
 ```
 
-`.env` bearbeiten und ein sicheres Datenbank-Passwort setzen:
+`.env` im Editor öffnen und die vier **Pflicht-Secrets** setzen — Docker verweigert den Start mit den Platzhalter-Werten:
+
+| Variable | Beschreibung | Beispiel |
+|---|---|---|
+| `NOMOS_JWT_SECRET` | 32+ Zeichen Secret für Session-Tokens | `openssl rand -hex 32` |
+| `NOMOS_PLUGIN_API_KEY` | Auth-Key für OpenClaw-Gateway-Kommunikation | `openssl rand -hex 24` |
+| `NOMOS_GATEWAY_TOKEN` | Bidirektionaler Gateway ↔ API Auth-Token | `openssl rand -hex 24` |
+| `NOMOS_DB_PASSWORD` | PostgreSQL-Passwort | beliebiges starkes Passwort |
+
+Alle vier auf einmal generieren:
+
+```bash
+echo "NOMOS_JWT_SECRET=$(openssl rand -hex 32)"
+echo "NOMOS_PLUGIN_API_KEY=$(openssl rand -hex 24)"
+echo "NOMOS_GATEWAY_TOKEN=$(openssl rand -hex 24)"
+echo "NOMOS_DB_PASSWORD=$(openssl rand -hex 16)"
+```
+
+Die Ausgabe in die `.env`-Datei eintragen.
+
+Mindestens einen LLM-Provider-Key setzen (NVIDIA bietet ein kostenloses Kontingent auf https://build.nvidia.com):
 
 ```
-NOMOS_DB_PASSWORD=dein-sicheres-passwort
-NOMOS_API_PORT=8060
-NOMOS_CONSOLE_PORT=3040
+NVIDIA_API_KEY=nvapi-dein-key-hier
+# oder: ANTHROPIC_API_KEY=sk-ant-...
+# oder: OPENAI_API_KEY=sk-...
 ```
 
-## 3. Stack starten
+## 2. NomOS starten
 
 ```bash
 docker compose up -d
 ```
 
-Das startet drei Services:
-- **nomos-api** auf `http://localhost:8060` (FastAPI REST API)
-- **nomos-console** auf `http://localhost:3040` (Next.js Dashboard)
-- **PostgreSQL 16** mit pgvector (intern, nicht exponiert)
-
-Warten bis alle Services gesund sind:
+NomOS startet 8 Services. Warten bis alle healthy sind (beim ersten Start ca. 60 Sekunden):
 
 ```bash
 docker compose ps
 ```
 
-API pruefen:
+Alle Services sollten `healthy` oder `running` anzeigen:
+
+| Service | Port | Zweck |
+|---|---|---|
+| `caddy` | 80 / 443 | Reverse Proxy mit automatischem TLS |
+| `nomos-console` | 3040 | Next.js Dashboard |
+| `nomos-api` | 8060 | FastAPI Control Plane |
+| `nomos-worker` | — | Hintergrund-Job-Prozessor |
+| `openclaw-gateway` | 3050 | Headless Plugin Framework |
+| `postgres` | — | PostgreSQL 16 + pgvector (intern) |
+| `valkey` | 6380 | Cache und Rate-Limiting (intern) |
+| `vault` | 8200 | HashiCorp Vault Secret Management |
+
+API-Health prüfen:
 
 ```bash
 curl http://localhost:8060/health
@@ -55,146 +78,104 @@ curl http://localhost:8060/health
 Erwartete Antwort:
 
 ```json
-{
-  "status": "ok",
-  "service": "NomOS Fleet API",
-  "version": "0.1.0"
-}
+{"status": "ok", "service": "NomOS API"}
 ```
 
-## 4. Ersten Agent erstellen
+## 3. Erster Login
+
+**http://localhost:3040** im Browser öffnen.
+
+Beim ersten Start zeigt die Konsole einen **Bootstrap**-Dialog. Admin-Account anlegen:
 
 ```bash
-curl -X POST http://localhost:8060/api/agents \
+curl -X POST http://localhost:8060/api/auth/bootstrap \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Mani Ruf",
-    "role": "external-secretary",
-    "company": "Acme GmbH",
-    "email": "mani@acme.at",
-    "risk_class": "limited"
+    "username": "admin",
+    "email": "admin@example.com",
+    "password": "jetzt-aendern"
   }'
 ```
 
-Die Antwort zeigt den neuen Agent mit `compliance_status: "blocked"` — das ist erwartet. Der Agent hat noch keine Compliance-Dokumente.
+Oder das Bootstrap-Formular im Browser ausfüllen. Danach mit den Zugangsdaten einloggen.
 
-## 5. Compliance Gate ausfuehren
+> **Hinweis:** Der Bootstrap-Endpoint ist nur verfügbar, solange noch kein Benutzer existiert. Er deaktiviert sich nach dem ersten Aufruf selbst.
 
-Alle 5 Pflicht-Compliance-Dokumente generieren:
+## 4. LLM-Provider konfigurieren
 
-```bash
-curl -X POST http://localhost:8060/api/agents/mani-ruf/gate
-```
+1. **Einstellungen** in der linken Sidebar klicken
+2. Bereich **LLM-Provider** öffnen
+3. API-Key eintragen (NVIDIA / Anthropic / OpenAI)
+4. Standardmodell auswählen
+5. **Speichern** klicken
 
-Erwartete Antwort:
+NomOS ist provider-agnostisch. Provider können jederzeit gewechselt oder mehrere Keys hinterlegt werden.
 
-```json
-{
-  "agent_id": "mani-ruf",
-  "status": "passed",
-  "missing_documents": [],
-  "errors": [],
-  "warnings": []
-}
-```
+## 5. Ersten Agent einstellen
 
-Das Gate generiert:
+**Hire** in der Sidebar klicken oder **http://localhost:3040/hire** aufrufen.
+
+Der Hire-Wizard führt durch vier Schritte:
+
+1. **Identität** — Name, Rolle und Unternehmen (z.B. `Support-Assistent`, `customer-support`, `Acme GmbH`)
+2. **Fähigkeiten** — Auswählen was der Agent darf (Websuche, Dateizugriff, Code-Ausführung)
+3. **Risikoklasse** — EU AI Act Risikoklasse festlegen (`minimal`, `limited`, `high`)
+4. **Überprüfung** — Generierte Compliance-Dokumente vor dem Deployment prüfen
+
+**Agent deployen** klicken. NomOS generiert automatisch die erforderlichen EU AI Act Compliance-Dokumente:
+
 - DPIA (Art. 35 DSGVO)
 - Verarbeitungsverzeichnis (Art. 30 DSGVO)
-- Transparenzerklaerung (Art. 50 EU AI Act)
-- Human Oversight / Kill Switch Policy (Art. 14 EU AI Act)
-- Record-Keeping / Logging Policy (Art. 12 EU AI Act)
+- Transparenzerklärung (Art. 50 EU AI Act)
+- Human Oversight / Kill-Switch-Richtlinie (Art. 14 EU AI Act)
+- Aufzeichnungs- und Logging-Richtlinie (Art. 12 EU AI Act)
 
-## 6. Im Dashboard pruefen
+## 6. Chatten
 
-`http://localhost:3040` im Browser oeffnen. Dort sieht man:
+1. **Fleet**-Ansicht öffnen — der neue Agent erscheint mit Compliance-Status `COMPLIANT`
+2. Agent-Namen klicken um die Detailansicht zu öffnen
+3. **Chat** oben rechts klicken
+4. Nachricht senden — der Agent antwortet über den konfigurierten LLM-Provider
 
-- Fleet-Uebersicht mit dem Agent
-- Agent-Detailansicht mit Manifest-Daten
-- Compliance-Status: PASSED
-- Audit Trail mit dem Erstellungs-Event
+Das Audit-Trail zeichnet jede Interaktion automatisch auf.
 
-## 7. Audit Trail anzeigen
+## Fehlerbehebung
 
+**"Not compliant"-Status** — Kann auftreten wenn die Compliance-Dokumenten-Generierung noch läuft. Einige Sekunden warten und neu laden. Wenn es anhält, Detailansicht des Agents öffnen und **Compliance Gate ausführen** klicken.
+
+**Chat antwortet nicht** — Prüfen ob ein LLM-Provider-Key in den Einstellungen konfiguriert ist. Key-Gültigkeit direkt beim Provider testen.
+
+**502 Bad Gateway Fehler** — Das OpenClaw-Gateway startet möglicherweise noch. Logs prüfen:
 ```bash
-curl http://localhost:8060/api/agents/mani-ruf/audit
+docker logs nomos-openclaw-gateway-1 --tail 50
 ```
 
-Gibt alle Audit-Eintraege fuer den Agent zurueck, einschliesslich des Erstellungs-Events mit Hash-Chain-Eintrag.
-
-## 8. Chain-Integritaet verifizieren
-
+**Services starten nicht** — Logs aller Services anzeigen:
 ```bash
-curl http://localhost:8060/api/audit/verify/mani-ruf
+docker compose logs -f
+```
+Für einen einzelnen Service: `docker compose logs -f nomos-api`
+
+**Port-Konflikte** — Falls Ports 80, 443, 3040 oder 8060 belegt sind, Alternativen in `.env` festlegen:
+```
+NOMOS_HTTP_PORT=8080
+NOMOS_HTTPS_PORT=8443
+NOMOS_CONSOLE_PORT=3041
+NOMOS_API_PORT=8061
 ```
 
-Erwartete Antwort:
-
-```json
-{
-  "agent_id": "mani-ruf",
-  "valid": true,
-  "entries_checked": 1,
-  "errors": []
-}
+**Vault initialisiert sich nicht** — Beim ersten Start muss Vault initialisiert werden. Prüfen:
+```bash
+docker compose logs vault --tail 30
 ```
 
-Verifiziert kryptographisch, dass keine Audit-Eintraege manipuliert wurden.
+**docker compose schlägt sofort fehl** — Platzhalter-Werte in `.env` vorhanden. Alle `CHANGE_ME_REQUIRED_*`-Werte durch echte Secrets ersetzen (siehe Schritt 1).
 
 ---
 
-## CLI statt API verwenden
+## Nächste Schritte
 
-Wenn man lieber lokal ohne Docker arbeitet:
-
-```bash
-cd nomos-cli
-pip install -e .
-```
-
-### Agent erstellen
-
-```bash
-nomos hire --name "Mani Ruf" --role external-secretary \
-  --company "Acme GmbH" --email mani@acme.at \
-  --output-dir ./data/agents/mani-ruf
-```
-
-### Compliance-Dokumente generieren
-
-```bash
-nomos gate --agent-dir ./data/agents/mani-ruf
-```
-
-### Compliance verifizieren
-
-```bash
-nomos verify --agent-dir ./data/agents/mani-ruf
-```
-
-### Alle Agents auflisten
-
-```bash
-nomos fleet --agents-dir ./data/agents
-```
-
-### Audit Trail anzeigen
-
-```bash
-nomos audit --agent-dir ./data/agents/mani-ruf
-```
-
-### Audit-Chain-Integritaet verifizieren
-
-```bash
-nomos audit --agent-dir ./data/agents/mani-ruf --verify
-```
-
----
-
-## Naechste Schritte
-
-- [API-Referenz](api-referenz.md) fuer alle Endpoints
-- [Compliance-Leitfaden](compliance-leitfaden.md) fuer EU AI Act Abdeckung
-- [CLI-Referenz](cli-referenz.md) fuer alle Befehle und Flags
-- [Architektur](architektur.md) fuer System-Design Details
+- [API-Referenz](api-referenz.md) — alle REST-Endpoints
+- [Compliance-Leitfaden](compliance-leitfaden.md) — EU AI Act Abdeckung im Detail
+- [Architektur](architektur.md) — System-Design und Datenfluss
+- [CLI-Referenz](cli-referenz.md) — Kommandozeilen-Interface für Automatisierung

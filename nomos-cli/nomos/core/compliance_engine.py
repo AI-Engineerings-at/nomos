@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from nomos.core.gate import get_docs_for_risk
 from nomos.core.manifest import AgentManifest
 
 
@@ -32,6 +33,20 @@ REQUIRED_DOCUMENTS = [
     "art14_killswitch",
     "art12_logging",
 ]
+
+
+def get_required_documents(risk_class: str, llm_location: str = "eu") -> list[str]:
+    """Return required compliance documents for a given risk class.
+
+    Delegates to gate.get_docs_for_risk which knows the full document
+    matrix (5 minimal, 9 limited, 13-14 high). Falls back to REQUIRED_DOCUMENTS
+    if an unknown risk class is provided (gate already handles this).
+
+    Args:
+        risk_class: EU AI Act risk class ("minimal", "limited", "high").
+        llm_location: LLM provider location ("eu" or "us"). Affects TIA requirement.
+    """
+    return get_docs_for_risk(risk_class, llm_location)
 
 
 @dataclass

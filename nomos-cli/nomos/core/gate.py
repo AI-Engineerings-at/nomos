@@ -35,10 +35,7 @@ from pathlib import Path
 from nomos.core.manifest import AgentManifest
 
 
-_DISCLAIMER = (
-    "Automatisch generiert von NomOS. "
-    "Dieses Dokument ersetzt keine individuelle Rechtsberatung."
-)
+_DISCLAIMER = "Automatisch generiert von NomOS. Dieses Dokument ersetzt keine individuelle Rechtsberatung."
 
 
 @dataclass
@@ -848,16 +845,16 @@ _DOCS_HIGH_RISK_BASE: list[str] = _DOCS_LIMITED + [
     "accessibility",
 ]
 
-_DOCS_FOR_RISK: dict[str, list[str]] = {
+DOCS_FOR_RISK: dict[str, list[str]] = {
     "minimal": _DOCS_MINIMAL,
     "limited": _DOCS_LIMITED,
     "high": _DOCS_HIGH_RISK_BASE,
 }
 
 
-def _get_docs_for_risk(risk_class: str, llm_location: str) -> list[str]:
+def get_docs_for_risk(risk_class: str, llm_location: str) -> list[str]:
     """Determine which documents to generate based on risk class and LLM location."""
-    docs = list(_DOCS_FOR_RISK.get(risk_class, _DOCS_MINIMAL))
+    docs = list(DOCS_FOR_RISK.get(risk_class, _DOCS_MINIMAL))
     if risk_class == "high" and llm_location == "us":
         docs.append("tia")
     return docs
@@ -882,7 +879,7 @@ def generate_compliance_docs(
     docs_dir.mkdir(parents=True, exist_ok=True)
     results: list[ComplianceDoc] = []
 
-    doc_names = _get_docs_for_risk(manifest.agent.risk_class.value, llm_location)
+    doc_names = get_docs_for_risk(manifest.agent.risk_class.value, llm_location)
 
     for doc_name in doc_names:
         generator = _GENERATORS.get(doc_name)
@@ -915,7 +912,7 @@ def load_compliance_status(agent_dir: Path) -> dict:
             "missing": [],
         }
 
-    required = _get_docs_for_risk(manifest.agent.risk_class.value, "eu")
+    required = get_docs_for_risk(manifest.agent.risk_class.value, "eu")
     docs_dir = agent_dir / "compliance"
 
     generated = 0

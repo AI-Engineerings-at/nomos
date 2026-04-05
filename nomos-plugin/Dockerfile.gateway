@@ -10,3 +10,4 @@ COPY --chown=node:node gateway-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/gateway-entrypoint.sh
 
 ENTRYPOINT ["gateway-entrypoint.sh"]
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]

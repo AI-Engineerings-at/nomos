@@ -1,0 +1,169 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - link "Zum Hauptinhalt springen" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - button "Open Next.js Dev Tools" [ref=e8] [cursor=pointer]:
+    - img [ref=e9]
+  - alert [ref=e12]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - link "NomOS Adler-Logo NomOS" [ref=e16] [cursor=pointer]:
+        - /url: /admin
+        - img "NomOS Adler-Logo" [ref=e17]
+        - generic [ref=e18]: NomOS
+      - navigation "Hauptnavigation" [ref=e20]:
+        - list [ref=e21]:
+          - listitem [ref=e22]:
+            - link "Uebersicht" [ref=e23] [cursor=pointer]:
+              - /url: /admin
+              - img [ref=e24]
+              - generic [ref=e26]: Uebersicht
+          - listitem [ref=e27]:
+            - link "Mein Team" [ref=e28] [cursor=pointer]:
+              - /url: /admin/team
+              - img [ref=e29]
+              - generic [ref=e31]: Mein Team
+          - listitem [ref=e32]:
+            - link "Einstellen" [ref=e33] [cursor=pointer]:
+              - /url: /admin/hire
+              - img [ref=e34]
+              - generic [ref=e36]: Einstellen
+          - listitem [ref=e37]:
+            - link "Freigaben" [ref=e38] [cursor=pointer]:
+              - /url: /admin/approvals
+              - img [ref=e39]
+              - generic [ref=e41]: Freigaben
+          - listitem [ref=e42]:
+            - link "Kosten" [ref=e43] [cursor=pointer]:
+              - /url: /admin/costs
+              - img [ref=e44]
+              - generic [ref=e46]: Kosten
+          - listitem [ref=e47]:
+            - link "Rechts-Check" [ref=e48] [cursor=pointer]:
+              - /url: /admin/compliance
+              - img [ref=e49]
+              - generic [ref=e51]: Rechts-Check
+          - listitem [ref=e52]:
+            - link "Protokoll" [ref=e53] [cursor=pointer]:
+              - /url: /admin/audit
+              - img [ref=e54]
+              - generic [ref=e56]: Protokoll
+          - listitem [ref=e57]:
+            - link "Gesundheitscheck" [ref=e58] [cursor=pointer]:
+              - /url: /admin/diagnostics
+              - img [ref=e59]
+              - generic [ref=e61]: Gesundheitscheck
+          - listitem [ref=e62]:
+            - link "Nutzer" [ref=e63] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e64]
+              - generic [ref=e66]: Nutzer
+          - listitem [ref=e67]:
+            - link "Vorfaelle" [ref=e68] [cursor=pointer]:
+              - /url: /admin/incidents
+              - img [ref=e69]
+              - generic [ref=e71]: Vorfaelle
+          - listitem [ref=e72]:
+            - link "Aufgaben" [ref=e73] [cursor=pointer]:
+              - /url: /admin/tasks
+              - img [ref=e74]
+              - generic [ref=e76]: Aufgaben
+          - listitem [ref=e77]:
+            - link "Einstellungen" [ref=e78] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e79]
+              - generic [ref=e81]: Einstellungen
+      - paragraph [ref=e83]: NomOS Console v0.1.0
+    - generic [ref=e84]:
+      - banner [ref=e85]:
+        - generic [ref=e86]:
+          - button "Sprache wechseln" [ref=e87]: DE|EN
+          - button "Dunkler Modus" [ref=e88]:
+            - img [ref=e89]
+          - button "Benutzermenue" [ref=e92]:
+            - generic [ref=e93]: J
+            - generic [ref=e94]: Joe Admin
+            - img [ref=e95]
+      - main "Hauptinhalt" [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - heading "Guten Morgen, Joe." [level=1] [ref=e100]
+            - button "Text vorlesen" [ref=e101]:
+              - img [ref=e102]
+          - generic [ref=e105]:
+            - img [ref=e107]
+            - generic [ref=e109]:
+              - heading "Compliance-Status" [level=3] [ref=e110]
+              - paragraph [ref=e111]: Compliance-Daten werden nach der Einstellung eines Mitarbeiters generiert.
+          - separator [ref=e112]
+          - generic [ref=e113]:
+            - 'button "Mitarbeiter: 0" [ref=e114] [cursor=pointer]':
+              - img [ref=e116]
+              - paragraph [ref=e120]: "0"
+              - paragraph [ref=e121]: Mitarbeiter
+              - paragraph [ref=e122]: 0 aktiv
+            - 'button "Kosten: 0,00 €" [ref=e123] [cursor=pointer]':
+              - img [ref=e125]
+              - paragraph [ref=e127]: 0,00 €
+              - paragraph [ref=e128]: Kosten
+              - paragraph [ref=e129]: pro Monat
+            - 'button "Freigaben: 0 offen" [ref=e130] [cursor=pointer]':
+              - img [ref=e132]
+              - paragraph [ref=e135]: "0"
+              - paragraph [ref=e136]: Freigaben
+              - paragraph [ref=e137]: offen
+            - 'generic "Vorfaelle: 0 aktiv" [ref=e138]':
+              - img [ref=e140]
+              - paragraph [ref=e142]: "0"
+              - paragraph [ref=e143]: Vorfaelle
+              - paragraph [ref=e144]: aktiv
+          - generic [ref=e145]:
+            - generic [ref=e146]:
+              - generic [ref=e147]:
+                - img [ref=e149]
+                - generic [ref=e151]:
+                  - heading "Aktivitaetsstatus" [level=3] [ref=e152]
+                  - paragraph [ref=e153]: Echtzeit-Status Ihrer Mitarbeiter
+              - status [ref=e155]:
+                - img [ref=e157]
+                - heading "Noch keine Mitarbeiter eingestellt." [level=3] [ref=e159]
+                - paragraph [ref=e160]: Stellen Sie Ihren ersten KI-Mitarbeiter ein, um loszulegen.
+                - button "Jetzt einstellen" [ref=e161]
+            - generic [ref=e162]:
+              - generic [ref=e163]:
+                - img [ref=e165]
+                - generic [ref=e168]:
+                  - heading "Letzte Aktivitaeten" [level=3] [ref=e169]
+                  - paragraph [ref=e170]: Die letzten 10 Ereignisse in Ihrem Team
+              - status [ref=e172]:
+                - img [ref=e174]
+                - heading "Noch keine Aktivitaeten aufgezeichnet." [level=3] [ref=e176]
+                - paragraph [ref=e177]: Aktivitaeten Ihrer Mitarbeiter werden hier angezeigt.
+          - separator [ref=e178]
+          - generic [ref=e179]:
+            - heading "Schnellzugriff" [level=2] [ref=e180]
+            - generic [ref=e181]:
+              - button "Mitarbeiter einstellen" [ref=e182]:
+                - img [ref=e184]
+                - text: Mitarbeiter einstellen
+              - button "Rechts-Check oeffnen" [ref=e185]:
+                - img [ref=e187]
+                - text: Rechts-Check oeffnen
+              - button "Kosten einsehen" [ref=e189]:
+                - img [ref=e191]
+                - text: Kosten einsehen
+              - button "Protokoll pruefen" [ref=e192]:
+                - img [ref=e194]
+                - text: Protokoll pruefen
+    - generic:
+      - img
+    - dialog "Schritt 1 von 5" [ref=e198]:
+      - paragraph [ref=e199]: Schritt 1 von 5
+      - heading "Willkommen bei NomOS!" [level=2] [ref=e200]
+      - paragraph [ref=e201]: Hier sehen Sie Ihr Team auf einen Blick. Compliance-Status, Kosten und Aktivitaeten — alles an einem Ort.
+      - generic [ref=e202]:
+        - button "Ueberspringen" [ref=e203]
+        - button "Weiter" [active] [ref=e204]
+```

@@ -96,3 +96,12 @@ Chat funktioniert architektonisch, Provider blockiert bei 429. Fallback-Provider
 
 ### L028 — Gegen echte API testen, nicht gegen Schemas
 Schema sagt "6 Felder", API liefert 3. Docker-Image alt. IMMER curl gegen laufende API.
+
+### L029 — Plugin-Build wird nicht automatisch deployed
+Source-Code aendern reicht nicht — `npx tsc` + Docker rebuild noetig. IMMER `docker compose build` nach Plugin-Aenderungen.
+
+### L030 — OpenClaw v2026.3.x Scope Bug
+Token Auth gibt nicht automatisch alle Scopes. Workaround: `x-openclaw-scopes` Header mitsenden. Siehe github.com/openclaw/openclaw/issues/52085.
+
+### L031 — OpenClaw Chat Model muss "openclaw" sein
+`/v1/chat/completions` erwartet `model: "openclaw"`, NICHT den Provider-Model-Namen direkt.

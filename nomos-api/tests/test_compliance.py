@@ -28,7 +28,7 @@ class TestCompliance:
 
 class TestGate:
     async def test_gate_generates_docs_and_passes(self, client) -> None:
-        # Create agent (starts as blocked)
+        # Create agent (auto-onboarding generates docs, agent is immediately compliant)
         create_resp = await client.post("/api/agents", json={
             "name": "Gate Test",
             "role": "test",
@@ -37,20 +37,15 @@ class TestGate:
         })
         agent_id = create_resp.json()["id"]
 
-        # Verify blocked before gate
+        # Agent should be passed immediately (auto-onboarding)
         comp_resp = await client.get(f"/api/agents/{agent_id}/compliance")
-        assert comp_resp.json()["status"] == "blocked"
+        assert comp_resp.json()["status"] == "passed"
+        assert len(comp_resp.json()["missing_documents"]) == 0
 
-        # Run gate
+        # Running gate again should still pass (idempotent)
         gate_resp = await client.post(f"/api/agents/{agent_id}/gate")
         assert gate_resp.status_code == 200
-        data = gate_resp.json()
-        assert data["status"] == "passed"
-        assert len(data["missing_documents"]) == 0
-
-        # Verify passed after gate
-        comp_resp2 = await client.get(f"/api/agents/{agent_id}/compliance")
-        assert comp_resp2.json()["status"] == "passed"
+        assert gate_resp.json()["status"] == "passed"
 
     async def test_gate_nonexistent_agent(self, client) -> None:
         resp = await client.post("/api/agents/nonexistent/gate")

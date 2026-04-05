@@ -10,7 +10,7 @@ export interface Agent {
   company: string;
   email: string;
   risk_class: 'minimal' | 'limited' | 'high';
-  status: 'created' | 'running' | 'paused' | 'killed' | 'retired' | 'deploying' | 'error';
+  status: 'created' | 'running' | 'paused' | 'killed' | 'retired' | 'stale' | 'deploying' | 'error';
   manifest_hash: string;
   compliance_status: string;
   heartbeat_at: string | null;
@@ -59,7 +59,7 @@ export interface IncidentEntry {
   incident_type: string;
   description: string;
   severity: string;
-  status: 'detected' | 'reported' | 'resolved';
+  status: 'detected' | 'reported' | 'resolved' | 'escalated' | 'overdue';
   detected_at: string;
   report_deadline: string;
 }
@@ -228,6 +228,8 @@ export function agentStatusToBadge(status: string): AgentBadgeStatus {
       return 'deploying';
     case 'retired':
       return 'offline';
+    case 'stale':
+      return 'error';
     default:
       return 'offline';
   }

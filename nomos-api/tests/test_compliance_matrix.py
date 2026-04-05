@@ -47,15 +47,13 @@ class TestComplianceMatrix:
         })
         agent_id = create_resp.json()["id"]
 
-        # Before gate: should be blocked/pending
+        # Auto-onboarding: agent should be passed immediately
         resp1 = await client.get("/api/compliance/matrix")
-        statuses_before = {e["agent_id"]: e["status"] for e in resp1.json()["matrix"]}
-        assert statuses_before[agent_id] in ("pending", "blocked")
+        statuses = {e["agent_id"]: e["status"] for e in resp1.json()["matrix"]}
+        assert statuses[agent_id] == "passed"
 
-        # Run gate
+        # Running gate again should still pass (idempotent)
         await client.post(f"/api/agents/{agent_id}/gate")
-
-        # After gate: should be passed
         resp2 = await client.get("/api/compliance/matrix")
         statuses_after = {e["agent_id"]: e["status"] for e in resp2.json()["matrix"]}
         assert statuses_after[agent_id] == "passed"

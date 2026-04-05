@@ -51,11 +51,28 @@ def verify_chain(path):  # TODO: implement
 ## Vor jedem Commit
 1. `ruff check .` — null Violations
 2. `ruff format --check .` — formatiert
-3. `uv run pytest -v` — alle Tests gruen
+3. `pytest tests/ -v` — alle Tests gruen
 4. `grep -r "10.40.10" .` — keine internen IPs
 5. `grep -r "coming soon\|TODO\|FIXME\|placeholder" nomos/` — kein S9
+6. `grep -r "alterName"` nach Renames — null Treffer (L019)
+7. Alle Fixtures/Mocks aktualisiert fuer geaenderte Types (L020)
+8. Dockerfile pruefen wenn neue Dateien erstellt (L024)
+
+## PFLICHT-LEARNINGS (lies .claude/knowledge/LEARNINGS.md)
+- **L003**: Kein Feature auf Fake-Fundament. Gegen echte Docker-Services entwickeln.
+- **L009**: EventTypes MUESSEN in events.py registriert sein.
+- **L019**: Nach JEDEM Rename grep nach dem alten Namen.
+- **L024**: Dockerfile muss ALLE neuen Dateien kopieren.
+- **L028**: Gegen echte API testen, nicht gegen Schemas.
+
+## Aktuelle Architektur (Stand 05.04.2026)
+- FastAPI mit Alembic Migrationen (kein create_all mehr)
+- Vault-first Settings (VaultSettingsSource)
+- ARQ Worker fuer Background-Jobs (Valkey)
+- RBAC auf State-Change Endpoints (get_current_user + check_agent_access)
+- Auto-Onboarding: create_agent generiert Compliance-Docs automatisch
 
 ## Plan-Referenz
-- Plan 1 (Foundation): docs/plans/2026-03-23-plan-01-cleanup-foundation.md
-- Plan 2 (API): docs/plans/2026-03-23-plan-02-nomos-api.md
-- Plan 7 (Production): docs/plans/2026-03-23-plan-07-production-ready.md
+- Enterprise Hardening: docs/superpowers/plans/2026-03-27-enterprise-hardening-plan.md
+- Session Report: docs/reports/2026-04-05-session-report.md
+- Design Spec: docs/superpowers/specs/2026-03-24-nomos-v2-design.md

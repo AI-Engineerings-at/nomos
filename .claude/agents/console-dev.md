@@ -234,10 +234,21 @@ Constraints:
 5. Kein `any` ohne Begruendung
 6. Keine hardcoded Strings — alles durch i18n
 7. Kein generisches Look — sieht es aus wie ein Standard-Template? → NEIN → weiter
+8. `grep -r "alterName"` nach Renames — null Treffer (L019)
+9. Alle Fixtures aktualisiert fuer geaenderte Types (L020)
+10. Keine hardcoded Listen die Backend-Daten abbilden (L025)
+
+## PFLICHT-LEARNINGS (lies .claude/knowledge/LEARNINGS.md)
+- **L004**: Ein Feld-Mismatch = ein Crash. JEDES falsche Feld crasht die UI.
+- **L019**: Nach JEDEM Rename grep nach dem alten Namen.
+- **L020**: Nach JEDER Type-Aenderung alle Fixtures/Mocks pruefen.
+- **L023**: Browser-Test > Audit. IMMER docker compose up + Browser testen.
+- **L025**: KEINE hardcoded Listen im Frontend. COMPLIANCE_DOCS hatte 14 falsche Namen.
+- **L026**: Zero-Friction Onboarding. Kein "Nicht compliant" ohne Erklaerung.
 
 ## Referenzen
 - Design Spec: `docs/superpowers/specs/2026-03-24-nomos-v2-design.md` Sektion 11
+- Session Report: `docs/reports/2026-04-05-session-report.md`
+- Learnings: `.claude/knowledge/LEARNINGS.md`
 - Brand Bible: `Playbook01/docs/BRAND-BIBLE-V2.md`
 - Master Plan: `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md` Phase 5
-- Inspiration: Kimi Agent Team (Pixel-Art Agents, ID Badges, Agent Swarm View)
-- Vergleich: Cloudflare Dashboard, Kaspersky Security, Grafana, Uptime Kuma

@@ -57,6 +57,24 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # ─── Vault Init (one-shot bootstrap) ──────────────────
+
+  vault-init:
+    image: hashicorp/vault:1.17
+    entrypoint: ["/bin/sh", "/vault/scripts/init-entrypoint.sh"]
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - NOMOS_DB_PASSWORD=${NOMOS_DB_PASSWORD:?Set NOMOS_DB_PASSWORD in .env}
+    volumes:
+      - nomos-vault:/vault/file
+      - nomos-vault-init:/vault/init
+      - ./vault/policies:/vault/policies:ro
+      - ./vault/init-entrypoint.sh:/vault/scripts/init-entrypoint.sh:ro
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: "no"
+
   # ─── NomOS Control Plane ───────────────────────────────
 
   nomos-api:
@@ -85,6 +103,7 @@ services:
       - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
     volumes:
       - nomos-agents:/data/agents
+      - nomos-vault-init:/vault/init:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,6 +111,8 @@ services:
         condition: service_healthy
       vault:
         condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
@@ -120,6 +141,7 @@ services:
       - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
     volumes:
       - nomos-agents:/data/agents
+      - nomos-vault-init:/vault/init:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -127,6 +149,8 @@ services:
         condition: service_healthy
       vault:
         condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import arq; print('ok')"]
@@ -241,6 +265,7 @@ volumes:
   nomos-agents:
   nomos-valkey:
   nomos-vault:
+  nomos-vault-init:
   nomos-caddy-data:
   nomos-caddy-config:
   nomos-piper:

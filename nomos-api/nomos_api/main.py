@@ -64,9 +64,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 def _run_alembic_upgrade() -> None:
     """Run Alembic migrations synchronously (called via run_in_executor)."""
-    alembic_ini = Path(__file__).resolve().parent.parent / "alembic.ini"
-    alembic_cfg = Config(str(alembic_ini))
-    command.upgrade(alembic_cfg, "head")
+    try:
+        project_root = Path(__file__).resolve().parent.parent
+        alembic_ini = project_root / "alembic.ini"
+        alembic_cfg = Config(str(alembic_ini))
+        alembic_cfg.set_main_option("script_location", str(project_root / "alembic"))
+        command.upgrade(alembic_cfg, "head")
+    except Exception as exc:
+        logger.warning("Alembic migration skipped: %s", exc)
 
 
 @asynccontextmanager

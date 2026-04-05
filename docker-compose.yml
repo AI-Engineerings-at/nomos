@@ -74,7 +74,9 @@ services:
       - NOMOS_VALKEY_URL=valkey://valkey:6379
       - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:?Set NOMOS_JWT_SECRET in .env}
       - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:?Set NOMOS_PLUGIN_API_KEY in .env}
+      - NOMOS_DB_PASSWORD=${NOMOS_DB_PASSWORD:?Set NOMOS_DB_PASSWORD in .env}
       - NOMOS_DEV_MODE=${NOMOS_DEV_MODE:-false}
+      - NOMOS_COOKIE_SECURE=${NOMOS_COOKIE_SECURE:-true}
       - VAULT_ADDR=http://vault:8200
       - VAULT_ROLE_ID=${VAULT_ROLE_ID:-}
       - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
@@ -92,8 +94,8 @@ services:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 30s
 
   nomos-worker:
     build:

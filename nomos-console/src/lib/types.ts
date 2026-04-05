@@ -137,7 +137,7 @@ export interface HealthResponse {
   status: string;
   service: string;
   version: string;
-  vault: string;
+  vault?: string;
 }
 
 /** NomOS user account for admin management. */

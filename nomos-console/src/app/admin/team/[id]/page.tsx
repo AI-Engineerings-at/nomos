@@ -57,12 +57,14 @@ function ProfileBudgetBar({ used, limit }: { used: number; limit: number }) {
   );
 }
 
-/** Compliance document checklist (14 required documents). */
+/** Compliance document checklist — matches gate.py DOCS_FOR_RISK exactly. */
 const COMPLIANCE_DOCS = [
-  'risk_assessment', 'data_protection_impact', 'transparency_notice',
-  'human_oversight_plan', 'technical_documentation', 'quality_management',
-  'ai_act_registration', 'dsgvo_art_13', 'dsgvo_art_14', 'dsgvo_art_22',
-  'ai_act_art_50', 'incident_response_plan', 'monitoring_plan', 'audit_trail_config',
+  // Minimal (5)
+  'dpia', 'verarbeitungsverzeichnis', 'art50_transparency', 'art14_killswitch', 'art12_logging',
+  // Limited (+4 = 9)
+  'avv', 'risk_management', 'betroffenenrechte', 'ai_literacy',
+  // High (+4 = 13, +TIA = 14)
+  'art22_policy', 'incident_response', 'tom', 'accessibility', 'tia',
 ] as const;
 
 function ComplianceChecklist({

@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir uv
 
 COPY nomos-cli /app/nomos-cli
 COPY nomos-api/pyproject.toml /app/
+COPY nomos-api/alembic.ini /app/
+COPY nomos-api/alembic /app/alembic/
 COPY nomos-api/nomos_api /app/nomos_api/
 
 ENV PYTHONPATH="/app/nomos-cli:${PYTHONPATH}"

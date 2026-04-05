@@ -1,12 +1,13 @@
 """HashiCorp Vault client for NomOS secret management.
 
-Uses AppRole authentication via hvac. Provides in-memory cache fallback
-when Vault is unavailable (graceful degradation).
+Uses AppRole authentication via hvac. Provides in-memory TTL cache to reduce
+Vault load and graceful degradation (stale cache) when Vault is unavailable.
 """
 
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 import hvac
@@ -23,12 +24,15 @@ class VaultClient:
         role_id: str = "",
         secret_id: str = "",
         mount: str = "nomos",
+        cache_ttl: float = 60.0,
     ) -> None:
         self._addr = addr
         self._mount = mount
+        self._cache_ttl = cache_ttl
         self._client: Any = None
         self._connected = False
-        self._cache: dict[str, dict[str, Any]] = {}
+        # Cache stores (data, timestamp) tuples for TTL tracking.
+        self._cache: dict[str, tuple[dict[str, Any], float]] = {}
 
         if not role_id or not secret_id:
             logger.warning("Vault role_id/secret_id not provided — running without Vault")
@@ -50,7 +54,23 @@ class VaultClient:
         return self._connected
 
     def get_secret(self, path: str) -> dict[str, Any] | None:
-        """Read secret from Vault KV v2. Falls back to cache on error."""
+        """Read secret from Vault KV v2 with TTL cache.
+
+        Cache hit (within TTL): return cached value, skip Vault read.
+        Cache miss or TTL expired: read from Vault and refresh cache.
+        Vault error with stale cache: return stale cache (graceful degradation).
+        Vault error without cache: return None.
+        """
+        now = time.time()
+
+        # Return cached value if within TTL.
+        cached_entry = self._cache.get(path)
+        if cached_entry is not None:
+            data, timestamp = cached_entry
+            if now - timestamp < self._cache_ttl:
+                logger.debug("Cache hit (within TTL) for %s", path)
+                return data
+
         if self._client and self._connected:
             try:
                 resp = self._client.secrets.kv.v2.read_secret_version(
@@ -58,16 +78,20 @@ class VaultClient:
                     mount_point=self._mount,
                 )
                 data = resp["data"]["data"]
-                self._cache[path] = data
+                self._cache[path] = (data, time.time())
                 return data
             except Exception as exc:
                 logger.warning("Vault read failed for %s: %s — using cache", path, exc)
+                # Graceful degradation: return stale cache regardless of TTL.
+                if cached_entry is not None:
+                    logger.info("Returning stale cache for %s", path)
+                    return cached_entry[0]
+                return None
 
-        # Cache fallback
-        cached = self._cache.get(path)
-        if cached is not None:
+        # Not connected — return stale cache if available.
+        if cached_entry is not None:
             logger.info("Returning cached value for %s", path)
-            return cached
+            return cached_entry[0]
 
         return None
 
@@ -82,7 +106,7 @@ class VaultClient:
                 secret=value,
                 mount_point=self._mount,
             )
-            self._cache[path] = value
+            self._cache[path] = (value, time.time())
             return True
         except Exception as exc:
             logger.warning("Vault write failed for %s: %s", path, exc)

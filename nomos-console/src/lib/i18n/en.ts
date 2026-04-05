@@ -284,6 +284,12 @@ export const en: Record<TranslationKey, string> = {
   'chat.pauseButton': 'Pause immediately',
   'chat.agentOffline': 'This employee is currently offline.',
   'chat.gatewayOffline': 'The chat gateway is unreachable. Please ensure the gateway service is running.',
+  'chat.error.rateLimit': 'Rate limit reached. Please wait a moment and try again.',
+  'chat.error.gatewayOffline': 'Chat service is unreachable. Please check settings.',
+  'chat.error.noProvider': 'No LLM provider configured.',
+  'chat.error.noProviderCta': 'Open settings',
+  'chat.error.unknown': 'An error occurred. Please try again.',
+  'chat.error.retry': 'Try again',
 
   // Approvals
   'approvals.title': 'Approvals',
@@ -573,6 +579,18 @@ export const en: Record<TranslationKey, string> = {
   'a11y.countdownTimer': 'GDPR countdown',
   'a11y.faqSection': 'Frequently asked questions',
   'a11y.glossarySection': 'Glossary',
+
+  // Inline strings extracted from pages
+  'diagnostics.servicesInfo': 'Service status is provided via the health endpoint.',
+  'chat.complianceBanner': '{name} is not yet ready. Compliance documents are missing.',
+  'chat.checkCompliance': 'Check compliance',
+  'users.sessionTimeoutHint': 'Session duration in hours',
+  'audit.selectAgentFirst': 'Please select an agent first',
+  'hire.validation.nameRequired': 'Please enter a name.',
+  'hire.validation.roleRequired': 'Please select a role.',
+  'hire.validation.capabilitiesRequired': 'Please select at least one capability.',
+  'hire.startOnboarding': 'Start onboarding',
+  'profile.documentsRequired': '{count} documents required',
 
   // Deploy Steps
   'deploy.step.validateManifest': 'Validating manifest',

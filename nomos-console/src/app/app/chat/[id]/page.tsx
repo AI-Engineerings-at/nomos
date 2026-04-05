@@ -143,13 +143,25 @@ function ChatContent() {
 
       setMessages((prev) => [...prev, agentMessage]);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.detail : t('error.serverError', language);
-      addToast({ type: 'error', message: msg, duration: 6000 });
+      let errorKey: string = 'chat.error.unknown';
+      if (err instanceof ApiError) {
+        if (err.status === 429) errorKey = 'chat.error.rateLimit';
+        else if (err.status === 502) errorKey = 'chat.error.gatewayOffline';
+        else if (err.status === 503) errorKey = 'chat.error.noProvider';
+      }
+
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now()}-error`,
+        role: 'agent',
+        content: t(errorKey as any, language),
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [inputValue, sending, agentId, sessionId, language, addToast]);
+  }, [inputValue, sending, agentId, sessionId, language]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

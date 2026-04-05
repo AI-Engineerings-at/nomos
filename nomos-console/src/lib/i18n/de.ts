@@ -282,6 +282,12 @@ export const de = {
   'chat.pauseButton': 'Sofort pausieren',
   'chat.agentOffline': 'Dieser Mitarbeiter ist derzeit offline.',
   'chat.gatewayOffline': 'Der Chat-Gateway ist nicht erreichbar. Bitte stellen Sie sicher, dass der Gateway-Dienst läuft.',
+  'chat.error.rateLimit': 'Anfrage-Limit erreicht. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
+  'chat.error.gatewayOffline': 'Der Chat-Dienst ist nicht erreichbar. Bitte prüfen Sie die Einstellungen.',
+  'chat.error.noProvider': 'Kein LLM-Provider konfiguriert.',
+  'chat.error.noProviderCta': 'Einstellungen öffnen',
+  'chat.error.unknown': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
+  'chat.error.retry': 'Erneut versuchen',
 
   // Approvals
   'approvals.title': 'Freigaben',
@@ -571,6 +577,18 @@ export const de = {
   'a11y.countdownTimer': 'DSGVO-Countdown',
   'a11y.faqSection': 'Häufige Fragen',
   'a11y.glossarySection': 'Begriffserklärungen',
+
+  // Inline strings extracted from pages
+  'diagnostics.servicesInfo': 'Service-Status wird über den Health-Endpoint bereitgestellt.',
+  'chat.complianceBanner': '{name} ist noch nicht einsatzbereit. Compliance-Dokumente fehlen.',
+  'chat.checkCompliance': 'Compliance prüfen',
+  'users.sessionTimeoutHint': 'Sitzungsdauer in Stunden',
+  'audit.selectAgentFirst': 'Bitte wählen Sie einen Agenten aus',
+  'hire.validation.nameRequired': 'Bitte geben Sie einen Namen ein.',
+  'hire.validation.roleRequired': 'Bitte wählen Sie eine Rolle.',
+  'hire.validation.capabilitiesRequired': 'Bitte wählen Sie mindestens eine Fähigkeit.',
+  'hire.startOnboarding': 'Einarbeitung starten',
+  'profile.documentsRequired': '{count} Dokumente erforderlich',
 
   // Deploy Steps
   'deploy.step.validateManifest': 'Manifest wird validiert',

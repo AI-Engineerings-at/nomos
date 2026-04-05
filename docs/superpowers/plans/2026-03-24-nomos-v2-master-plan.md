@@ -1165,7 +1165,7 @@ Die 6 Panels die ein KMU-Chef SOFORT braucht:
 
 ### Erfolgs-Kriterien 5b
 
-- [ ] Alle 6 MVP-Panels implementiert
+- [ ] Alle 6 v1-Panels implementiert
 - [ ] Hire Wizard end-to-end funktional
 - [ ] Chat via Proxy (oder Offline-Meldung wenn Gateway fehlt)
 - [ ] Pause-Button funktioniert in JEDEM Kontext

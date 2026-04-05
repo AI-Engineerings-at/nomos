@@ -1,0 +1,2379 @@
+{
+  "AgentCreateRequest": {
+    "properties": {
+      "name": {
+        "examples": [
+          "Mani Ruf"
+        ],
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Name",
+        "type": "string"
+      },
+      "role": {
+        "examples": [
+          "external-secretary"
+        ],
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Role",
+        "type": "string"
+      },
+      "company": {
+        "examples": [
+          "AI Engineering"
+        ],
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Company",
+        "type": "string"
+      },
+      "email": {
+        "examples": [
+          "mani@ai-engineering.at"
+        ],
+        "title": "Email",
+        "type": "string"
+      },
+      "risk_class": {
+        "default": "limited",
+        "pattern": "^(minimal|limited|high)$",
+        "title": "Risk Class",
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "role",
+      "company",
+      "email"
+    ],
+    "title": "AgentCreateRequest",
+    "type": "object"
+  },
+  "AgentPatchRequest": {
+    "properties": {
+      "status": {
+        "anyOf": [
+          {
+            "pattern": "^(paused|running|killed)$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Status"
+      }
+    },
+    "title": "AgentPatchRequest",
+    "type": "object"
+  },
+  "AgentResponse": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "name": {
+        "title": "Name",
+        "type": "string"
+      },
+      "role": {
+        "title": "Role",
+        "type": "string"
+      },
+      "company": {
+        "title": "Company",
+        "type": "string"
+      },
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "risk_class": {
+        "title": "Risk Class",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "manifest_hash": {
+        "title": "Manifest Hash",
+        "type": "string"
+      },
+      "compliance_status": {
+        "title": "Compliance Status",
+        "type": "string"
+      },
+      "heartbeat_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Heartbeat At"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "updated_at": {
+        "format": "date-time",
+        "title": "Updated At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "role",
+      "company",
+      "email",
+      "risk_class",
+      "status",
+      "manifest_hash",
+      "compliance_status",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "AgentResponse",
+    "type": "object"
+  },
+  "ApprovalListResponse": {
+    "$defs": {
+      "ApprovalResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "requested_at": {
+            "title": "Requested At",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "timeout_minutes": {
+            "title": "Timeout Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "action",
+          "description",
+          "status",
+          "requested_at",
+          "resolved_at",
+          "resolved_by",
+          "timeout_minutes"
+        ],
+        "title": "ApprovalResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "approvals": {
+        "items": {
+          "$ref": "#/$defs/ApprovalResponse"
+        },
+        "title": "Approvals",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "approvals",
+      "total"
+    ],
+    "title": "ApprovalListResponse",
+    "type": "object"
+  },
+  "ApprovalRequestCreate": {
+    "properties": {
+      "agent_id": {
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "action": {
+        "examples": [
+          "external_api_call"
+        ],
+        "minLength": 1,
+        "title": "Action",
+        "type": "string"
+      },
+      "description": {
+        "examples": [
+          "Call CRM API"
+        ],
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
+      "timeout_minutes": {
+        "default": 60,
+        "minimum": 1,
+        "title": "Timeout Minutes",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "agent_id",
+      "action",
+      "description"
+    ],
+    "title": "ApprovalRequestCreate",
+    "type": "object"
+  },
+  "ApprovalResolveRequest": {
+    "properties": {
+      "resolved_by": {
+        "examples": [
+          "admin@nomos.local"
+        ],
+        "minLength": 1,
+        "title": "Resolved By",
+        "type": "string"
+      }
+    },
+    "required": [
+      "resolved_by"
+    ],
+    "title": "ApprovalResolveRequest",
+    "type": "object"
+  },
+  "ApprovalResponse": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "action": {
+        "title": "Action",
+        "type": "string"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "requested_at": {
+        "title": "Requested At",
+        "type": "string"
+      },
+      "resolved_at": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Resolved At"
+      },
+      "resolved_by": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Resolved By"
+      },
+      "timeout_minutes": {
+        "title": "Timeout Minutes",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "id",
+      "agent_id",
+      "action",
+      "description",
+      "status",
+      "requested_at",
+      "resolved_at",
+      "resolved_by",
+      "timeout_minutes"
+    ],
+    "title": "ApprovalResponse",
+    "type": "object"
+  },
+  "AuditEntryCreateRequest": {
+    "properties": {
+      "agent_id": {
+        "examples": [
+          "mani-ruf-01"
+        ],
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "event_type": {
+        "examples": [
+          "governance.hook.triggered"
+        ],
+        "minLength": 1,
+        "title": "Event Type",
+        "type": "string"
+      },
+      "payload": {
+        "additionalProperties": true,
+        "title": "Payload",
+        "type": "object"
+      }
+    },
+    "required": [
+      "agent_id",
+      "event_type"
+    ],
+    "title": "AuditEntryCreateRequest",
+    "type": "object"
+  },
+  "AuditEntryCreateResponse": {
+    "properties": {
+      "hash": {
+        "title": "Hash",
+        "type": "string"
+      },
+      "id": {
+        "title": "Id",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "hash",
+      "id"
+    ],
+    "title": "AuditEntryCreateResponse",
+    "type": "object"
+  },
+  "AuditEntryResponse": {
+    "properties": {
+      "sequence": {
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "event_type": {
+        "title": "Event Type",
+        "type": "string"
+      },
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "data": {
+        "additionalProperties": true,
+        "title": "Data",
+        "type": "object"
+      },
+      "chain_hash": {
+        "title": "Chain Hash",
+        "type": "string"
+      },
+      "timestamp": {
+        "title": "Timestamp",
+        "type": "string"
+      }
+    },
+    "required": [
+      "sequence",
+      "event_type",
+      "agent_id",
+      "data",
+      "chain_hash",
+      "timestamp"
+    ],
+    "title": "AuditEntryResponse",
+    "type": "object"
+  },
+  "AuditResponse": {
+    "$defs": {
+      "AuditEntryResponse": {
+        "properties": {
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "chain_hash": {
+            "title": "Chain Hash",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "event_type",
+          "agent_id",
+          "data",
+          "chain_hash",
+          "timestamp"
+        ],
+        "title": "AuditEntryResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "entries": {
+        "items": {
+          "$ref": "#/$defs/AuditEntryResponse"
+        },
+        "title": "Entries",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "agent_id",
+      "entries",
+      "total"
+    ],
+    "title": "AuditResponse",
+    "type": "object"
+  },
+  "AuditVerifyResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "valid": {
+        "title": "Valid",
+        "type": "boolean"
+      },
+      "entries_checked": {
+        "title": "Entries Checked",
+        "type": "integer"
+      },
+      "errors": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Errors",
+        "type": "array"
+      }
+    },
+    "required": [
+      "agent_id",
+      "valid",
+      "entries_checked",
+      "errors"
+    ],
+    "title": "AuditVerifyResponse",
+    "type": "object"
+  },
+  "BudgetCheckRequest": {
+    "properties": {
+      "agent_id": {
+        "examples": [
+          "mani-ruf-01"
+        ],
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "estimated_cost": {
+        "default": 0.0,
+        "description": "Estimated cost in EUR",
+        "minimum": 0,
+        "title": "Estimated Cost",
+        "type": "number"
+      }
+    },
+    "required": [
+      "agent_id"
+    ],
+    "title": "BudgetCheckRequest",
+    "type": "object"
+  },
+  "BudgetTrackRequest": {
+    "properties": {
+      "agent_id": {
+        "examples": [
+          "mani-ruf-01"
+        ],
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "cost": {
+        "description": "Cost in EUR to track",
+        "exclusiveMinimum": 0,
+        "title": "Cost",
+        "type": "number"
+      }
+    },
+    "required": [
+      "agent_id",
+      "cost"
+    ],
+    "title": "BudgetTrackRequest",
+    "type": "object"
+  },
+  "BudgetTrackResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "budget_used_eur": {
+        "title": "Budget Used Eur",
+        "type": "number"
+      },
+      "budget_limit_eur": {
+        "title": "Budget Limit Eur",
+        "type": "number"
+      }
+    },
+    "required": [
+      "agent_id",
+      "budget_used_eur",
+      "budget_limit_eur"
+    ],
+    "title": "BudgetTrackResponse",
+    "type": "object"
+  },
+  "ComplianceMatrixEntry": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "agent_name": {
+        "title": "Agent Name",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "missing_docs": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Missing Docs",
+        "type": "array"
+      },
+      "risk_class": {
+        "title": "Risk Class",
+        "type": "string"
+      }
+    },
+    "required": [
+      "agent_id",
+      "agent_name",
+      "status",
+      "missing_docs",
+      "risk_class"
+    ],
+    "title": "ComplianceMatrixEntry",
+    "type": "object"
+  },
+  "ComplianceMatrixResponse": {
+    "$defs": {
+      "ComplianceMatrixEntry": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "agent_name": {
+            "title": "Agent Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "missing_docs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Docs",
+            "type": "array"
+          },
+          "risk_class": {
+            "title": "Risk Class",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "agent_name",
+          "status",
+          "missing_docs",
+          "risk_class"
+        ],
+        "title": "ComplianceMatrixEntry",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "matrix": {
+        "items": {
+          "$ref": "#/$defs/ComplianceMatrixEntry"
+        },
+        "title": "Matrix",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "matrix",
+      "total"
+    ],
+    "title": "ComplianceMatrixResponse",
+    "type": "object"
+  },
+  "ComplianceResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "missing_documents": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Missing Documents",
+        "type": "array"
+      },
+      "errors": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Errors",
+        "type": "array"
+      },
+      "warnings": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Warnings",
+        "type": "array"
+      }
+    },
+    "required": [
+      "agent_id",
+      "status",
+      "missing_documents",
+      "errors",
+      "warnings"
+    ],
+    "title": "ComplianceResponse",
+    "type": "object"
+  },
+  "CostOverviewResponse": {
+    "$defs": {
+      "CostResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "total_cost_eur": {
+            "title": "Total Cost Eur",
+            "type": "number"
+          },
+          "budget_limit_eur": {
+            "title": "Budget Limit Eur",
+            "type": "number"
+          },
+          "budget_status": {
+            "title": "Budget Status",
+            "type": "string"
+          },
+          "percent_used": {
+            "title": "Percent Used",
+            "type": "number"
+          }
+        },
+        "required": [
+          "agent_id",
+          "total_cost_eur",
+          "budget_limit_eur",
+          "budget_status",
+          "percent_used"
+        ],
+        "title": "CostResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "costs": {
+        "items": {
+          "$ref": "#/$defs/CostResponse"
+        },
+        "title": "Costs",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "costs",
+      "total"
+    ],
+    "title": "CostOverviewResponse",
+    "type": "object"
+  },
+  "CostResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "total_cost_eur": {
+        "title": "Total Cost Eur",
+        "type": "number"
+      },
+      "budget_limit_eur": {
+        "title": "Budget Limit Eur",
+        "type": "number"
+      },
+      "budget_status": {
+        "title": "Budget Status",
+        "type": "string"
+      },
+      "percent_used": {
+        "title": "Percent Used",
+        "type": "number"
+      }
+    },
+    "required": [
+      "agent_id",
+      "total_cost_eur",
+      "budget_limit_eur",
+      "budget_status",
+      "percent_used"
+    ],
+    "title": "CostResponse",
+    "type": "object"
+  },
+  "DSGVOExportRequest": {
+    "properties": {
+      "email": {
+        "examples": [
+          "max@example.com"
+        ],
+        "minLength": 1,
+        "title": "Email",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email"
+    ],
+    "title": "DSGVOExportRequest",
+    "type": "object"
+  },
+  "DSGVOExportResponse": {
+    "properties": {
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "messages": {
+        "items": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "title": "Messages",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      },
+      "timestamp": {
+        "title": "Timestamp",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email",
+      "messages",
+      "total",
+      "timestamp"
+    ],
+    "title": "DSGVOExportResponse",
+    "type": "object"
+  },
+  "DSGVOForgetRequest": {
+    "properties": {
+      "email": {
+        "examples": [
+          "max@example.com"
+        ],
+        "minLength": 1,
+        "title": "Email",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email"
+    ],
+    "title": "DSGVOForgetRequest",
+    "type": "object"
+  },
+  "DSGVOForgetResponse": {
+    "properties": {
+      "deleted_messages": {
+        "title": "Deleted Messages",
+        "type": "integer"
+      },
+      "search_term": {
+        "title": "Search Term",
+        "type": "string"
+      },
+      "audit_event": {
+        "title": "Audit Event",
+        "type": "string"
+      },
+      "audit_preserved": {
+        "title": "Audit Preserved",
+        "type": "boolean"
+      },
+      "timestamp": {
+        "title": "Timestamp",
+        "type": "string"
+      }
+    },
+    "required": [
+      "deleted_messages",
+      "search_term",
+      "audit_event",
+      "audit_preserved",
+      "timestamp"
+    ],
+    "title": "DSGVOForgetResponse",
+    "type": "object"
+  },
+  "FleetResponse": {
+    "$defs": {
+      "AgentResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "risk_class": {
+            "title": "Risk Class",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "manifest_hash": {
+            "title": "Manifest Hash",
+            "type": "string"
+          },
+          "compliance_status": {
+            "title": "Compliance Status",
+            "type": "string"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Heartbeat At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "company",
+          "email",
+          "risk_class",
+          "status",
+          "manifest_hash",
+          "compliance_status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AgentResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "agents": {
+        "items": {
+          "$ref": "#/$defs/AgentResponse"
+        },
+        "title": "Agents",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "agents",
+      "total"
+    ],
+    "title": "FleetResponse",
+    "type": "object"
+  },
+  "HealthResponse": {
+    "properties": {
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "service": {
+        "title": "Service",
+        "type": "string"
+      },
+      "version": {
+        "title": "Version",
+        "type": "string"
+      },
+      "vault": {
+        "default": "not_configured",
+        "title": "Vault",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "service",
+      "version"
+    ],
+    "title": "HealthResponse",
+    "type": "object"
+  },
+  "HeartbeatRequest": {
+    "properties": {
+      "metrics": {
+        "additionalProperties": true,
+        "title": "Metrics",
+        "type": "object"
+      }
+    },
+    "title": "HeartbeatRequest",
+    "type": "object"
+  },
+  "HeartbeatResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "agent_id",
+      "status"
+    ],
+    "title": "HeartbeatResponse",
+    "type": "object"
+  },
+  "IncidentCreateRequest": {
+    "properties": {
+      "log_entry": {
+        "minLength": 1,
+        "title": "Log Entry",
+        "type": "string"
+      },
+      "agent_id": {
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "context": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Context"
+      }
+    },
+    "required": [
+      "log_entry",
+      "agent_id"
+    ],
+    "title": "IncidentCreateRequest",
+    "type": "object"
+  },
+  "IncidentListResponse": {
+    "$defs": {
+      "IncidentResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "incident_type": {
+            "title": "Incident Type",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "detected_at": {
+            "title": "Detected At",
+            "type": "string"
+          },
+          "report_deadline": {
+            "title": "Report Deadline",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "incident_type",
+          "description",
+          "severity",
+          "status",
+          "detected_at",
+          "report_deadline"
+        ],
+        "title": "IncidentResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "incidents": {
+        "items": {
+          "$ref": "#/$defs/IncidentResponse"
+        },
+        "title": "Incidents",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "incidents",
+      "total"
+    ],
+    "title": "IncidentListResponse",
+    "type": "object"
+  },
+  "IncidentResponse": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "integer"
+      },
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "incident_type": {
+        "title": "Incident Type",
+        "type": "string"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "severity": {
+        "title": "Severity",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "detected_at": {
+        "title": "Detected At",
+        "type": "string"
+      },
+      "report_deadline": {
+        "title": "Report Deadline",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "agent_id",
+      "incident_type",
+      "description",
+      "severity",
+      "status",
+      "detected_at",
+      "report_deadline"
+    ],
+    "title": "IncidentResponse",
+    "type": "object"
+  },
+  "IncidentUpdateRequest": {
+    "properties": {
+      "status": {
+        "pattern": "^(detected|reported|resolved)$",
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "IncidentUpdateRequest",
+    "type": "object"
+  },
+  "LoginRequest": {
+    "properties": {
+      "email": {
+        "examples": [
+          "admin@nomos.local"
+        ],
+        "title": "Email",
+        "type": "string"
+      },
+      "password": {
+        "minLength": 1,
+        "title": "Password",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email",
+      "password"
+    ],
+    "title": "LoginRequest",
+    "type": "object"
+  },
+  "LoginResponse": {
+    "$defs": {
+      "LoginUserInfo": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role"
+        ],
+        "title": "LoginUserInfo",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "requires_2fa": {
+        "default": false,
+        "title": "Requires 2Fa",
+        "type": "boolean"
+      },
+      "user": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/LoginUserInfo"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "message": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Message"
+      }
+    },
+    "title": "LoginResponse",
+    "type": "object"
+  },
+  "LoginUserInfo": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "name": {
+        "title": "Name",
+        "type": "string"
+      },
+      "role": {
+        "title": "Role",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "email",
+      "name",
+      "role"
+    ],
+    "title": "LoginUserInfo",
+    "type": "object"
+  },
+  "LogoutResponse": {
+    "properties": {
+      "message": {
+        "title": "Message",
+        "type": "string"
+      }
+    },
+    "required": [
+      "message"
+    ],
+    "title": "LogoutResponse",
+    "type": "object"
+  },
+  "PIIFilterRequest": {
+    "properties": {
+      "text": {
+        "examples": [
+          "Email: max@example.com"
+        ],
+        "minLength": 1,
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ],
+    "title": "PIIFilterRequest",
+    "type": "object"
+  },
+  "PIIFilterResponse": {
+    "$defs": {
+      "PIIMatchResponse": {
+        "properties": {
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "start",
+          "end"
+        ],
+        "title": "PIIMatchResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "filtered": {
+        "title": "Filtered",
+        "type": "string"
+      },
+      "pii_count": {
+        "title": "Pii Count",
+        "type": "integer"
+      },
+      "matches": {
+        "items": {
+          "$ref": "#/$defs/PIIMatchResponse"
+        },
+        "title": "Matches",
+        "type": "array"
+      }
+    },
+    "required": [
+      "filtered",
+      "pii_count",
+      "matches"
+    ],
+    "title": "PIIFilterResponse",
+    "type": "object"
+  },
+  "PIIMatchResponse": {
+    "properties": {
+      "type": {
+        "title": "Type",
+        "type": "string"
+      },
+      "start": {
+        "title": "Start",
+        "type": "integer"
+      },
+      "end": {
+        "title": "End",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "type",
+      "start",
+      "end"
+    ],
+    "title": "PIIMatchResponse",
+    "type": "object"
+  },
+  "ProxyChatRequest": {
+    "properties": {
+      "agent_id": {
+        "examples": [
+          "mani-ruf-01"
+        ],
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "message": {
+        "examples": [
+          "Hello, what can you do?"
+        ],
+        "minLength": 1,
+        "title": "Message",
+        "type": "string"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "examples": [
+          "sess-abc123"
+        ],
+        "title": "Session Id"
+      }
+    },
+    "required": [
+      "agent_id",
+      "message"
+    ],
+    "title": "ProxyChatRequest",
+    "type": "object"
+  },
+  "ProxyChatResponse": {
+    "properties": {
+      "response": {
+        "title": "Response",
+        "type": "string"
+      },
+      "session_id": {
+        "title": "Session Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "response",
+      "session_id"
+    ],
+    "title": "ProxyChatResponse",
+    "type": "object"
+  },
+  "ProxyStatusResponse": {
+    "properties": {
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "version": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Version"
+      },
+      "agents_count": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Agents Count"
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "ProxyStatusResponse",
+    "type": "object"
+  },
+  "RecoveryRequest": {
+    "properties": {
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "recovery_phrase": {
+        "title": "Recovery Phrase",
+        "type": "string"
+      },
+      "new_password": {
+        "minLength": 12,
+        "title": "New Password",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email",
+      "recovery_phrase",
+      "new_password"
+    ],
+    "title": "RecoveryRequest",
+    "type": "object"
+  },
+  "RecoveryResponse": {
+    "properties": {
+      "message": {
+        "title": "Message",
+        "type": "string"
+      }
+    },
+    "required": [
+      "message"
+    ],
+    "title": "RecoveryResponse",
+    "type": "object"
+  },
+  "SettingsUpdateRequest": {
+    "description": "Partial update \u2014 only provided fields are changed.",
+    "properties": {
+      "gateway_url": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Gateway Url"
+      },
+      "retention_days": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Retention Days"
+      },
+      "pii_filter_mode": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Pii Filter Mode"
+      },
+      "openai_api_key": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Openai Api Key"
+      },
+      "anthropic_api_key": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Anthropic Api Key"
+      },
+      "nvidia_api_key": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Nvidia Api Key"
+      }
+    },
+    "title": "SettingsUpdateRequest",
+    "type": "object"
+  },
+  "SystemSettingsResponse": {
+    "description": "System settings \u2014 config values in cleartext, secrets masked.",
+    "properties": {
+      "gateway_url": {
+        "title": "Gateway Url",
+        "type": "string"
+      },
+      "retention_days": {
+        "title": "Retention Days",
+        "type": "integer"
+      },
+      "pii_filter_mode": {
+        "title": "Pii Filter Mode",
+        "type": "string"
+      },
+      "openai_api_key_set": {
+        "default": false,
+        "title": "Openai Api Key Set",
+        "type": "boolean"
+      },
+      "anthropic_api_key_set": {
+        "default": false,
+        "title": "Anthropic Api Key Set",
+        "type": "boolean"
+      },
+      "nvidia_api_key_set": {
+        "default": false,
+        "title": "Nvidia Api Key Set",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "gateway_url",
+      "retention_days",
+      "pii_filter_mode"
+    ],
+    "title": "SystemSettingsResponse",
+    "type": "object"
+  },
+  "TaskCreateRequest": {
+    "properties": {
+      "agent_id": {
+        "examples": [
+          "mani-ruf-01"
+        ],
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "description": {
+        "examples": [
+          "Write blog post"
+        ],
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
+      "priority": {
+        "default": "normal",
+        "pattern": "^(low|normal|high|urgent)$",
+        "title": "Priority",
+        "type": "string"
+      },
+      "timeout_minutes": {
+        "default": 60,
+        "minimum": 1,
+        "title": "Timeout Minutes",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "agent_id",
+      "description"
+    ],
+    "title": "TaskCreateRequest",
+    "type": "object"
+  },
+  "TaskListResponse": {
+    "$defs": {
+      "TaskResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "timeout_minutes": {
+            "title": "Timeout Minutes",
+            "type": "integer"
+          },
+          "cost_eur": {
+            "title": "Cost Eur",
+            "type": "number"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "description",
+          "priority",
+          "status",
+          "created_by",
+          "timeout_minutes",
+          "cost_eur",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TaskResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "tasks": {
+        "items": {
+          "$ref": "#/$defs/TaskResponse"
+        },
+        "title": "Tasks",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "tasks",
+      "total"
+    ],
+    "title": "TaskListResponse",
+    "type": "object"
+  },
+  "TaskResponse": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "description": {
+        "title": "Description",
+        "type": "string"
+      },
+      "priority": {
+        "title": "Priority",
+        "type": "string"
+      },
+      "status": {
+        "title": "Status",
+        "type": "string"
+      },
+      "created_by": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Created By"
+      },
+      "timeout_minutes": {
+        "title": "Timeout Minutes",
+        "type": "integer"
+      },
+      "cost_eur": {
+        "title": "Cost Eur",
+        "type": "number"
+      },
+      "created_at": {
+        "title": "Created At",
+        "type": "string"
+      },
+      "updated_at": {
+        "title": "Updated At",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "agent_id",
+      "description",
+      "priority",
+      "status",
+      "created_by",
+      "timeout_minutes",
+      "cost_eur",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "TaskResponse",
+    "type": "object"
+  },
+  "TaskUpdateRequest": {
+    "properties": {
+      "status": {
+        "pattern": "^(queued|assigned|running|review|done|failed)$",
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "TaskUpdateRequest",
+    "type": "object"
+  },
+  "TotpSetupResponse": {
+    "properties": {
+      "secret": {
+        "title": "Secret",
+        "type": "string"
+      },
+      "provisioning_uri": {
+        "title": "Provisioning Uri",
+        "type": "string"
+      }
+    },
+    "required": [
+      "secret",
+      "provisioning_uri"
+    ],
+    "title": "TotpSetupResponse",
+    "type": "object"
+  },
+  "TotpVerifyRequest": {
+    "properties": {
+      "code": {
+        "maxLength": 6,
+        "minLength": 6,
+        "title": "Code",
+        "type": "string"
+      }
+    },
+    "required": [
+      "code"
+    ],
+    "title": "TotpVerifyRequest",
+    "type": "object"
+  },
+  "TotpVerifyResponse": {
+    "$defs": {
+      "LoginUserInfo": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role"
+        ],
+        "title": "LoginUserInfo",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "verified": {
+        "title": "Verified",
+        "type": "boolean"
+      },
+      "user": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/LoginUserInfo"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      }
+    },
+    "required": [
+      "verified"
+    ],
+    "title": "TotpVerifyResponse",
+    "type": "object"
+  },
+  "UserCreateRequest": {
+    "properties": {
+      "email": {
+        "examples": [
+          "user@nomos.local"
+        ],
+        "title": "Email",
+        "type": "string"
+      },
+      "password": {
+        "minLength": 12,
+        "title": "Password",
+        "type": "string"
+      },
+      "role": {
+        "default": "user",
+        "pattern": "^(admin|user|officer)$",
+        "title": "Role",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email",
+      "password"
+    ],
+    "title": "UserCreateRequest",
+    "type": "object"
+  },
+  "UserCreateResponse": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "role": {
+        "title": "Role",
+        "type": "string"
+      },
+      "recovery_key": {
+        "title": "Recovery Key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "email",
+      "role",
+      "recovery_key"
+    ],
+    "title": "UserCreateResponse",
+    "type": "object"
+  },
+  "UserListResponse": {
+    "$defs": {
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "totp_enabled": {
+            "title": "Totp Enabled",
+            "type": "boolean"
+          },
+          "session_timeout_hours": {
+            "title": "Session Timeout Hours",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "max_tasks": {
+            "default": 10,
+            "title": "Max Tasks",
+            "type": "integer"
+          },
+          "allowed_agents": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Agents",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "totp_enabled",
+          "session_timeout_hours",
+          "is_active"
+        ],
+        "title": "UserResponse",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "users": {
+        "items": {
+          "$ref": "#/$defs/UserResponse"
+        },
+        "title": "Users",
+        "type": "array"
+      },
+      "total": {
+        "title": "Total",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "users",
+      "total"
+    ],
+    "title": "UserListResponse",
+    "type": "object"
+  },
+  "UserResponse": {
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "name": {
+        "default": "",
+        "title": "Name",
+        "type": "string"
+      },
+      "role": {
+        "title": "Role",
+        "type": "string"
+      },
+      "totp_enabled": {
+        "title": "Totp Enabled",
+        "type": "boolean"
+      },
+      "session_timeout_hours": {
+        "title": "Session Timeout Hours",
+        "type": "integer"
+      },
+      "is_active": {
+        "title": "Is Active",
+        "type": "boolean"
+      },
+      "max_tasks": {
+        "default": 10,
+        "title": "Max Tasks",
+        "type": "integer"
+      },
+      "allowed_agents": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Allowed Agents",
+        "type": "array"
+      },
+      "created_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Created At"
+      }
+    },
+    "required": [
+      "id",
+      "email",
+      "role",
+      "totp_enabled",
+      "session_timeout_hours",
+      "is_active"
+    ],
+    "title": "UserResponse",
+    "type": "object"
+  },
+  "UserUpdateRequest": {
+    "properties": {
+      "role": {
+        "anyOf": [
+          {
+            "pattern": "^(admin|user|officer)$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Role"
+      },
+      "session_timeout_hours": {
+        "anyOf": [
+          {
+            "maximum": 168,
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Timeout Hours"
+      },
+      "is_active": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Is Active"
+      }
+    },
+    "title": "UserUpdateRequest",
+    "type": "object"
+  },
+  "WorkspaceInfoResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "workspace_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Workspace Id"
+      },
+      "mounted_collections": {
+        "items": {
+          "type": "string"
+        },
+        "title": "Mounted Collections",
+        "type": "array"
+      },
+      "is_active": {
+        "title": "Is Active",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "agent_id",
+      "workspace_id",
+      "mounted_collections",
+      "is_active"
+    ],
+    "title": "WorkspaceInfoResponse",
+    "type": "object"
+  },
+  "WorkspaceMountRequest": {
+    "properties": {
+      "agent_id": {
+        "examples": [
+          "mani-ruf-01"
+        ],
+        "minLength": 1,
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "collection_name": {
+        "examples": [
+          "brand-guidelines"
+        ],
+        "minLength": 1,
+        "title": "Collection Name",
+        "type": "string"
+      }
+    },
+    "required": [
+      "agent_id",
+      "collection_name"
+    ],
+    "title": "WorkspaceMountRequest",
+    "type": "object"
+  },
+  "WorkspaceMountResponse": {
+    "properties": {
+      "agent_id": {
+        "title": "Agent Id",
+        "type": "string"
+      },
+      "collection_name": {
+        "title": "Collection Name",
+        "type": "string"
+      },
+      "mounted": {
+        "title": "Mounted",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "agent_id",
+      "collection_name",
+      "mounted"
+    ],
+    "title": "WorkspaceMountResponse",
+    "type": "object"
+  }
+}

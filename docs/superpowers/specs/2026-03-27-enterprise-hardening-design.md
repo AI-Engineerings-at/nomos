@@ -2,7 +2,7 @@
 
 > **Status:** Approved by @hq on 2026-03-27
 > **Scope:** Security Hardening + Feature Completion + Enterprise Test Suite
-> **Trigger:** GSD Audit identified 19 findings (4 CRITICAL, 5 HIGH) — plain ENV secrets, in-memory rate limiter, hardcoded CORS, MVP framing throughout docs
+> **Trigger:** GSD Audit identified 19 findings (4 CRITICAL, 5 HIGH) — plain ENV secrets, in-memory rate limiter, hardcoded CORS, v1 framing throughout docs
 
 ---
 
@@ -10,7 +10,7 @@
 
 Two independent audits (2026-03-27) plus a GSD security audit confirmed:
 - NomOS is an **Enterprise product** with 3 deployment tiers (Enterprise VPS, Docker Self-Hosted, Open-Source)
-- The codebase was built with "standalone MVP" assumptions that contaminated security, config, and documentation
+- The codebase was built with "standalone v1" assumptions that contaminated security, config, and documentation
 - All 25+ contract mismatches were fixed in the stabilization sprint — but the security foundation was never addressed
 
 **This spec addresses the security foundation and completes the remaining feature gaps.**
@@ -140,8 +140,8 @@ Two independent audits (2026-03-27) plus a GSD security audit confirmed:
 - `.claude/CLAUDE.md`: Remove "Standalone Docker-Produkt", add Enterprise tier description
 - `docs/architecture.md`: Replace ENV-as-security-control with Vault architecture
 - `docs/architecture.md`: Remove `nomos` as documented DB password default
-- `docs/references/openclaw-nemoclaw-reference.md`: Remove "NomOS v2 MVP" framing
-- `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md`: "Console MVP" → "Console v1"
+- `docs/references/openclaw-nemoclaw-reference.md`: Remove "NomOS v2 v1" framing
+- `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md`: "Console v1" → "Console v1"
 - All docs: "spaeter Valkey" → done (rate limiter migrated)
 - `nomos-console/src/lib/i18n/en.ts` + `de.ts`: Remove "Read-only view" string
 - `.claude/agents/nomos-security.md`: Add Vault guidance, remove ENV-as-final-solution
@@ -228,7 +228,7 @@ Two independent audits (2026-03-27) plus a GSD security audit confirmed:
 8. E2E suite covers login → hire → chat → audit → settings → logout
 9. E2E suite covers wrong password, 2FA, budget exceeded, session expired
 10. 0 CRITICAL, 0 HIGH findings in final security scan. MEDIUM findings documented with accepted-risk rationale.
-11. All documentation says "Enterprise", zero "MVP" references
+11. All documentation says "Enterprise", zero "v1" references
 12. **Explicit dependency:** P1.2 (Settings PATCH) requires P0.1 (Vault) to be complete and stable
 
 ---

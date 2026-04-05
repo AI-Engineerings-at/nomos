@@ -37,7 +37,13 @@ class TestConfigValidation:
         assert exc_info.value.code == 1
 
     def test_all_insecure_defaults_cause_exit(self):
-        s = Settings(dev_mode=False)
+        s = Settings(
+            jwt_secret="change-me-in-production",
+            plugin_api_key="nomos-plugin-dev",
+            gateway_token="nomos-dev-token",
+            db_password="nomos",
+            dev_mode=False,
+        )
         with pytest.raises(SystemExit) as exc_info:
             validate_settings(s)
         assert exc_info.value.code == 1

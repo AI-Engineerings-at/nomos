@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Transform NomOS from MVP-grade security to Enterprise-grade: Vault secret management, persistent rate limiting, configurable CORS, editable settings with encrypted key storage, automated contract enforcement, and a complete test suite (vitest + Playwright Enterprise Suite).
+**Goal:** Transform NomOS from v1-grade security to Enterprise-grade: Vault secret management, persistent rate limiting, configurable CORS, editable settings with encrypted key storage, automated contract enforcement, and a complete test suite (vitest + Playwright Enterprise Suite).
 
 **Architecture:** HashiCorp Vault (Docker service) manages all secrets via KV v2 engine. `pydantic-settings` `settings_customise_sources()` integrates Vault as highest-priority source. Rate limiter moves to Valkey (already in stack). Console gets full vitest coverage (20 pages x 4 states) and Playwright E2E Enterprise Suite (happy path + error cases + multi-user + full sweep).
 
@@ -47,7 +47,7 @@
 | Create | `scripts/check-contracts.ts` | Parse types.ts, compare against JSON Schema |
 | Create | `scripts/contract-naming-map.json` | Intentional rename mappings |
 | Modify | `.github/workflows/ci.yml` | Add contract-check job |
-| Modify | Multiple docs | MVP → Enterprise framing |
+| Modify | Multiple docs | v1 → Enterprise framing |
 
 ### Phase 2: Frontend Quality — New/Modified Files
 
@@ -1576,11 +1576,11 @@ Kunden starten docker compose up -d auf ihrem Server. Secret Management via Hash
 
 - [ ] **Step 3: Fix reference docs**
 
-Replace all "NomOS v2 MVP" with "NomOS v2".
+Replace all "NomOS v2 v1" with "NomOS v2".
 
 - [ ] **Step 4: Fix master plan**
 
-Replace "Console MVP" with "Console v1". Replace "spaeter Valkey" with "done (migrated in Enterprise Hardening sprint)".
+Replace "Console v1" with "Console v1". Replace "spaeter Valkey" with "done (migrated in Enterprise Hardening sprint)".
 
 - [ ] **Step 5: Fix security agent instructions**
 
@@ -1596,7 +1596,7 @@ Pruefregel: Kein Secret darf als Default-Wert in config.py oder docker-compose.y
 git add .claude/CLAUDE.md docs/architecture.md docs/references/ \
   docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md \
   .claude/agents/nomos-security.md
-git commit -m "docs: MVP → Enterprise framing, Vault architecture, no insecure defaults"
+git commit -m "docs: v1 → Enterprise framing, Vault architecture, no insecure defaults"
 ```
 
 ---
@@ -1604,7 +1604,7 @@ git commit -m "docs: MVP → Enterprise framing, Vault architecture, no insecure
 ### Ralph-Loop #2: Backend Integration
 
 ```
-/ralph-loop "Run full CI pipeline locally: cd nomos-api && python -m pytest tests/ -v && cd ../nomos-plugin && npm run build && npm test. Run contract check: python scripts/export-schemas.py > schemas.json && npx tsx scripts/check-contracts.ts. Verify all docs use Enterprise framing (grep -r 'MVP' docs/ — should be 0 hits). Report findings." --completion-promise "BACKEND_CLEAN" --max-iterations 10
+/ralph-loop "Run full CI pipeline locally: cd nomos-api && python -m pytest tests/ -v && cd ../nomos-plugin && npm run build && npm test. Run contract check: python scripts/export-schemas.py > schemas.json && npx tsx scripts/check-contracts.ts. Verify all docs use Enterprise framing (grep -r 'v1' docs/ — should be 0 hits). Report findings." --completion-promise "BACKEND_CLEAN" --max-iterations 10
 ```
 
 ---
@@ -2069,7 +2069,7 @@ git commit -m "test(e2e): enterprise suite — happy path, errors, multi-user, p
 4. Run contract check: python scripts/export-schemas.py > schemas.json && npx tsx scripts/check-contracts.ts
 5. Run E2E: cd nomos-console && npx playwright test
 6. Security scan: grep -rn 'change-me\|nomos-plugin-dev\|nomos-dev-token' nomos-api/ config/ docker-compose.yml — should be 0 hits outside tests
-7. MVP scan: grep -rn 'MVP\|Standalone' docs/ .claude/ — should be 0 hits
+7. v1 scan: grep -rn 'v1\|Standalone' docs/ .claude/ — should be 0 hits
 8. Docker build: docker compose build
 All must pass." --completion-promise "ENTERPRISE_READY" --max-iterations 15
 ```

@@ -96,7 +96,7 @@ services:
   nemoclaw-sandbox-*:  # Pro Agent ein Container (dynamisch)
   honcho:              # Session Memory (Peer Model, Cross-Session)
   postgres:            # pgvector — Fleet Registry, Audit Trail, Honcho Storage
-  redis:               # Honcho Queue, Event Bus
+  valkey:              # Honcho Queue, Event Bus, Rate Limiter (BSD-3)
   nomos-api:           # FastAPI — Fleet, Compliance, Audit, Admin, Proxy
   nomos-console:       # Next.js — Command Center Dashboard
 ```

@@ -187,7 +187,7 @@ richtig und der User bleibt "ausgeloggt".
 **WARUM:** Der Console-Agent hat die API Response NICHT gelesen. Er hat Types
 ERFUNDEN die nicht zur echten API passen. Niemand hat gegen die laufende API getestet.
 
-### 15:00 — Phase 5b: 6 MVP Panels
+### 15:00 — Phase 5b: 6 v1 Panels
 
 **Gemacht:** Dashboard, Team, Profil, Hire Wizard, Chat, Freigaben.
 **Abweichung:** Alle Panels zeigen leere Daten oder crashen weil:

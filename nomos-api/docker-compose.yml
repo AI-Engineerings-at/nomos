@@ -6,9 +6,12 @@ services:
     ports:
       - "${NOMOS_API_PORT:-8060}:8000"
     environment:
-      - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:-nomos}@postgres:5432/nomos
-      - NOMOS_VALKEY_URL=redis://valkey:6379
+      - NOMOS_DATABASE_URL=postgresql+asyncpg://nomos:${NOMOS_DB_PASSWORD:?Set NOMOS_DB_PASSWORD in .env}@postgres:5432/nomos
+      - NOMOS_VALKEY_URL=valkey://valkey:6379
       - NOMOS_AGENTS_DIR=/data/agents
+      - NOMOS_JWT_SECRET=${NOMOS_JWT_SECRET:?Set NOMOS_JWT_SECRET in .env}
+      - NOMOS_PLUGIN_API_KEY=${NOMOS_PLUGIN_API_KEY:?Set NOMOS_PLUGIN_API_KEY in .env}
+      - NOMOS_GATEWAY_TOKEN=${NOMOS_GATEWAY_TOKEN:?Set NOMOS_GATEWAY_TOKEN in .env}
     volumes:
       - nomos-agents:/data/agents
     depends_on:
@@ -28,7 +31,7 @@ services:
     environment:
       - POSTGRES_DB=nomos
       - POSTGRES_USER=nomos
-      - POSTGRES_PASSWORD=${NOMOS_DB_PASSWORD:-nomos}
+      - POSTGRES_PASSWORD=${NOMOS_DB_PASSWORD:?Set NOMOS_DB_PASSWORD in .env}
     volumes:
       - nomos-pgdata:/var/lib/postgresql/data
     healthcheck:

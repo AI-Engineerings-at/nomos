@@ -75,13 +75,17 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 22. **Kleine Gaps = grosse Fehler** — Ein vergessenes Rename, eine vergessene Fixture, ein fehlender Guard — jedes davon ist ein Runtime-Crash fuer den Kunden. Null Toleranz.
 
 ## Aktiver Plan
-- Phase 2.1 Vitest: COMPLETE
-- **OpenClaw v2026.3.28 Kompatibilitaet**: DONE (Entry Point, Image Pin, Types) — TASK-2026-00529
-- Naechste Schritte (Reihenfolge):
-  1. Contract-Alignment (Stabilisierung v2, Tasks A1-A6, B1-B5)
-  2. Enterprise Hardening Phase 0 (Vault, Rate Limiter, CORS)
-  3. E2E Tests (Playwright Suite)
-- Enterprise Hardening Plan: `docs/superpowers/plans/2026-03-27-enterprise-hardening-plan.md`
+- Enterprise Hardening Phase 0-2: COMPLETE
+- OpenClaw v2026.3.28 Kompatibilitaet: DONE — TASK-2026-00529
+- Contract-Alignment: DONE (9 Fixes) — TASK-2026-00535
+- Alembic DB-Migrationen: DONE — TASK-2026-00542
+- Full Audit P0 Fixes: DONE (API-Key Header, Test Count, Broken Tests)
+- **Naechste Schritte (Reihenfolge):**
+  1. TASK-00545: Auth auf State-Change Endpoints (3-4h)
+  2. TASK-00546: Compliance-Dokumente 5→14 (2-3h)
+  3. TASK-00544: Background Worker ARQ (5-6h)
+  4. TASK-00543: TLS via Caddy (4-5h) — MUSS letzter sein (Cookie secure=True braucht TLS)
+- Production Readiness Plan: Detailliert in dieser Session entworfen (Architect Agent)
 
 ## OpenClaw Versionsstand (01.04.2026)
 - **Gepinnt auf:** v2026.3.28 (Dockerfile.gateway)

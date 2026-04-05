@@ -23,7 +23,7 @@ Documents:
 11. Art. 22 Policy — Automatisierte Entscheidungen
 12. Incident Response Plan — Art. 33/34 DSGVO
 13. TOM-Dokumentation — Art. 32 DSGVO
-14. Barrierefreiheitserklaerung — BFSG
+14. Barrierefreiheitserklärung — BFSG
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _now_iso() -> str:
 
 def _generate_dpia(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
     """Generate Data Protection Impact Assessment (Art. 35 DSGVO)."""
-    content = f"""# Datenschutz-Folgenabschaetzung (DPIA)
+    content = f"""# Datenschutz-Folgenabschätzung (DPIA)
 
 **Agent:** {manifest.agent.name}
 **Rolle:** {manifest.agent.role}
@@ -71,25 +71,25 @@ def _generate_dpia(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 ## 1. Verarbeitungszweck
 
 Der AI-Agent "{manifest.agent.name}" wird eingesetzt als {manifest.agent.role}
-fuer {manifest.identity.company}.
+für {manifest.identity.company}.
 
 ## 2. Beschreibung der Verarbeitung
 
-- **Art der Daten:** Geschaeftskommunikation, Aufgabenverwaltung
-- **Betroffene:** Mitarbeiter, Kunden, Geschaeftspartner
+- **Art der Daten:** Geschäftskommunikation, Aufgabenverwaltung
+- **Betroffene:** Mitarbeiter, Kunden, Geschäftspartner
 - **Speicherdauer:** {manifest.memory.retention.session_messages_days} Tage (Sessions), {manifest.memory.retention.audit_logs_days} Tage (Audit)
 - **PII-Filter:** {"Aktiviert (Honcho)" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "Nicht aktiv — lokales Backend ohne PII-Filterung" if manifest.memory.pii_filter.enabled else "Deaktiviert"}
 
 ## 3. Risikobewertung
 
-| Risiko | Einstufung | Massnahme |
+| Risiko | Einstufung | Maßnahme |
 |--------|-----------|-----------|
-| Datenverlust | Mittel | Verschluesselte Speicherung, Backup-Policy |
+| Datenverlust | Mittel | Verschlüsselte Speicherung, Backup-Policy |
 | Unbefugter Zugriff | Niedrig | NemoClaw Sandbox, Credential Guard |
-| PII-Exposition | {"Niedrig" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "Mittel — PII-Filter nicht aktiv (lokales Backend)" if manifest.memory.pii_filter.enabled else "Hoch"} | PII-Filter {"aktiv (Honcho)" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "nicht aktiv — Honcho-Backend fuer PII-Filterung erforderlich" if manifest.memory.pii_filter.enabled else "NICHT aktiv — Massnahmen erforderlich"} |
+| PII-Exposition | {"Niedrig" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "Mittel — PII-Filter nicht aktiv (lokales Backend)" if manifest.memory.pii_filter.enabled else "Hoch"} | PII-Filter {"aktiv (Honcho)" if manifest.memory.backend.value == "honcho" and manifest.memory.pii_filter.enabled else "nicht aktiv — Honcho-Backend für PII-Filterung erforderlich" if manifest.memory.pii_filter.enabled else "NICHT aktiv — Maßnahmen erforderlich"} |
 | Unkontrollierte Aktionen | Niedrig | Safety Gate + Kill Switch |
 
-## 4. Technische und organisatorische Massnahmen
+## 4. Technische und organisatorische Maßnahmen
 
 - NemoClaw Sandbox (Netzwerk-Isolation: {manifest.nemoclaw.network_policy})
 - Governance Hooks: {", ".join(manifest.governance.hooks_enabled)}
@@ -99,7 +99,7 @@ fuer {manifest.identity.company}.
 
 ## 5. Ergebnis
 
-Die Verarbeitung ist unter den beschriebenen Massnahmen **zulaessig**.
+Die Verarbeitung ist unter den beschriebenen Maßnahmen **zulässig**.
 
 ---
 
@@ -107,7 +107,7 @@ Die Verarbeitung ist unter den beschriebenen Massnahmen **zulaessig**.
 """
     path = docs_dir / "dpia.md"
     path.write_text(content, encoding="utf-8")
-    return ComplianceDoc(name="dpia", title="Datenschutz-Folgenabschaetzung", path=path)
+    return ComplianceDoc(name="dpia", title="Datenschutz-Folgenabschätzung", path=path)
 
 
 def _generate_verarbeitungsverzeichnis(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
@@ -127,12 +127,12 @@ def _generate_verarbeitungsverzeichnis(manifest: AgentManifest, docs_dir: Path) 
 | Verantwortlicher | {manifest.identity.company} |
 | Kontakt | {manifest.identity.email} |
 | Zweck | {manifest.agent.role} |
-| Kategorien betroffener Personen | Mitarbeiter, Kunden, Geschaeftspartner |
+| Kategorien betroffener Personen | Mitarbeiter, Kunden, Geschäftspartner |
 | Kategorien personenbezogener Daten | Kommunikationsdaten, Aufgabendaten |
-| Empfaenger | Intern: Geschaeftsfuehrung. Extern: Keine |
-| Drittlandtransfer | {"Nein (EU-Hosting)" if manifest.nemoclaw.enabled else "Zu pruefen"} |
-| Loeschfristen | Sessions: {manifest.memory.retention.session_messages_days}d, Audit: {manifest.memory.retention.audit_logs_days}d |
-| Technische Massnahmen | NemoClaw Sandbox, PII-Filter, Audit Chain, Kill Switch |
+| Empfänger | Intern: Geschäftsführung. Extern: Keine |
+| Drittlandtransfer | {"Nein (EU-Hosting)" if manifest.nemoclaw.enabled else "Zu prüfen"} |
+| Löschfristen | Sessions: {manifest.memory.retention.session_messages_days}d, Audit: {manifest.memory.retention.audit_logs_days}d |
+| Technische Maßnahmen | NemoClaw Sandbox, PII-Filter, Audit Chain, Kill Switch |
 
 ---
 
@@ -145,7 +145,7 @@ def _generate_verarbeitungsverzeichnis(manifest: AgentManifest, docs_dir: Path) 
 
 def _generate_art50(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
     """Generate Art. 50 Transparency Declaration (EU AI Act)."""
-    content = f"""# Transparenzerklaerung (Art. 50 EU AI Act)
+    content = f"""# Transparenzerklärung (Art. 50 EU AI Act)
 
 **Agent:** {manifest.agent.name}
 **Unternehmen:** {manifest.identity.company}
@@ -167,9 +167,9 @@ def _generate_art50(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 | Risikoeinstufung | {manifest.agent.risk_class.value} (EU AI Act Art. 6) |
 | Kontakt | {manifest.identity.email} |
 
-## Erklaerung
+## Erklärung
 
-Dieses System ist ein KI-gestuetzter Agent der fuer {manifest.agent.role}
+Dieses System ist ein KI-gestützter Agent der für {manifest.agent.role}
 eingesetzt wird. Alle Ausgaben dieses Systems werden mit folgendem Hinweis
 gekennzeichnet:
 
@@ -183,7 +183,7 @@ Die Kennzeichnung erfolgt automatisch durch den Art. 50 Labeler Hook.
 """
     path = docs_dir / "art50_transparency.md"
     path.write_text(content, encoding="utf-8")
-    return ComplianceDoc(name="art50_transparency", title="Art. 50 Transparenzerklaerung", path=path)
+    return ComplianceDoc(name="art50_transparency", title="Art. 50 Transparenzerklärung", path=path)
 
 
 def _generate_art14(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
@@ -208,8 +208,8 @@ def _generate_art14(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 
 ## Funktionsweise
 
-Der Kill Switch ermoeglicht autorisierten Personen ({authorities}) den
-sofortigen Halt aller Agent-Aktivitaeten. Der Switch wirkt auf Gateway-Ebene
+Der Kill Switch ermöglicht autorisierten Personen ({authorities}) den
+sofortigen Halt aller Agent-Aktivitäten. Der Switch wirkt auf Gateway-Ebene
 und unterbricht:
 
 1. Alle laufenden Operationen
@@ -219,7 +219,7 @@ und unterbricht:
 ## Eskalationspfad
 
 1. **Automatisch:** Nach {manifest.governance.escalation_threshold} Korrekturen wird ein Warnhinweis generiert
-2. **Manuell:** Autorisierte Person kann jederzeit "STOP" oder "NOTAUS" ausfuehren
+2. **Manuell:** Autorisierte Person kann jederzeit "STOP" oder "NOTAUS" ausführen
 3. **Audit:** Jede Kill-Switch-Aktivierung wird im Audit Trail protokolliert
 
 ---
@@ -246,7 +246,7 @@ def _generate_art12(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 | Feld | Wert |
 |------|------|
 | Format | JSONL (JSON Lines) |
-| Integritaet | SHA-256 Hash Chain (tamper-evident) |
+| Integrität | SHA-256 Hash Chain (tamper-evident) |
 | Aufbewahrung | {manifest.governance.audit_retention_days} Tage |
 | Verifizierung | `nomos audit --verify` oder API GET /api/audit/verify/{{id}} |
 
@@ -261,7 +261,7 @@ def _generate_art12(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 
 ## Hash Chain
 
-Jeder Eintrag enthaelt einen SHA-256 Hash der ueber folgende Felder berechnet wird:
+Jeder Eintrag enthält einen SHA-256 Hash der über folgende Felder berechnet wird:
 - Sequenznummer
 - Zeitstempel (UTC ISO 8601)
 - Event-Typ
@@ -273,9 +273,9 @@ Manipulation eines Eintrags invalidiert alle nachfolgenden Hashes.
 
 ## Export
 
-Der Audit Trail kann fuer Regulatoren exportiert werden:
-- `nomos audit --agent-dir <path>` (vollstaendiger Trail)
-- `nomos audit --agent-dir <path> --verify` (Integritaetspruefung)
+Der Audit Trail kann für Regulatoren exportiert werden:
+- `nomos audit --agent-dir <path>` (vollständiger Trail)
+- `nomos audit --agent-dir <path> --verify` (Integritätsprüfung)
 - API: GET /api/agents/{{id}}/audit (JSON)
 - API: GET /api/audit/verify/{{id}} (kryptographische Verifikation)
 
@@ -306,10 +306,10 @@ def _generate_avv(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 ## 1. Gegenstand und Dauer der Verarbeitung
 
 Der Auftragsverarbeiter (AI-Agent "{manifest.agent.name}") verarbeitet
-personenbezogene Daten im Auftrag von {manifest.identity.company} fuer den
+personenbezogene Daten im Auftrag von {manifest.identity.company} für den
 Zweck: {manifest.agent.role}.
 
-Die Verarbeitung erfolgt fuer die Dauer des Einsatzes des AI-Agenten.
+Die Verarbeitung erfolgt für die Dauer des Einsatzes des AI-Agenten.
 
 ## 2. Art und Zweck der Verarbeitung
 
@@ -317,24 +317,24 @@ Die Verarbeitung erfolgt fuer die Dauer des Einsatzes des AI-Agenten.
 |------|------|
 | Art der Verarbeitung | Automatisierte Datenverarbeitung durch AI-Agent |
 | Zweck | {manifest.agent.role} |
-| Art der Daten | Geschaeftskommunikation, Aufgabendaten |
-| Kategorien Betroffener | Mitarbeiter, Kunden, Geschaeftspartner |
+| Art der Daten | Geschäftskommunikation, Aufgabendaten |
+| Kategorien Betroffener | Mitarbeiter, Kunden, Geschäftspartner |
 
 ## 3. Pflichten des Auftragsverarbeiters
 
 - Verarbeitung nur auf dokumentierte Weisung des Verantwortlichen
 - Vertraulichkeitsverpflichtung aller Personen mit Zugang
-- Technische und organisatorische Massnahmen gemaess Art. 32 DSGVO
+- Technische und organisatorische Maßnahmen gemäß Art. 32 DSGVO
 - Keine Unterauftragsverarbeiter ohne vorherige Genehmigung
-- Unterstuetzung bei Betroffenenrechten (Art. 15-22 DSGVO)
-- Loeschung aller Daten nach Beendigung (Retention: {manifest.memory.retention.session_messages_days} Tage)
+- Unterstützung bei Betroffenenrechten (Art. 15-22 DSGVO)
+- Löschung aller Daten nach Beendigung (Retention: {manifest.memory.retention.session_messages_days} Tage)
 
-## 4. Technische und organisatorische Massnahmen
+## 4. Technische und organisatorische Maßnahmen
 
 - NemoClaw Sandbox-Isolation
 - PII-Filter: {"Aktiv" if manifest.memory.pii_filter.enabled else "Nicht aktiv"}
-- Audit Trail mit Hash-Chain-Integritaet
-- Kill Switch fuer sofortigen Halt
+- Audit Trail mit Hash-Chain-Integrität
+- Kill Switch für sofortigen Halt
 
 ## 5. Kontakt
 
@@ -362,30 +362,30 @@ def _generate_risk_management(manifest: AgentManifest, docs_dir: Path) -> Compli
 
 ## 1. Risikomanagement-System
 
-Fuer den AI-Agent "{manifest.agent.name}" (Risikoeinstufung: {manifest.agent.risk_class.value})
-wurde ein Risikomanagement-System gemaess Art. 9 EU AI Act eingerichtet.
+Für den AI-Agent "{manifest.agent.name}" (Risikoeinstufung: {manifest.agent.risk_class.value})
+wurde ein Risikomanagement-System gemäß Art. 9 EU AI Act eingerichtet.
 
 ## 2. Identifizierte Risiken
 
-| Risiko | Wahrscheinlichkeit | Auswirkung | Massnahme |
+| Risiko | Wahrscheinlichkeit | Auswirkung | Maßnahme |
 |--------|-------------------|------------|-----------|
 | Fehlentscheidung | Mittel | Hoch | Human Oversight (Art. 14), Eskalation nach {manifest.governance.escalation_threshold} Korrekturen |
-| Datenverlust | Niedrig | Hoch | Verschluesselung, Backup, Audit Trail |
+| Datenverlust | Niedrig | Hoch | Verschlüsselung, Backup, Audit Trail |
 | PII-Exposition | Mittel | Hoch | PII-Filter, Datensparsamkeit |
-| Manipulation | Niedrig | Kritisch | Hash-Chain-Integritaet, NemoClaw Sandbox |
+| Manipulation | Niedrig | Kritisch | Hash-Chain-Integrität, NemoClaw Sandbox |
 | Unkontrolliertes Handeln | Niedrig | Kritisch | Kill Switch, Safety Gate |
 
-## 3. Risikominderungsmassnahmen
+## 3. Risikominderungsmaßnahmen
 
 - **Governance Hooks:** {", ".join(manifest.governance.hooks_enabled)}
 - **Kill Switch Authority:** {", ".join(manifest.governance.kill_switch_authority) or "NICHT KONFIGURIERT"}
 - **Audit Trail:** {manifest.governance.audit_retention_days} Tage Aufbewahrung
 - **Sandbox:** NemoClaw mit Profil {manifest.nemoclaw.sandbox_profile.value}
 
-## 4. Ueberwachung und Review
+## 4. Überwachung und Review
 
-Das Risikomanagement wird laufend ueberprueft. Jede Aenderung am Agent-Manifest
-loest eine Neubewertung aus.
+Das Risikomanagement wird laufend überprüft. Jede Änderung am Agent-Manifest
+löst eine Neubewertung aus.
 
 ---
 
@@ -408,40 +408,40 @@ def _generate_betroffenenrechte(manifest: AgentManifest, docs_dir: Path) -> Comp
 
 ## 1. Recht auf Auskunft (Art. 15 DSGVO)
 
-Betroffene Personen koennen Auskunft ueber die von "{manifest.agent.name}"
+Betroffene Personen können Auskunft über die von "{manifest.agent.name}"
 verarbeiteten personenbezogenen Daten anfordern.
 
 **Kontakt:** {manifest.identity.email}
 **Frist:** 30 Tage ab Eingang der Anfrage
 
-## 2. Recht auf Loeschung (Art. 17 DSGVO)
+## 2. Recht auf Löschung (Art. 17 DSGVO)
 
-Betroffene koennen die Loeschung ihrer Daten verlangen. Der Agent loescht:
+Betroffene können die Löschung ihrer Daten verlangen. Der Agent löscht:
 - Session-Nachrichten (Retention: {manifest.memory.retention.session_messages_days} Tage)
 - Abgeleitete Daten (Retention: {manifest.memory.retention.representations_days} Tage)
 
-Audit-Logs werden gemaess gesetzlicher Aufbewahrungspflicht
+Audit-Logs werden gemäß gesetzlicher Aufbewahrungspflicht
 {manifest.memory.retention.audit_logs_days} Tage aufbewahrt.
 
 ## 3. Recht auf Berichtigung (Art. 16 DSGVO)
 
-Unrichtige Daten werden unverzueglich berichtigt.
+Unrichtige Daten werden unverzüglich berichtigt.
 
-## 4. Recht auf Einschraenkung (Art. 18 DSGVO)
+## 4. Recht auf Einschränkung (Art. 18 DSGVO)
 
-Die Verarbeitung kann eingeschraenkt werden. Bei Einschraenkung wird der
+Die Verarbeitung kann eingeschränkt werden. Bei Einschränkung wird der
 Agent-Status auf "paused" gesetzt.
 
-## 5. Recht auf Datenportabilitaet (Art. 20 DSGVO)
+## 5. Recht auf Datenportabilität (Art. 20 DSGVO)
 
-Export der Daten im maschinenlesbaren Format (JSON/JSONL) ueber:
+Export der Daten im maschinenlesbaren Format (JSON/JSONL) über:
 - CLI: `nomos audit --agent-dir <path>`
 - API: GET /api/agents/{{id}}/audit/export
 
 ## 6. Prozess
 
 1. Anfrage per Email an {manifest.identity.email}
-2. Identitaetspruefung des Betroffenen
+2. Identitätsprüfung des Betroffenen
 3. Bearbeitung innerhalb von 30 Tagen
 4. Dokumentation im Audit Trail
 
@@ -466,31 +466,31 @@ def _generate_ai_literacy(manifest: AgentManifest, docs_dir: Path) -> Compliance
 
 ## 1. Zweck
 
-Gemaess Art. 4 EU AI Act muessen Anbieter und Betreiber sicherstellen, dass
-Personen die mit KI-Systemen arbeiten ueber ausreichende KI-Kompetenz verfuegen.
+Gemäß Art. 4 EU AI Act müssen Anbieter und Betreiber sicherstellen, dass
+Personen die mit KI-Systemen arbeiten über ausreichende KI-Kompetenz verfügen.
 
-## 2. Schulungsinhalte fuer "{manifest.agent.name}"
+## 2. Schulungsinhalte für "{manifest.agent.name}"
 
 | Thema | Inhalt | Status |
 |-------|--------|--------|
 | Grundlagen | Was ist ein AI-Agent? Wie funktioniert "{manifest.agent.name}"? | Offen |
-| Einschraenkungen | Grenzen der KI, moegliche Fehler, Halluzinationen | Offen |
-| Risikoeinstufung | Bedeutung von "{manifest.agent.risk_class.value}" gemaess EU AI Act | Offen |
+| Einschränkungen | Grenzen der KI, mögliche Fehler, Halluzinationen | Offen |
+| Risikoeinstufung | Bedeutung von "{manifest.agent.risk_class.value}" gemäß EU AI Act | Offen |
 | Kill Switch | Wie und wann wird der Kill Switch eingesetzt? | Offen |
-| Datenschutz | Welche Daten verarbeitet der Agent? PII-Filter erklaeren | Offen |
+| Datenschutz | Welche Daten verarbeitet der Agent? PII-Filter erklären | Offen |
 | Eskalation | Wann muss an einen Menschen eskaliert werden? | Offen |
-| Audit | Wie pruefe ich den Audit Trail? | Offen |
+| Audit | Wie prüfe ich den Audit Trail? | Offen |
 
 ## 3. Zielgruppen
 
-- Geschaeftsfuehrung / Management
+- Geschäftsführung / Management
 - Mitarbeiter die mit dem Agent interagieren
 - IT-Administration
 - Datenschutzbeauftragter
 
 ## 4. Nachweispflicht
 
-Schulungen muessen dokumentiert und nachweisbar sein. NomOS protokolliert
+Schulungen müssen dokumentiert und nachweisbar sein. NomOS protokolliert
 Agent-Interaktionen im Audit Trail.
 
 ---
@@ -522,40 +522,40 @@ def _generate_tia(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 
 ## 1. Zweck
 
-Diese Bewertung prueft die Zulaessigkeit der Datenuebermittlung in Drittlaender
-im Zusammenhang mit dem AI-Agent "{manifest.agent.name}" gemaess den
+Diese Bewertung prüft die Zulässigkeit der Datenübermittlung in Drittländer
+im Zusammenhang mit dem AI-Agent "{manifest.agent.name}" gemäß den
 Anforderungen des EuGH-Urteils "Schrems II" (C-311/18).
 
-## 2. Uebermittelte Daten
+## 2. Übermittelte Daten
 
 | Feld | Wert |
 |------|------|
 | Agent | {manifest.agent.name} |
 | Verarbeitungszweck | {manifest.agent.role} |
-| Art der Daten | Geschaeftskommunikation, Aufgabendaten |
+| Art der Daten | Geschäftskommunikation, Aufgabendaten |
 | Zielland | USA (LLM-Provider) |
-| Rechtsgrundlage | Standardvertragsklauseln (SCC) + ergaenzende Massnahmen |
+| Rechtsgrundlage | Standardvertragsklauseln (SCC) + ergänzende Maßnahmen |
 
 ## 3. Risikobewertung Drittland
 
-| Risiko | Bewertung | Massnahme |
+| Risiko | Bewertung | Maßnahme |
 |--------|-----------|-----------|
-| Zugriff durch Behoerden (FISA 702) | Hoch | Verschluesselung, Datensparsamkeit |
-| Fehlender Rechtsschutz | Mittel | SCC + ergaenzende Garantien |
-| Datenverlust bei Transfer | Niedrig | TLS-Verschluesselung |
+| Zugriff durch Behörden (FISA 702) | Hoch | Verschlüsselung, Datensparsamkeit |
+| Fehlender Rechtsschutz | Mittel | SCC + ergänzende Garantien |
+| Datenverlust bei Transfer | Niedrig | TLS-Verschlüsselung |
 
-## 4. Ergaenzende Massnahmen
+## 4. Ergänzende Maßnahmen
 
-- PII-Filter vor Uebermittlung: {"Aktiv" if manifest.memory.pii_filter.enabled else "Nicht aktiv — ERFORDERLICH"}
-- Verschluesselung im Transit (TLS 1.3)
-- Minimale Datenuebermittlung (nur notwendige Prompts)
-- Audit Trail fuer alle Transfers
+- PII-Filter vor Übermittlung: {"Aktiv" if manifest.memory.pii_filter.enabled else "Nicht aktiv — ERFORDERLICH"}
+- Verschlüsselung im Transit (TLS 1.3)
+- Minimale Datenübermittlung (nur notwendige Prompts)
+- Audit Trail für alle Transfers
 - NemoClaw Sandbox-Isolation
 
 ## 5. Ergebnis
 
-Die Datenuebermittlung ist unter den beschriebenen ergaenzenden Massnahmen
-zulaessig. Eine regelmaessige Neubewertung ist erforderlich.
+Die Datenübermittlung ist unter den beschriebenen ergänzenden Maßnahmen
+zulässig. Eine regelmäßige Neubewertung ist erforderlich.
 
 ---
 
@@ -579,18 +579,18 @@ def _generate_art22(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 ## 1. Zweck
 
 Diese Richtlinie regelt den Umgang mit automatisierten Einzelentscheidungen
-gemaess Art. 22 DSGVO im Zusammenhang mit dem AI-Agent "{manifest.agent.name}".
+gemäß Art. 22 DSGVO im Zusammenhang mit dem AI-Agent "{manifest.agent.name}".
 
 ## 2. Grundsatz
 
 Betroffene Personen haben das Recht, nicht einer ausschliesslich auf
 automatisierter Verarbeitung beruhenden Entscheidung unterworfen zu werden,
-die ihnen gegenueber rechtliche Wirkung entfaltet oder sie in aehnlicher
-Weise erheblich beeintraechtigt.
+die ihnen gegenüber rechtliche Wirkung entfaltet oder sie in ähnlicher
+Weise erheblich beeinträchtigt.
 
-## 3. Massnahmen fuer "{manifest.agent.name}"
+## 3. Maßnahmen für "{manifest.agent.name}"
 
-| Massnahme | Implementation |
+| Maßnahme | Implementation |
 |-----------|---------------|
 | Human Oversight | Kill Switch Authority: {", ".join(manifest.governance.kill_switch_authority) or "NICHT KONFIGURIERT"} |
 | Eskalationspfad | Nach {manifest.governance.escalation_threshold} Korrekturen |
@@ -602,14 +602,14 @@ Weise erheblich beeintraechtigt.
 1. Agent trifft Entscheidung
 2. Betroffener wird informiert (Art. 50 Labeler)
 3. Betroffener kann Widerspruch einlegen
-4. Menschliche Pruefung innerhalb von 48h
+4. Menschliche Prüfung innerhalb von 48h
 5. Dokumentation im Audit Trail
 
 ## 5. Ausnahmen
 
-Automatisierte Entscheidungen sind zulaessig wenn:
-- Ausdrueckliche Einwilligung vorliegt
-- Fuer Vertragserfuellung erforderlich
+Automatisierte Entscheidungen sind zulässig wenn:
+- Ausdrückliche Einwilligung vorliegt
+- Für Vertragserfüllung erforderlich
 - Durch Rechtsvorschrift zugelassen
 
 ---
@@ -634,36 +634,36 @@ def _generate_incident_response(manifest: AgentManifest, docs_dir: Path) -> Comp
 ## 1. Zweck
 
 Dieser Plan regelt das Vorgehen bei Datenschutzverletzungen im Zusammenhang
-mit dem AI-Agent "{manifest.agent.name}" gemaess Art. 33 und Art. 34 DSGVO.
+mit dem AI-Agent "{manifest.agent.name}" gemäß Art. 33 und Art. 34 DSGVO.
 
 ## 2. Meldepflicht (Art. 33 DSGVO)
 
 | Feld | Wert |
 |------|------|
-| Meldefrist an Aufsichtsbehoerde | 72 Stunden nach Bekanntwerden |
-| Meldefrist an Betroffene (Art. 34) | Unverzueglich bei hohem Risiko |
+| Meldefrist an Aufsichtsbehörde | 72 Stunden nach Bekanntwerden |
+| Meldefrist an Betroffene (Art. 34) | Unverzüglich bei hohem Risiko |
 | Verantwortlich | {manifest.identity.company} ({manifest.identity.email}) |
 
 ## 3. Erkennungsmechanismen
 
 - **PII-in-Log-Detection:** Automatische Erkennung von PII in Logs
-- **Endpoint-Monitoring:** Ueberwachung auf unautorisierte Endpunkte
+- **Endpoint-Monitoring:** Überwachung auf unautorisierte Endpunkte
 - **Hash-Chain-Verifikation:** Erkennung von Manipulation
-- **Kill Switch:** Sofortiger Halt bei kritischen Vorfaellen
+- **Kill Switch:** Sofortiger Halt bei kritischen Vorfällen
 
 ## 4. Reaktionsprozess
 
 1. **Erkennung** (automatisch durch NomOS Incident Detection)
-2. **Eindaemmung** (Kill Switch falls erforderlich)
+2. **Eindämmung** (Kill Switch falls erforderlich)
 3. **Bewertung** (Schweregrad: critical/high/medium/low)
-4. **Meldung** (innerhalb 72h an Aufsichtsbehoerde)
+4. **Meldung** (innerhalb 72h an Aufsichtsbehörde)
 5. **Benachrichtigung** (Betroffene bei hohem Risiko)
 6. **Dokumentation** (Audit Trail + Incident Report)
-7. **Nachbereitung** (Root Cause Analyse, Massnahmen)
+7. **Nachbereitung** (Root Cause Analyse, Maßnahmen)
 
 ## 5. Eskalationsstufen
 
-| Schweregrad | Massnahme | Frist |
+| Schweregrad | Maßnahme | Frist |
 |-------------|-----------|-------|
 | Critical | Kill Switch + sofortige Meldung | Sofort |
 | High | Meldung an Verantwortlichen | 4h |
@@ -681,7 +681,7 @@ mit dem AI-Agent "{manifest.agent.name}" gemaess Art. 33 und Art. 34 DSGVO.
 
 def _generate_tom(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
     """Generate TOM-Dokumentation (Art. 32 DSGVO)."""
-    content = f"""# Technische und Organisatorische Massnahmen (TOM) — Art. 32 DSGVO
+    content = f"""# Technische und Organisatorische Maßnahmen (TOM) — Art. 32 DSGVO
 
 **Agent:** {manifest.agent.name}
 **Unternehmen:** {manifest.identity.company}
@@ -691,30 +691,30 @@ def _generate_tom(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
 
 ## 1. Zweck
 
-Dokumentation der technischen und organisatorischen Massnahmen zum Schutz
+Dokumentation der technischen und organisatorischen Maßnahmen zum Schutz
 personenbezogener Daten bei Einsatz des AI-Agents "{manifest.agent.name}"
-gemaess Art. 32 DSGVO.
+gemäß Art. 32 DSGVO.
 
 ## 2. Vertraulichkeit
 
-| Massnahme | Implementation |
+| Maßnahme | Implementation |
 |-----------|---------------|
 | Zugriffskontrolle | NemoClaw Sandbox (Profil: {manifest.nemoclaw.sandbox_profile.value}) |
 | Credential Guard | {"Aktiv" if manifest.nemoclaw.credential_guard else "Nicht aktiv"} |
 | PII-Filter | {"Aktiv" if manifest.memory.pii_filter.enabled else "Nicht aktiv"} |
 | Datenisolation | {manifest.memory.isolation_level.value} |
 
-## 3. Integritaet
+## 3. Integrität
 
-| Massnahme | Implementation |
+| Maßnahme | Implementation |
 |-----------|---------------|
 | Hash Chain | SHA-256, tamper-evident Audit Trail |
-| Manifest-Integritaet | SHA-256 Hash-Verifikation |
+| Manifest-Integrität | SHA-256 Hash-Verifikation |
 | Netzwerk-Policy | {manifest.nemoclaw.network_policy} |
 
-## 4. Verfuegbarkeit
+## 4. Verfügbarkeit
 
-| Massnahme | Implementation |
+| Maßnahme | Implementation |
 |-----------|---------------|
 | Kill Switch | Authority: {", ".join(manifest.governance.kill_switch_authority) or "NICHT KONFIGURIERT"} |
 | Audit Retention | {manifest.governance.audit_retention_days} Tage |
@@ -722,7 +722,7 @@ gemaess Art. 32 DSGVO.
 
 ## 5. Belastbarkeit
 
-| Massnahme | Implementation |
+| Maßnahme | Implementation |
 |-----------|---------------|
 | Sandbox-Isolation | NemoClaw mit Netzwerk-Restriction |
 | Safety Gate | {"Aktiv" if "safety-gate" in manifest.governance.hooks_enabled else "Nicht aktiv"} |
@@ -730,7 +730,7 @@ gemaess Art. 32 DSGVO.
 
 ## 6. Regeln zur Bewertung
 
-Die Wirksamkeit der Massnahmen wird laufend ueberprueft. Jede Aenderung
+Die Wirksamkeit der Maßnahmen wird laufend überprüft. Jede Änderung
 am Agent-Manifest oder an der Infrastruktur erfordert eine Neubewertung.
 
 ---
@@ -743,8 +743,8 @@ am Agent-Manifest oder an der Infrastruktur erfordert eine Neubewertung.
 
 
 def _generate_accessibility(manifest: AgentManifest, docs_dir: Path) -> ComplianceDoc:
-    """Generate Barrierefreiheitserklaerung (BFSG)."""
-    content = f"""# Barrierefreiheitserklaerung — BFSG
+    """Generate Barrierefreiheitserklärung (BFSG)."""
+    content = f"""# Barrierefreiheitserklärung — BFSG
 
 **Agent:** {manifest.agent.name}
 **Unternehmen:** {manifest.identity.company}
@@ -754,8 +754,8 @@ def _generate_accessibility(manifest: AgentManifest, docs_dir: Path) -> Complian
 
 ## 1. Zweck
 
-Diese Erklaerung beschreibt den Stand der Barrierefreiheit des AI-Agents
-"{manifest.agent.name}" gemaess Barrierefreiheitsstaerkungsgesetz (BFSG).
+Diese Erklärung beschreibt den Stand der Barrierefreiheit des AI-Agents
+"{manifest.agent.name}" gemäß Barrierefreiheitsstärkungsgesetz (BFSG).
 
 ## 2. Geltungsbereich
 
@@ -769,18 +769,18 @@ Diese Erklaerung beschreibt den Stand der Barrierefreiheit des AI-Agents
 
 | Anforderung | Status | Anmerkung |
 |-------------|--------|-----------|
-| Textbasierte Interaktion | Erfuellt | Agent kommuniziert textbasiert |
-| Screenreader-Kompatibilitaet | Teilweise | Console-Oberflaeche in Entwicklung |
-| Tastaturbedienbarkeit | Erfuellt | CLI vollstaendig per Tastatur bedienbar |
+| Textbasierte Interaktion | Erfüllt | Agent kommuniziert textbasiert |
+| Screenreader-Kompatibilität | Teilweise | Console-Oberfläche in Entwicklung |
+| Tastaturbedienbarkeit | Erfüllt | CLI vollständig per Tastatur bedienbar |
 | Farbkontraste | Teilweise | Console-Design in Entwicklung |
-| Einfache Sprache | Offen | KI-Ausgaben koennen komplex sein |
+| Einfache Sprache | Offen | KI-Ausgaben können komplex sein |
 | Alternativtexte | Nicht anwendbar | Keine Bilder in Agent-Ausgaben |
 
 ## 4. Bekannte Einschraenkungen
 
-- KI-generierte Texte koennen komplex formuliert sein
-- Console-Oberflaeche befindet sich in Entwicklung
-- Sprachausgabe (TTS) ist optional verfuegbar
+- KI-generierte Texte können komplex formuliert sein
+- Console-Oberfläche befindet sich in Entwicklung
+- Sprachausgabe (TTS) ist optional verfügbar
 
 ## 5. Feedback und Kontakt
 
@@ -793,7 +793,7 @@ Bei Fragen zur Barrierefreiheit wenden Sie sich an:
 """
     path = docs_dir / "accessibility.md"
     path.write_text(content, encoding="utf-8")
-    return ComplianceDoc(name="accessibility", title="Barrierefreiheitserklaerung", path=path)
+    return ComplianceDoc(name="accessibility", title="Barrierefreiheitserklärung", path=path)
 
 
 # ---------------------------------------------------------------------------

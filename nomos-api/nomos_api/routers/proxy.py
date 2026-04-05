@@ -83,7 +83,7 @@ async def proxy_chat(
     if result is None:
         raise HTTPException(
             status_code=502,
-            detail="OpenClaw Gateway ist nicht erreichbar. Stellen Sie sicher, dass der Gateway-Dienst laeuft.",
+            detail="OpenClaw Gateway ist nicht erreichbar. Stellen Sie sicher, dass der Gateway-Dienst läuft.",
         )
 
     # Handle error response from gateway (e.g. no API key configured)

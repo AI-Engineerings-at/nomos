@@ -83,7 +83,7 @@ class TestGenerateComplianceDocs:
         # DPIA must contain these sections per Art. 35 DSGVO
         assert "Verarbeitungszweck" in content or "Processing Purpose" in content
         assert "Risikobewertung" in content or "Risk Assessment" in content
-        assert "Massnahmen" in content or "Measures" in content
+        assert "Maßnahmen" in content or "Measures" in content
 
     def test_art50_contains_ai_disclosure(self, agent_dir: Path) -> None:
         manifest = load_manifest(agent_dir / "manifest.yaml")

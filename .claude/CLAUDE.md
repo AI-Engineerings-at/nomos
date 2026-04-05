@@ -74,6 +74,14 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 21. **NACH JEDEM FIX: alle Tests laufen lassen SOFORT** — Nicht erst am Ende. Jeder einzelne Fix → Test Run. Haette test_health Drift sofort aufgedeckt.
 22. **Kleine Gaps = grosse Fehler** — Ein vergessenes Rename, eine vergessene Fixture, ein fehlender Guard — jedes davon ist ein Runtime-Crash fuer den Kunden. Null Toleranz.
 
+### Session 02-05.04 (Production Readiness + Integration Test)
+23. **Unit Tests und Audits ersetzen KEINEN Browser-Test** — 3 Audits, 2 Code Reviews, "alles aligned" — erster Browser-Test: 5 echte Failures. IMMER docker compose up + Browser BEVOR etwas als "fertig" gilt.
+24. **Dockerfile muss ALLE Dateien kopieren** — alembic/ und alembic.ini fehlten im Docker Image. JEDE neue Datei/Verzeichnis → Dockerfile pruefen.
+25. **Hardcoded Listen im Frontend sind Gift** — COMPLIANCE_DOCS hatte 14 erfundene Namen die KEINEN einzigen Match mit dem Backend hatten. Listen muessen entweder vom Backend kommen oder EXAKT synchronisiert sein.
+26. **Onboarding muss Zero-Friction sein** — Agent erstellt → "Nicht compliant" → keine Erklaerung → User steckt fest. Compliance-Docs muessen automatisch generiert werden. kill_switch_authority muss automatisch gesetzt werden.
+27. **NVIDIA API Free Tier hat Rate Limits** — Chat funktioniert architektonisch, Provider blockiert bei 429. Fallback-Provider oder Error-Handling im Chat noetig.
+28. **Gegen echte API testen, nicht gegen Schemas** — Schema sagt "6 Felder", API liefert 3. Settings-Response fehlten key_set Booleans weil Docker-Image alt war. IMMER curl gegen laufende API.
+
 ## Aktiver Plan
 - Enterprise Hardening Phase 0-2: COMPLETE
 - OpenClaw v2026.3.28 Kompatibilitaet: DONE — TASK-2026-00529
@@ -84,8 +92,11 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 - TASK-00546: Compliance-Dokumente 5→14: DONE (20 Tests, risikoklassenabhaengig)
 - TASK-00544: Background Worker ARQ: DONE (4 Cron-Jobs, 9 Tests)
 - TASK-00543: TLS via Caddy: DONE (Reverse Proxy, Cookie Hardening, 3 Tests)
-- **Production Readiness: ~8/10** (war 5/10)
-- **Naechste Schritte:** Final Validation, Docker Stack E2E Test, Deployment Guide
+- TASK-00556: Hire-to-Chat Flow: DONE (Auto-Generate Docs, Auto Kill Switch, Compliance Banner)
+- Integration Test: 8/8 Docker Services healthy, Hire→Compliant funktioniert
+- Chat: Architektonisch funktioniert, NVIDIA Rate Limit blockiert (429)
+- **Production Readiness: 8/10**
+- **Naechste Session:** Chat E2E mit alternativem Provider, Umlaut-Fix, Deployment Guide
 
 ## OpenClaw Versionsstand (01.04.2026)
 - **Gepinnt auf:** v2026.3.28 (Dockerfile.gateway)

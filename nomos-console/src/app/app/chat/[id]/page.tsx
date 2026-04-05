@@ -23,7 +23,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SpeakButton } from '@/components/ui/speak-button';
 import { MicButton } from '@/components/ui/mic-button';
-import type { Agent, ChatMessage, ProxyChatResponse, ProxyStatusResponse } from '@/lib/types';
+import type { Agent, ChatMessage, ProxyChatResponse, ProxyStatusResponse, SystemSettings } from '@/lib/types';
 import { agentStatusToBadge } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -101,6 +101,7 @@ function ChatContent() {
 
   const agentFetch = useFetch<Agent>(`/fleet/${agentId}`);
   const gatewayStatus = useFetch<ProxyStatusResponse>('/proxy/status');
+  const settingsFetch = useFetch<SystemSettings>('/settings');
 
   const isGatewayOnline = gatewayStatus.data?.status === 'online';
   const agent = agentFetch.data;
@@ -219,6 +220,25 @@ function ChatContent() {
               className="ml-auto text-xs font-semibold text-[var(--color-primary)] hover:underline"
             >
               {t('chat.checkCompliance', language)}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Provider not configured banner — only when not compliance-blocked */}
+      {!isBlocked && settingsFetch.data && !settingsFetch.data.openai_api_key_set && !settingsFetch.data.anthropic_api_key_set && !settingsFetch.data.nvidia_api_key_set && (
+        <div className="px-4 py-3 bg-[var(--color-warning-bg,#3d2e00)] border-b border-[var(--color-warning,#f59e0b)] text-sm" role="alert">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-[var(--color-warning,#f59e0b)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <span className="text-[var(--color-warning,#f59e0b)] font-medium">
+              {t('chat.noProvider.banner' as any, language)}
+            </span>
+            <button
+              onClick={() => router.push('/admin/settings')}
+              className="ml-auto text-xs font-semibold text-[var(--color-primary)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)]"
+            >
+              {t('chat.noProvider.cta' as any, language)}
             </button>
           </div>
         </div>

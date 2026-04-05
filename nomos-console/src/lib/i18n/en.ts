@@ -290,6 +290,8 @@ export const en: Record<TranslationKey, string> = {
   'chat.error.noProviderCta': 'Open settings',
   'chat.error.unknown': 'An error occurred. Please try again.',
   'chat.error.retry': 'Try again',
+  'chat.noProvider.banner': 'No LLM provider configured. Your agent cannot respond yet.',
+  'chat.noProvider.cta': 'Configure provider in settings',
 
   // Approvals
   'approvals.title': 'Approvals',

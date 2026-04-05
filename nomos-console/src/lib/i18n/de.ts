@@ -288,6 +288,8 @@ export const de = {
   'chat.error.noProviderCta': 'Einstellungen öffnen',
   'chat.error.unknown': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
   'chat.error.retry': 'Erneut versuchen',
+  'chat.noProvider.banner': 'Kein LLM-Provider konfiguriert. Ihr Agent kann noch nicht antworten.',
+  'chat.noProvider.cta': 'Provider in Einstellungen konfigurieren',
 
   // Approvals
   'approvals.title': 'Freigaben',

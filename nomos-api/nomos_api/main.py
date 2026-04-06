@@ -40,11 +40,13 @@ from nomos_api.routers import (
 )
 from nomos_api.routers import settings as settings_router
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+from nomos_api.middleware.logging import JSONFormatter
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(JSONFormatter())
+logging.root.handlers = [_handler]
+logging.root.setLevel(logging.INFO)
+
 logger = logging.getLogger("nomos-api")
 
 
@@ -52,13 +54,17 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start = time.monotonic()
         response = await call_next(request)
-        duration = (time.monotonic() - start) * 1000
+        duration_ms = round((time.monotonic() - start) * 1000, 1)
         logger.info(
-            "%s %s %d %.0fms",
+            "%s %s",
             request.method,
             request.url.path,
-            response.status_code,
-            duration,
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": duration_ms,
+            },
         )
         return response
 

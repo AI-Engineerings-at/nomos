@@ -11,7 +11,7 @@ from pathlib import Path
 import jwt
 from alembic import command
 from alembic.config import Config
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -40,7 +40,9 @@ from nomos_api.routers import (
 )
 from nomos_api.routers import settings as settings_router
 
+from nomos_api.errors import ERROR_CODES, NomOSErrorResponse
 from nomos_api.middleware.logging import JSONFormatter
+from nomos_api.middleware.request_id import RequestIDMiddleware
 
 _handler = logging.StreamHandler()
 _handler.setFormatter(JSONFormatter())
@@ -55,11 +57,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         start = time.monotonic()
         response = await call_next(request)
         duration_ms = round((time.monotonic() - start) * 1000, 1)
+        request_id = getattr(request.state, "request_id", "unknown")
         logger.info(
             "%s %s",
             request.method,
             request.url.path,
             extra={
+                "request_id": request_id,
                 "method": request.method,
                 "path": request.url.path,
                 "status": response.status_code,
@@ -139,6 +143,45 @@ app = FastAPI(title=settings.api_title, version=settings.api_version, lifespan=l
 
 app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RequestIDMiddleware)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Return standardized {detail, code, request_id} for all HTTP exceptions."""
+    request_id: str = getattr(request.state, "request_id", "unknown")
+    code = ERROR_CODES.get(exc.status_code, "UNKNOWN_ERROR")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=NomOSErrorResponse(
+            detail=str(exc.detail),
+            code=code,
+            request_id=request_id,
+        ).model_dump(),
+        headers={"X-Request-ID": request_id},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all: never leak stack traces, always return structured error."""
+    request_id: str = getattr(request.state, "request_id", "unknown")
+    logger.error(
+        "Unhandled exception: %s",
+        exc,
+        exc_info=True,
+        extra={"request_id": request_id},
+    )
+    return JSONResponse(
+        status_code=500,
+        content=NomOSErrorResponse(
+            detail="Internal server error",
+            code="INTERNAL_ERROR",
+            request_id=request_id,
+        ).model_dump(),
+        headers={"X-Request-ID": request_id},
+    )
+
 
 # Build CORS origins
 cors_origins = list(settings.cors_origins)
@@ -151,7 +194,7 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept", "X-NomOS-API-Key"],
+    allow_headers=["Content-Type", "Accept", "X-NomOS-API-Key", "X-Request-ID"],
 )
 
 app.include_router(health.router)

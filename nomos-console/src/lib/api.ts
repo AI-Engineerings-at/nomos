@@ -20,6 +20,7 @@ export class ApiError extends Error {
 interface ApiErrorResponse {
   detail: string;
   code?: string;
+  request_id?: string;
 }
 
 /** Base URL for the NomOS API. In dev: Next.js proxy (/api). In Docker: env var. */
@@ -60,6 +61,15 @@ export async function apiFetch<T>(
     headers.set('Content-Type', 'application/json');
   }
   headers.set('Accept', 'application/json');
+
+  // Correlation ID: generate client-side, echo'd by server for traceability
+  if (!headers.has('X-Request-ID')) {
+    const requestId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    headers.set('X-Request-ID', requestId);
+  }
 
   let lastError: Error | null = null;
 

@@ -114,11 +114,20 @@ class AuditEntryCreateResponse(BaseModel):
     id: int
 
 
+class HealthComponentStatus(BaseModel):
+    vault: str = "unknown"
+    postgres: str = "unknown"
+    valkey: str = "unknown"
+    gateway: str = "unknown"
+
+
 class HealthResponse(BaseModel):
     status: str
     service: str
     version: str
-    vault: str = "not_configured"
+    vault: str | None = None  # backwards compat
+    components: HealthComponentStatus | None = None
+    uptime_seconds: int | None = None
 
 
 # --- Auth Schemas ---

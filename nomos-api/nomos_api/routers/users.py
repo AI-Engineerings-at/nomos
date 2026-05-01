@@ -9,7 +9,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from nomos_api.auth.jwt import decode_token, TokenPayload
+from nomos_api.auth.jwt import decode_token
 from nomos_api.auth.password import hash_password, validate_password_strength
 from nomos_api.auth.recovery import generate_recovery_key, hash_recovery_key
 from nomos_api.config import settings

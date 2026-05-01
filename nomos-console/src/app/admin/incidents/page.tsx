@@ -60,6 +60,7 @@ function statusBadge(status: IncidentEntry['status']): BadgeStatus {
     case 'detected': return 'error';
     case 'reported': return 'paused';
     case 'resolved': return 'online';
+    default: return 'paused';
   }
 }
 
@@ -68,6 +69,7 @@ function statusLabel(status: IncidentEntry['status'], lang: 'de' | 'en'): string
     case 'detected': return t('incidents.detected', lang);
     case 'reported': return t('incidents.reported', lang);
     case 'resolved': return t('incidents.resolved', lang);
+    default: return status;
   }
 }
 

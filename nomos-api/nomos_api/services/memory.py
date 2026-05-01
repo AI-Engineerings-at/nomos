@@ -14,6 +14,7 @@ async def store_message(
     session_id: str,
     role: str,
     content: str,
+    importance_score: float = 1.0,
 ) -> AgentMemory:
     """Persist a single message to the agent_memory table."""
     msg = AgentMemory(
@@ -21,6 +22,7 @@ async def store_message(
         session_id=session_id,
         role=role,
         content=content,
+        importance_score=importance_score,
     )
     db.add(msg)
     await db.commit()

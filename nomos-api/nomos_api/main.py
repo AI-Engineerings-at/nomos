@@ -31,6 +31,7 @@ from nomos_api.routers import (
     fleet,
     health,
     incidents,
+    monitoring,
     pii,
     proxy,
     system,
@@ -42,6 +43,7 @@ from nomos_api.routers import settings as settings_router
 
 from nomos_api.errors import ERROR_CODES, NomOSErrorResponse
 from nomos_api.middleware.logging import JSONFormatter
+from nomos_api.middleware.metrics import APIMetricsMiddleware
 from nomos_api.middleware.request_id import RequestIDMiddleware
 
 _handler = logging.StreamHandler()
@@ -197,6 +199,10 @@ app.add_middleware(
     allow_headers=["Content-Type", "Accept", "X-NomOS-API-Key", "X-Request-ID"],
 )
 
+# Add metrics middleware after CORS but before other middleware
+app.add_middleware(APIMetricsMiddleware)
+
+
 app.include_router(health.router)
 app.include_router(system.router)
 app.include_router(fleet.router)
@@ -215,3 +221,4 @@ app.include_router(workspace.router)
 app.include_router(dsgvo.router)
 app.include_router(proxy.router)
 app.include_router(settings_router.router)
+app.include_router(monitoring.router)

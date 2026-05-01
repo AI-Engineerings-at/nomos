@@ -49,8 +49,16 @@ def _read_creds_from_file(path: str = APPROLE_CREDS_PATH) -> tuple[str, str]:
                 if "=" in line and not line.startswith("#"):
                     key, val = line.split("=", 1)
                     creds[key.strip()] = val.strip()
-            return creds.get("VAULT_ROLE_ID", ""), creds.get("VAULT_SECRET_ID", "")
+            role_id = creds.get("VAULT_ROLE_ID", "")
+            secret_id = creds.get("VAULT_SECRET_ID", "")
+            if role_id and secret_id:
+                logger.debug("Successfully read AppRole credentials from %s", path)
+            return role_id, secret_id
     except FileNotFoundError:
+        logger.debug("AppRole credentials file not found at %s", path)
+        return "", ""
+    except Exception as exc:
+        logger.error("Failed to read AppRole credentials from %s: %s", path, exc)
         return "", ""
 
 
@@ -94,6 +102,7 @@ class VaultSettingsSource:
         client = _get_vault_client()
 
         if not client.connected:
+            logger.warning("Vault not connected, skipping Vault settings source")
             return values
 
         # Group by vault path to minimize reads
@@ -101,11 +110,19 @@ class VaultSettingsSource:
 
         for field_name, (vault_path, vault_key) in VAULT_FIELD_MAP.items():
             if vault_path not in paths_seen:
-                paths_seen[vault_path] = client.get_secret(vault_path)
+                secret_data = client.get_secret(vault_path)
+                paths_seen[vault_path] = secret_data
+                if secret_data is None:
+                    logger.warning("No secret data found at Vault path %s", vault_path)
 
             secret_data = paths_seen[vault_path]
             if secret_data and vault_key in secret_data:
                 values[field_name] = secret_data[vault_key]
-                logger.debug("Loaded %s from Vault path %s", field_name, vault_path)
+                logger.info("Loaded %s from Vault path %s", field_name, vault_path)
+            else:
+                logger.debug("Field %s not found in Vault path %s", vault_key, vault_path)
+
+        if not values:
+            logger.warning("No settings loaded from Vault - check Vault initialization and policies")
 
         return values

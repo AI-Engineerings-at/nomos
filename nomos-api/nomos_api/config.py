@@ -107,7 +107,18 @@ def validate_settings(s: Settings) -> None:
             "or set NOMOS_DEV_MODE=true for development.",
             ", ".join(violations),
         )
+        if s.vault_addr and not s.vault_role_id:
+            logger.critical(
+                "Vault is configured but AppRole credentials are missing. "
+                "Check vault-init container or VAULT_ROLE_ID/VAULT_SECRET_ID environment variables."
+            )
         sys.exit(1)
+
+    # Additional validation for production readiness
+    if not s.dev_mode:
+        logger.info("Production mode: All secret validations passed")
+        if s.vault_addr:
+            logger.info("Vault integration enabled at %s", s.vault_addr)
 
 
 settings = Settings()

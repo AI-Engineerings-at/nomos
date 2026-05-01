@@ -1,0 +1,68 @@
+# Compliance Red-Teamer Agent Manifest
+# Agent designed for security testing and compliance validation
+
+agent:
+  id: rico-red-teamer
+  name: Rico
+  role: Compliance Red Teamer & QA Auditor
+  risk_class: high
+  description: "Compliance Red-Teamer Agent - Security Testing & Validation"
+  company: "AI Engineering"
+  email: "rico@compliance.local"
+  location: "EU"
+  language: "en"
+
+compliance:
+  test_mode: true
+  kill_switch_enabled: true
+  safety_gate_hook: "compliance_safety_gate"
+  required_documents:
+    - dpia
+    - art30
+    - art50
+    - art14
+    - art12
+    - risk_assessment
+    - security_policy
+    - incident_response_plan
+    - data_retention_policy
+    - privacy_notice
+    - records_of_processing
+    - transparency_obligations
+    - right_to_information
+    - kill_switch_documentation
+
+budget:
+  monthly_limit_eur: 140
+  alert_threshold: 0.8
+  currency: "EUR"
+
+approval:
+  required_for_tasks: true
+  default_approval_timeout_minutes: 60
+  escalation_path: ["compliance_officer", "admin"]
+
+context:
+  max_tokens: 131072
+  chunk_size: 8192
+  overlap_percentage: 10
+  summarization_strategy: "hierarchical"
+
+capabilities:
+  - security_testing
+  - compliance_validation
+  - penetration_testing
+  - vulnerability_scanning
+  - risk_assessment
+  - audit_trail_analysis
+  - incident_simulation
+
+restrictions:
+  - no_production_data_access
+  - sandboxed_environment_only
+  - time_limited_sessions
+  - approved_test_cases_only
+
+created_at: "2026-04-13T00:00:00Z"
+updated_at: "2026-04-13T00:00:00Z"
+version: "1.0.0"

@@ -191,6 +191,7 @@ class AgentMemory(Base):
     session_id: Mapped[str] = mapped_column(String(128), index=True)
     role: Mapped[str] = mapped_column(String(32))
     content: Mapped[str] = mapped_column(Text)
+    importance_score: Mapped[float] = mapped_column(Float, default=1.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -208,3 +209,80 @@ class WorkspaceMount(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class AlertRule(Base):
+    """Configuration for alert thresholds and notifications."""
+
+    __tablename__ = "alert_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    metric_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    threshold_type: Mapped[str] = mapped_column(String(50), nullable=False)  # 'above', 'below', 'change'
+    threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
+    comparison_window: Mapped[str | None] = mapped_column(String(50))  # e.g., '5m', '1h'
+    severity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # 'critical', 'warning', 'info'
+    notification_channels: Mapped[dict] = mapped_column(JSON, nullable=False)  # {"email": [...], "webhook": [...]}
+    description: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class Alert(Base):
+    """Record of triggered alerts and their resolution status."""
+
+    __tablename__ = "alerts"
+    __table_args__ = (Index("ix_alerts_status", "status"), Index("ix_alerts_severity", "severity"))
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    rule_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    severity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    metric_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    current_value: Mapped[float] = mapped_column(Float, nullable=False)
+    threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
+    triggered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notification_status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="pending"
+    )  # 'pending', 'sent', 'failed'
+    notification_channels: Mapped[dict] = mapped_column(JSON, nullable=False)
+    context: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="triggered"
+    )  # 'triggered', 'acknowledged', 'resolved'
+
+
+class Metric(Base):
+    """Time-series metrics for monitoring system performance."""
+
+    __tablename__ = "metrics"
+    __table_args__ = (
+        Index("ix_metrics_timestamp", "timestamp"),
+        Index("ix_metrics_name", "metric_name"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
+        server_default=func.now(),
+    )
+    metric_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    dimensions: Mapped[dict] = mapped_column(JSON, nullable=False)  # {"endpoint": "/api/agents", "method": "GET"}
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    source: Mapped[str | None] = mapped_column(String(50))  # 'api', 'agent', 'system'

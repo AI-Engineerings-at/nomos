@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -506,3 +507,96 @@ class UnsealKeyResponse(BaseModel):
     """Response for GET /api/system/unseal-key — one-time retrieval."""
 
     unseal_key: str
+
+
+# --- Monitoring Schemas ---
+
+
+class MetricValue(BaseModel):
+    """A single metric data point."""
+
+    timestamp: str
+    value: float
+
+
+class MetricSeries(BaseModel):
+    """A series of metric values with dimensions."""
+
+    values: list[MetricValue]
+    dimensions: dict[str, str] = Field(default_factory=dict)
+
+
+class MetricsResponse(BaseModel):
+    """Response for GET /api/monitoring/metrics."""
+
+    api: dict[str, MetricSeries]
+    agents: dict[str, MetricSeries]
+    system: dict[str, MetricSeries]
+    timestamp: str
+
+
+class AlertCreate(BaseModel):
+    """Request body for POST /api/monitoring/alerts."""
+
+    id: str | None = None
+    severity: str = Field(..., pattern="^(critical|warning|info)$")
+    metric_name: str = Field(..., examples=["api.error_rate", "agent.stale_percentage"])
+    current_value: float
+    threshold_value: float
+    notification_channels: dict[str, list[str]] | None = None
+    context: dict[str, Any] | None = None
+
+
+class AlertResponse(BaseModel):
+    """Response for alert endpoints."""
+
+    id: str
+    rule_id: int | None
+    severity: str
+    metric_name: str
+    current_value: float
+    threshold_value: float
+    triggered_at: datetime
+    resolved_at: datetime | None
+    notification_status: str
+    notification_channels: dict[str, list[str]]
+    context: dict[str, Any]
+    status: str
+
+
+class AlertUpdate(BaseModel):
+    """Request body for PATCH /api/monitoring/alerts/{alert_id}."""
+
+    status: str | None = Field(None, pattern="^(triggered|acknowledged|resolved)$")
+    notification_status: str | None = Field(None, pattern="^(pending|sent|failed)$")
+
+
+class AlertRuleCreate(BaseModel):
+    """Request body for POST /api/monitoring/alert-rules."""
+
+    metric_name: str = Field(..., examples=["api.error_rate", "agent.stale_percentage"])
+    threshold_type: str = Field(..., pattern="^(above|below|change)$")
+    threshold_value: float
+    comparison_window: str | None = Field(None, examples=["5m", "1h", "24h"])
+    severity: str = Field(..., pattern="^(critical|warning|info)$")
+    notification_channels: dict[str, list[str]] = Field(
+        ..., examples=[{"email": ["admin@nomos.local"], "webhook": ["https://slack.com/alerts"]}]
+    )
+    description: str | None = None
+    is_active: bool = True
+
+
+class AlertRuleResponse(BaseModel):
+    """Response for alert rule endpoints."""
+
+    id: int
+    metric_name: str
+    threshold_type: str
+    threshold_value: float
+    comparison_window: str | None
+    severity: str
+    notification_channels: dict[str, list[str]]
+    description: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime

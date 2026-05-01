@@ -17,8 +17,8 @@ def test_rico_manifest_valid():
     manifest_path = TEMPLATES_DIR / "compliance-red-teamer" / "manifest.yaml"
     with open(manifest_path) as f:
         data = yaml.safe_load(f)
-    assert data["name"] == "Rico"
-    assert data["risk_class"] == "high"
+    assert data["agent"]["name"] == "Rico"
+    assert data["agent"]["risk_class"] == "high"
     assert data["budget"]["monthly_limit_eur"] == 140
     assert data["compliance"]["test_mode"] is True
 

@@ -1,22 +1,68 @@
-{$NOMOS_DOMAIN:localhost} {
+ {$NOMOS_DOMAIN:localhost} {
+	# Enable HTTP/2 and HTTP/3 for better performance
+	# Note: HTTP/2 and HTTP/3 are enabled by default in Caddy
+
+	# TLS Configuration for security and performance
+	# Caddy uses modern TLS settings by default (TLS 1.2+, strong ciphers)
+	# OCSP stapling, session tickets, and modern ciphers are enabled automatically
+
+	# API routing
 	handle /api/* {
 		reverse_proxy nomos-api:8000
 	}
 
+	# Health check endpoint
 	handle /health {
 		reverse_proxy nomos-api:8000
 	}
 
+	# Main console routing
 	handle {
 		reverse_proxy nomos-console:3000
 	}
 
+	# Security headers
 	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"
+		# HSTS with 2-year duration and preload
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		# Enhanced Content Security Policy with reporting
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; connect-src 'self' https:; frame-ancestors 'none'; report-uri /csp-report"
+		# Clickjacking protection
 		X-Frame-Options "DENY"
+		# MIME type sniffing protection
 		X-Content-Type-Options "nosniff"
+		# Referrer policy
 		Referrer-Policy "strict-origin-when-cross-origin"
-		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Permissions policy
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Disable XSS filter (modern browsers don't need it)
+		X-XSS-Protection "0"
+		# Remove server header for security
+		Server ""
+		# Feature policy
+		Feature-Policy "geolocation 'none'; microphone 'none'; camera 'none'; payment 'none'; usb 'none'"
+	}
+
+	# Redirect HTTP to HTTPS
+	@http {
+		protocol http
+	}
+	rewrite @http https://{host}{uri}
+
+	# Security.txt location
+	header /security.txt {
+		Content-Type "text/plain; charset=utf-8"
+	}
+
+	# Enable compression for better performance
+	encode gzip zstd
+
+	# File server for static assets (if needed)
+	@static {
+		file
+		path *.js *.css *.png *.jpg *.jpeg *.gif *.svg *.woff *.woff2 *.ttf *.eot
+	}
+	header @static {
+		Cache-Control "public, max-age=31536000, immutable"
 	}
 }

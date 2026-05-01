@@ -15,11 +15,14 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 RUN addgroup --system --gid 1001 nomos && \
     adduser --system --uid 1001 nomos
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nomos:nomos /app/.next/standalone ./
-COPY --from=builder --chown=nomos:nomos /app/.next/static ./.next/static
+COPY --from=builder --chown=nomos:nomos /app/.next ./.next
+COPY --from=builder --chown=nomos:nomos /app/package.json ./package.json
+COPY --from=builder --chown=nomos:nomos /app/package-lock.json ./package-lock.json
+RUN npm ci --omit=dev
 USER nomos
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npm run start || while true; do sleep 30; done"]

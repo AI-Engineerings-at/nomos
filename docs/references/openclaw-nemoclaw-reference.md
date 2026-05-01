@@ -223,7 +223,7 @@ NemoClaw ist ein **CLI-Tool + Blueprint-System** das Sandbox-Container DYNAMISCH
 Es gehoert NICHT als fester Service in docker-compose.
 Die Sandbox-Container werden **pro Agent** erstellt und verwaltet.
 
-## 8. NemoClaw Installation
+## 8. NemoClaw Installation (v0.0.14 - April 13, 2026)
 
 ```bash
 curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash

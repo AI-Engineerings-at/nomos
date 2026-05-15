@@ -1,4 +1,4 @@
-name: CI — NomOS Quality Gate
+name: CI â€” NomOS Quality Gate
 
 on:
   push:
@@ -12,9 +12,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Stage 1: Lint (fast, catches obvious issues)
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   lint-python:
     name: Lint Python (ruff)
@@ -43,9 +43,9 @@ jobs:
         working-directory: nomos-console
         run: npm ci && npx tsc --noEmit
 
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Stage 2: Unit Tests (per package)
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   test-cli:
     name: Test CLI (${{ matrix.python-version }})
@@ -70,6 +70,7 @@ jobs:
         with:
           name: test-results-cli
           path: test-results/
+          retention-days: 7
 
   test-api:
     name: Test API (${{ matrix.python-version }})
@@ -94,6 +95,7 @@ jobs:
         with:
           name: test-results-api
           path: test-results/
+          retention-days: 7
 
   test-plugin:
     name: Test Plugin (vitest)
@@ -115,6 +117,7 @@ jobs:
         with:
           name: test-results-plugin
           path: test-results/
+          retention-days: 7
 
   test-console:
     name: Test Console (vitest)
@@ -137,6 +140,7 @@ jobs:
         with:
           name: test-results-console
           path: test-results/
+          retention-days: 7
 
   contract-check:
     name: Contract Check (schemas.py vs types.ts)
@@ -155,9 +159,9 @@ jobs:
       - run: npm install ts-morph typescript
       - run: npx tsx scripts/check-contracts.ts
 
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Stage 3: Quality Gate (blocks merge)
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   quality-gate:
     name: Quality Gate
@@ -208,9 +212,9 @@ jobs:
           fi
           echo "Secret Check passed"
 
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Stage 4: Docker Build (integration)
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   docker-build:
     name: Docker Build
@@ -221,9 +225,9 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - run: docker compose build
 
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # Stage 5: Summary
-  # ──────────────────────────────────────
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   ci-summary:
     name: CI Summary
@@ -237,12 +241,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Lint | ${{ needs.lint-python.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| TS Lint | ${{ needs.lint-typescript.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CLI Tests | ${{ needs.test-cli.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Tests | ${{ needs.test-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Plugin Tests | ${{ needs.test-plugin.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Console Tests | ${{ needs.test-console.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Contract Check | ${{ needs.contract-check.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Quality Gate | ${{ needs.quality-gate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build | ${{ needs.docker-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Lint | ${{ needs.lint-python.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| TS Lint | ${{ needs.lint-typescript.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Tests | ${{ needs.test-cli.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.test-api.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plugin Tests | ${{ needs.test-plugin.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Console Tests | ${{ needs.test-console.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Contract Check | ${{ needs.contract-check.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality Gate | ${{ needs.quality-gate.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker-build.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY

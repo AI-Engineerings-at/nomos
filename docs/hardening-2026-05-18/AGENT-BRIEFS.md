@@ -52,4 +52,14 @@
 - 2026-05-18: Assessment complete (4 agents). Scope contract accepted, full-autonomous. Batches A–G tracked in task list.
 - 2026-05-18: Batch A committed (3da9994) — migration chain, duplicate-index DDL, console healthcheck, datetime, docstrings. Verified: test_alembic 11/11; 191 index setup-errors eliminated.
 - 2026-05-18: K1 (".env tracked secret") found to be a FALSE POSITIVE — .env is gitignored, never committed, never in history. No leak; no rotation needed.
-- 2026-05-19: Test-infra foundation. Decision (Joe): real services in CI. Wired Valkey via NOMOS_VALKEY_URL + autouse rate-limiter isolation fixture. Fixed prod bug in APIMetricsMiddleware (request→500 on metrics failure + session leak via `anext(get_db())`) → now uses `async_session()` and is non-fatal. Removed stale dead code in auth_router test fixture (referenced removed in-memory limiter). Added Valkey+Postgres service containers to CI test-api job. Result: auth_router + workspace_db 15/15 green (previously the dominant failure class).
+- 2026-05-19: Test-infra foundation (commit f039c8f). Decision (Joe): real services in CI. Wired Valkey via NOMOS_VALKEY_URL + autouse rate-limiter isolation fixture. Fixed prod bug in APIMetricsMiddleware (request→500 on metrics failure + session leak via `anext(get_db())`) → now uses `async_session()` and is non-fatal. Removed stale dead code in auth_router test fixture. Added Valkey+Postgres service containers to CI test-api job.
+- 2026-05-19: TRUE baseline established — nomos-cli 204/204, nomos-api **332/341** (50s; was 162-failed/13min/CI-red). The 9 residual failures map cleanly to Batch C: context_pipeline (~3), vault graceful-degradation (1), monitoring service (1), + others in same families.
+- 2026-05-19: Batch B C1 done (commit a64ba87) — public Vault unseal-key endpoint closed: in-memory one-shot flag → DB-derived setup-complete gate (403) + persistent filesystem one-shot marker (410). 8/8 system tests green incl. new 403 regression test.
+
+### Remaining roadmap (priority order)
+- **Batch B (continue):** K3 dev_mode bypass + `vault-pending`/hardcoded creds; H1 monitoring authZ; H2/H3 proxy+heartbeat authZ/IDOR/SSRF; H4 settings auth; H5 log redaction; M1 CSRF; M3 hash-chain HMAC; M4 host-port exposure; L2 security headers. Each: regression test + golden path intact.
+- **Batch C:** wire ContextPipeline into proxy.py, persist chat history, real prune deletion, fix the 9 residual nomos-api failures (context_pipeline async, vault VaultSecretNotFoundError swallow, monitoring service), reconcile design doc.
+- **Batch D (remainder):** monitoring HTTP integration tests, CORS via ASGITransport, costs/approvals/fleet HTTP tests, strengthen weak assertions, remove dead nested test.
+- **Batch E:** research+pin current OpenClaw, digest-pin base images, Python dep upper bounds, vitest 3→4 align, doc/reality drift.
+- **Batch F:** CLI structured logging + NOMOS_LOG_LEVEL, correlation-id egress, refresh README/architecture/api-reference, runbook.
+- **Batch G:** docker compose up → browser golden path → F12 clean → full CI green.

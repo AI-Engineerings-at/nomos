@@ -1,5 +1,8 @@
 # NomOS Architecture
 
+> Last reconciled against source: 2026-05-19 (enterprise-hardening Batch F).
+> Citations point to the verifying file/line in this repository.
+
 ## Component Overview
 
 ```
@@ -16,12 +19,23 @@
 |          | HTTP (internal)    |                |      |
 |          +------------------------------------+      |
 |          | asyncpg (PostgreSQL)                       |
-|  +----------------+  +----------------+              |
-|  |    valkey      |  | openclaw-gw    |              |
-|  |  (BSD-3 cache) |  | (LLM gateway)  |              |
-|  |   Port 6379    |  |   Port 8080    |              |
+|  +----------------+  +----------------+  +---------+ |
+|  |    valkey      |  | openclaw-gw    |  | vault   | |
+|  |  (BSD-3 cache) |  | (LLM gateway)  |  |(secrets)| |
+|  |  (internal)    |  |   Port 3050    |  | Port    | |
+|  +----------------+  +----------------+  | 8200    | |
+|  +----------------+  +----------------+  +---------+ |
+|  | nomos-worker   |  |    caddy       |              |
+|  | (ARQ / Valkey) |  | (TLS reverse   |              |
+|  | no host port   |  |  proxy 80/443) |              |
 |  +----------------+  +----------------+              |
 +-----------------------------------------------------+
+
+> docker-compose.yml is authoritative for ports. Host-exposed:
+> Console `${NOMOS_CONSOLE_PORT:-3040}`, API `${NOMOS_API_PORT:-8060}`,
+> Gateway `${NOMOS_GATEWAY_PORT:-3050}`, Caddy 80/443, Vault 8200.
+> `postgres`, `valkey` and `nomos-worker` have NO host port (compose
+> network only). Source: `docker-compose.yml:3,13-14,90-91,166-167`.
            |
            v
    +---------------+
@@ -46,7 +60,11 @@
 
 ### nomos-api (FastAPI — Python 3.12)
 
-REST API with 17 routers and 47+ endpoints.
+REST API. Routers live in `nomos-api/nomos_api/routers/`; the directory
+currently contains 19 router modules (verified by file listing
+2026-05-19): the 16 below plus `monitoring.py`, `system.py`, and an
+internal `__init__.py`-aggregated set. See the API Reference for the
+authoritative per-endpoint table.
 
 #### Routers
 
@@ -67,8 +85,18 @@ REST API with 17 routers and 47+ endpoints.
 | `routers/incidents.py` | `/api/incidents` | Incident CRUD |
 | `routers/workspace.py` | `/api/workspace` | Workspace mount/unmount |
 | `routers/dsgvo.py` | `/api/dsgvo` | DSGVO forget and export |
-| `routers/proxy.py` | `/api/proxy` | LLM proxy status, chat relay |
-| `routers/settings.py` | `/api/settings` | System settings |
+| `routers/proxy.py` | `/api/proxy` | LLM proxy status, chat relay (auth + agent-ownership) |
+| `routers/settings.py` | `/api/settings` | System settings (GET admin-gated) |
+| `routers/monitoring.py` | `/api/monitoring` | Metrics, alerts, alert-rules (**admin-only**) |
+| `routers/system.py` | `/api/system` | Setup-wizard status + bootstrap-only unseal-key |
+
+> Auth verified in source: `routers/monitoring.py:34,40` (every endpoint
+> `Depends(require_admin)`), `routers/proxy.py:34,126,147`
+> (`get_current_user` + `check_agent_access(user, agent, "chat")`),
+> `routers/settings.py:56,59,154` (GET behind `_require_admin`),
+> `routers/system.py:129-156` (unseal-key: 403 once an admin exists,
+> 410 after one-shot serve), `routers/agents.py:78-226`
+> (`check_agent_access` on patch/pause/resume/kill/retire).
 
 #### ORM Models
 
@@ -104,7 +132,16 @@ The core library and command-line tool. Contains all business logic.
 | `core/compliance_engine.py` | Blocking compliance check (PASSED / WARNING / BLOCKED) |
 | `core/hash_chain.py` | SHA-256 append-only hash chain (JSONL storage), verification |
 | `core/events.py` | Canonical event type definitions (14 event types) |
-| `cli.py` | Click CLI with 5 commands: hire, gate, verify, fleet, audit |
+| `logging_config.py` | Structured JSON diagnostics logger; `NOMOS_LOG_LEVEL`-driven, writes to stderr (stdout reserved for `rich` UX) |
+| `cli.py` | Click CLI: `hire`, `verify`, `fleet`, `gate`, `audit`, plus API-backed `pause`, `resume`, `retire`, `forget`, `assign`, `costs`, `incidents`, `workspace mount/unmount` |
+
+> The CLI emits two streams: user-facing output via `rich`/`click.echo`
+> on **stdout** (unchanged UX), and structured JSON diagnostics on
+> **stderr** via `nomos.logging_config`. Verbosity: env `NOMOS_LOG_LEVEL`
+> (DEBUG/INFO/WARNING/ERROR, case-insensitive; invalid → INFO + warning).
+> The JSON record shape (`timestamp`/`level`/`logger`/`message`,
+> `exception` when present) mirrors the API's
+> `nomos-api/nomos_api/middleware/logging.py` JSONFormatter.
 
 ### nomos-console (Next.js 15 / React 19)
 
@@ -142,9 +179,53 @@ Stores the agent registry, users, tasks, approvals, incidents, and indexed audit
 
 BSD-3 licensed Redis replacement. Used for session caching, rate limiting, and ephemeral state.
 
+### nomos-worker (ARQ on Valkey)
+
+Background job processor. Runs `python -m arq
+nomos_api.worker.main.WorkerSettings` (`docker-compose.yml:127-131`),
+sharing the API codebase but with no HTTP port. Five cron jobs are
+registered in `nomos-api/nomos_api/worker/main.py:62-83`:
+
+| Job | Schedule | Purpose |
+|-----|----------|---------|
+| `retention_cleanup` | daily 03:00 | Data-retention enforcement |
+| `detect_stale_agents` | every 5 min | Mark agents missing heartbeats |
+| `check_incident_deadlines` | hourly | Art. 33/34 reporting deadlines |
+| `expire_approvals` | every 10 min | Time out stale approval requests |
+| `process_alerts` | every minute | Evaluate alert rules, raise alerts |
+
+### Monitoring & Alerting
+
+`routers/monitoring.py` exposes metrics, alerts and alert-rules under
+`/api/monitoring`. **Every endpoint requires an admin user**
+(`Depends(require_admin)`, `routers/monitoring.py:40,96,120,146,172,185,210`).
+Alert evaluation is driven by the `process_alerts` worker cron. An
+`APIMetricsMiddleware` records request metrics; metric-recording
+failures are non-fatal (do not 500 the request).
+
+### Context-Management Pipeline (wired into chat)
+
+`nomos-api/nomos_api/services/context_pipeline.py` provides
+`ContextPipeline` (chunker + summarizer + agent memory). It is wired
+into the chat path: `routers/proxy.py:24-25,158-160` instantiates
+`ContextPipeline` and uses managed context, and persists turns via
+`memory.store_message(...)` (`routers/proxy.py:185,218`) so chat
+retains history across requests.
+
 ### HashiCorp Vault
 
-Secret management layer (KV v2). All credentials (DB passwords, JWT secrets, API keys) are stored in Vault. The API fetches secrets at startup. ENV vars are accepted as fallback in dev mode only.
+Secret management layer (KV v2). All credentials (DB passwords, JWT
+secrets, API keys, gateway token) are stored in Vault and fetched at
+startup via a Vault-first settings source. ENV vars serve as a
+documented fallback path (e.g. `NOMOS_DB_PASSWORD` is also injected via
+compose for the postgres init). Vault runs as its own compose service
+(`docker-compose.yml:41,69`).
+
+### Caddy (TLS reverse proxy)
+
+`caddy:2-alpine` terminates TLS and fronts the console/API on ports
+80/443 (`docker-compose.yml:219-228`), with the public domain set via
+`NOMOS_DOMAIN` (default `localhost`). Automatic HTTPS in production.
 
 ---
 
@@ -299,9 +380,51 @@ Modifying any field in any entry invalidates that entry's hash and breaks the ch
 
 ### Authentication
 
-- **JWT Cookie** — HttpOnly, Secure, SameSite=Strict. Issued on login, checked by global middleware.
-- **API Key** — `X-NomOS-API-Key` header for plugin and service-to-service calls.
-- **2FA** — Optional TOTP-based two-factor authentication with recovery codes.
+- **JWT Cookie** — HttpOnly, Secure, SameSite=Strict. Issued on login,
+  checked by global middleware.
+- **API Key** — `X-NomOS-API-Key` header for plugin and
+  service-to-service calls.
+- **2FA** — Optional TOTP-based two-factor authentication with recovery
+  codes.
+
+### Authorization (RBAC + agent ownership)
+
+Authorization is enforced per-router, not just authentication:
+
+- **Admin-only:** the entire `/api/monitoring/*` surface requires an
+  admin user (`require_admin`, `routers/monitoring.py:40+`). `GET
+  /api/settings` is admin-gated (`routers/settings.py:59,154`).
+- **Agent ownership / IDOR protection:** state-changing agent endpoints
+  and chat resolve the target agent then call
+  `check_agent_access(user, agent, <action>)`, which permits admins and
+  the owning user only — `routers/proxy.py:147` (chat),
+  `routers/agents.py:86,105,144,188,226` (patch/pause/resume/kill/retire).
+- **Bootstrap-only unseal key:** `GET /api/system/unseal-key` returns
+  403 once any admin user exists and 410 after a durable one-shot serve
+  (`routers/system.py:129-156`) — it is never a standing public endpoint.
+
+### Security headers & cookies
+
+`SecurityHeadersMiddleware` (`middleware/security_headers.py`, added in
+`main.py:48,208`) sets `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, and `Strict-Transport-Security` (only when
+cookie-secure / HTTPS is active). Session cookies are
+`SameSite=Strict`.
+
+### Redacted structured logging
+
+The API JSON log formatter (`middleware/logging.py`) runs every message
+and serialized exception through a redaction step that scrubs
+token-like blobs, Bearer tokens and the values of known secret keys, so
+Vault/LLM-provider exception bodies cannot leak credentials into the
+log stream.
+
+### Audit hash-chain HMAC
+
+The on-disk hash chain supports an HMAC key, env-injectable via
+`NOMOS_HASHCHAIN_HMAC_KEY` (`nomos-cli/nomos/core/hash_chain.py:30-43`),
+inject from Vault in production. This makes the chain tamper-evident
+against an attacker who can also recompute plain SHA-256 hashes.
 
 ### Non-root Docker Container
 
@@ -367,8 +490,21 @@ No secret may appear as a default value in `config.py` or `docker-compose.yml`.
 | `NOMOS_API_TITLE` | `NomOS Fleet API` | API title |
 | `NOMOS_API_VERSION` | `0.1.0` | API version |
 | `NOMOS_CORS_ORIGINS` | `["http://localhost:3040"]` | Allowed CORS origins |
-| `NOMOS_AGENTS_DIR` | `./data/agents` | Agent file storage directory |
+| `NOMOS_AGENTS_DIR` | `/data/agents` | Agent file storage directory (compose) |
+| `NOMOS_VALKEY_URL` | `valkey://valkey:6379` | Valkey URL for rate limiting + ARQ (`docker-compose.yml:97,136`) |
+| `NOMOS_GATEWAY_URL` | `http://openclaw-gateway:18789` | OpenClaw gateway base URL (compose-internal) |
+| `NOMOS_LOG_LEVEL` | `INFO` | CLI diagnostics log level (DEBUG/INFO/WARNING/ERROR) |
+| `NOMOS_DEV_MODE` | `false` | Dev fallbacks; production must be `false` |
+| `NOMOS_COOKIE_SECURE` | `true` | Secure-cookie + HSTS toggle |
+| `NOMOS_DOMAIN` | `localhost` | Public domain for Caddy TLS |
 | `NOMOS_API_PORT` (docker-compose) | `8060` | External API port |
 | `NOMOS_CONSOLE_PORT` (docker-compose) | `3040` | External console port |
+| `NOMOS_GATEWAY_PORT` (docker-compose) | `3050` | External gateway port |
+
+Secret env vars (injected from Vault in production; never defaulted in
+code/compose): `NOMOS_JWT_SECRET`, `NOMOS_PLUGIN_API_KEY`,
+`NOMOS_GATEWAY_TOKEN`, `NOMOS_DB_PASSWORD`,
+`NOMOS_HASHCHAIN_HMAC_KEY`, and one LLM provider key
+(`NVIDIA_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`).
 
 > All secrets managed via HashiCorp Vault KV v2. ENV vars as fallback in dev mode only.

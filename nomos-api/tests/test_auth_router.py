@@ -33,11 +33,9 @@ async def auth_client(auth_engine, tmp_path, monkeypatch):
     from nomos_api.config import settings
     from nomos_api.database import get_db
     from nomos_api.main import app
-    from nomos_api.routers.auth import _login_limiter
 
-    # Reset rate limiter between tests
-    _login_limiter._attempts.clear()
-    _login_limiter._lockouts.clear()
+    # Rate-limiter isolation is handled by the autouse `_isolate_rate_limiter`
+    # fixture in conftest (resets the singleton + flushes the Valkey keyspace).
 
     factory = async_sessionmaker(auth_engine, class_=AsyncSession, expire_on_commit=False)
 

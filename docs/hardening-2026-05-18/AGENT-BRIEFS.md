@@ -50,3 +50,6 @@
 ## Progress log
 
 - 2026-05-18: Assessment complete (4 agents). Scope contract accepted, full-autonomous. Batches A–G tracked in task list.
+- 2026-05-18: Batch A committed (3da9994) — migration chain, duplicate-index DDL, console healthcheck, datetime, docstrings. Verified: test_alembic 11/11; 191 index setup-errors eliminated.
+- 2026-05-18: K1 (".env tracked secret") found to be a FALSE POSITIVE — .env is gitignored, never committed, never in history. No leak; no rotation needed.
+- 2026-05-19: Test-infra foundation. Decision (Joe): real services in CI. Wired Valkey via NOMOS_VALKEY_URL + autouse rate-limiter isolation fixture. Fixed prod bug in APIMetricsMiddleware (request→500 on metrics failure + session leak via `anext(get_db())`) → now uses `async_session()` and is non-fatal. Removed stale dead code in auth_router test fixture (referenced removed in-memory limiter). Added Valkey+Postgres service containers to CI test-api job. Result: auth_router + workspace_db 15/15 green (previously the dominant failure class).

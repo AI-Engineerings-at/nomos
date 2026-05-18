@@ -10,16 +10,51 @@ os.environ["NOMOS_PLUGIN_API_KEY"] = "test-plugin-key"
 os.environ["NOMOS_GATEWAY_TOKEN"] = "test-gateway-token"
 os.environ["NOMOS_DB_PASSWORD"] = "test-db-password"
 os.environ["NOMOS_DEV_MODE"] = "true"
+# Tests run against a REAL Valkey (rule 02: no mocks for infra services).
+# Locally: `docker compose up -d valkey`. In CI: a `valkey` service container.
+# Default config points at the docker hostname `valkey`; override to localhost
+# for both the app singleton and pydantic Settings (env_prefix NOMOS_).
+os.environ.setdefault("NOMOS_VALKEY_URL", "valkey://localhost:6379")
 
 import uuid
 
 import pytest
+import valkey.asyncio as _valkey
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from nomos_api.auth.jwt import TokenPayload, create_token
 from nomos_api.auth.password import hash_password
 from nomos_api.models import Base, User
+
+_TEST_VALKEY_URL = os.environ["NOMOS_VALKEY_URL"]
+
+
+@pytest.fixture(autouse=True)
+async def _isolate_rate_limiter():
+    """Per-test isolation for the Valkey-backed rate limiter.
+
+    The login limiter is a module-global singleton built from settings on
+    first use; rate-limit state lives in Valkey and would otherwise leak
+    across tests. Reset the singleton and flush the limiter keyspace before
+    and after each test so tests stay deterministic and order-independent.
+    """
+    from nomos_api.routers import auth as _auth_router
+
+    async def _flush() -> None:
+        client = _valkey.from_url(_TEST_VALKEY_URL, decode_responses=True)
+        try:
+            keys = await client.keys("nomos:ratelimit:*")
+            if keys:
+                await client.delete(*keys)
+        finally:
+            await client.aclose()
+
+    _auth_router._login_limiter = None
+    await _flush()
+    yield
+    _auth_router._login_limiter = None
+    await _flush()
 
 
 @pytest.fixture

@@ -81,6 +81,34 @@ jobs:
     defaults:
       run:
         working-directory: nomos-api
+    # Real services (rule 02: no mocks for infra). The suite needs a live
+    # Valkey (rate limiter) and Postgres (metrics middleware / DB paths).
+    services:
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: nomos
+          POSTGRES_PASSWORD: nomos
+          POSTGRES_DB: nomos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nomos"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      NOMOS_VALKEY_URL: valkey://localhost:6379
+      NOMOS_DATABASE_URL: postgresql+asyncpg://nomos:nomos@localhost:5432/nomos
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4

@@ -68,46 +68,45 @@ async def test_status_after_bootstrap(client: AsyncClient, db_engine, tmp_path: 
 
 @pytest.mark.asyncio
 async def test_unseal_key_returns_key(client: AsyncClient, tmp_path: Path) -> None:
-    """First call to unseal-key returns the key from file."""
-    import nomos_api.routers.system as system_mod
-
-    # Reset served flag for clean state
-    system_mod._unseal_key_served = False
-
+    """First call to unseal-key returns the key from file (no admin yet)."""
     key_file = tmp_path / "unseal-key"
     key_file.write_text("s.ABCDEF1234567890")
+    marker = tmp_path / "served-marker"
 
     with patch(
         "nomos_api.routers.system._get_unseal_key_paths",
         return_value=[key_file],
+    ), patch(
+        "nomos_api.routers.system._get_served_marker_path",
+        return_value=marker,
     ):
         resp = await client.get("/api/system/unseal-key")
 
     assert resp.status_code == 200
     data = resp.json()
     assert data["unseal_key"] == "s.ABCDEF1234567890"
+    assert marker.exists()  # one-shot marker persisted
 
 
 @pytest.mark.asyncio
 async def test_unseal_key_returns_410_on_second_call(client: AsyncClient, tmp_path: Path) -> None:
-    """Second call to unseal-key returns 410 Gone."""
-    import nomos_api.routers.system as system_mod
-
-    # Reset served flag for clean state
-    system_mod._unseal_key_served = False
-
+    """Second call to unseal-key returns 410 Gone (persistent marker)."""
     key_file = tmp_path / "unseal-key"
     key_file.write_text("s.ABCDEF1234567890")
+    marker = tmp_path / "served-marker"
 
     with patch(
         "nomos_api.routers.system._get_unseal_key_paths",
         return_value=[key_file],
+    ), patch(
+        "nomos_api.routers.system._get_served_marker_path",
+        return_value=marker,
     ):
         # First call — succeeds
         resp1 = await client.get("/api/system/unseal-key")
         assert resp1.status_code == 200
 
-        # Second call — 410 Gone
+        # Second call — 410 Gone (marker now exists on disk)
         resp2 = await client.get("/api/system/unseal-key")
         assert resp2.status_code == 410
         assert "already been served" in resp2.json()["detail"]
@@ -116,40 +115,79 @@ async def test_unseal_key_returns_410_on_second_call(client: AsyncClient, tmp_pa
 @pytest.mark.asyncio
 async def test_unseal_key_returns_404_when_no_file(client: AsyncClient, tmp_path: Path) -> None:
     """When unseal key file does not exist, return 404."""
-    import nomos_api.routers.system as system_mod
-
-    # Reset served flag for clean state
-    system_mod._unseal_key_served = False
-
+    marker = tmp_path / "served-marker"
     with patch(
         "nomos_api.routers.system._get_unseal_key_paths",
         return_value=[tmp_path / "nonexistent-key"],
+    ), patch(
+        "nomos_api.routers.system._get_served_marker_path",
+        return_value=marker,
     ):
         resp = await client.get("/api/system/unseal-key")
 
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"].lower()
+    assert not marker.exists()  # nothing served -> no marker written
 
 
 @pytest.mark.asyncio
 async def test_unseal_key_reads_from_init_output_json(client: AsyncClient, tmp_path: Path) -> None:
     """Unseal key can be read from init-output.json as fallback."""
-    import nomos_api.routers.system as system_mod
-
-    system_mod._unseal_key_served = False
-
     # No plain unseal-key file, but init-output.json exists
     init_output = tmp_path / "init-output.json"
     init_output.write_text(json.dumps({"unseal_keys_b64": ["s.FROM-INIT-OUTPUT"], "root_token": "ignored"}))
+    marker = tmp_path / "served-marker"
 
     with patch(
         "nomos_api.routers.system._get_unseal_key_paths",
         return_value=[tmp_path / "nonexistent-key", init_output],
+    ), patch(
+        "nomos_api.routers.system._get_served_marker_path",
+        return_value=marker,
     ):
         resp = await client.get("/api/system/unseal-key")
 
     assert resp.status_code == 200
     assert resp.json()["unseal_key"] == "s.FROM-INIT-OUTPUT"
+
+
+@pytest.mark.asyncio
+async def test_unseal_key_forbidden_once_admin_exists(
+    client: AsyncClient, db_engine, tmp_path: Path
+) -> None:
+    """Security: once an admin exists (setup complete), unseal-key is 403 forever."""
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_factory() as session:
+        session.add(
+            User(
+                id="admin-sec-001",
+                email="admin-sec@nomos.local",
+                password_hash=hash_password("Str0ngP@ssword!"),
+                role="admin",
+                is_active=True,
+                session_timeout_hours=8,
+            )
+        )
+        await session.commit()
+
+    key_file = tmp_path / "unseal-key"
+    key_file.write_text("s.SHOULD-NEVER-BE-RETURNED")
+    marker = tmp_path / "served-marker"
+
+    with patch(
+        "nomos_api.routers.system._get_unseal_key_paths",
+        return_value=[key_file],
+    ), patch(
+        "nomos_api.routers.system._get_served_marker_path",
+        return_value=marker,
+    ):
+        resp = await client.get("/api/system/unseal-key")
+
+    assert resp.status_code == 403
+    assert "permanently disabled" in resp.json()["detail"]
+    assert not marker.exists()
 
 
 @pytest.mark.asyncio

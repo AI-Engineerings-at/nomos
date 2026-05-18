@@ -15,7 +15,7 @@
 | Lizenz | MIT |
 | Sprache | TypeScript (ESM) |
 | Stars | ~335.000 |
-| Docker Image | `ghcr.io/openclaw/openclaw:latest` |
+| Docker Image | `ghcr.io/openclaw/openclaw:2026.5.18` (pinned 2026-05-19, never `:latest`) |
 | Default Port | 18789 |
 | Config | `~/.openclaw/openclaw.json` (JSON5) |
 | ClawHub | https://clawhub.ai (Skill Directory) |
@@ -149,14 +149,18 @@ openclaw plugins install <package-name>  # Sucht ClawHub, dann npm
 
 ### Offizielles Image
 
-`ghcr.io/openclaw/openclaw` (Tags: `latest`, `main`, `<version>` z.B. `2026.2.26`)
+`ghcr.io/openclaw/openclaw` (Tags: `latest`, `main`, `<version>` z.B. `2026.5.18`).
+**NomOS pins an explicit version** (`Dockerfile.gateway`), currently `2026.5.18`
+(current stable per GitHub releases/latest on 2026-05-19). Never deploy `:latest`.
+Plugin API/entrypoint last fully validated at `v2026.3.28` — revalidate the golden
+path (docker compose up → hire → chat → F12) on every version bump.
 
 ### Docker Compose (aus Kimi-Referenz, funktioniert)
 
 ```yaml
 services:
   openclaw-gateway:
-    image: ghcr.io/openclaw/openclaw:latest
+    image: ghcr.io/openclaw/openclaw:2026.5.18  # pin explicit version, never :latest
     ports:
       - "18789:18789"
     volumes:
@@ -343,7 +347,7 @@ nemoclaw-policy-agent:
 1. `api.on(hookName, handler, { priority })` — stimmt
 2. `openclaw.plugin.json` Format — grundsaetzlich korrekt
 3. Port 18789 — stimmt
-4. Docker Image `ghcr.io/openclaw/openclaw:latest` — stimmt
+4. Docker Image `ghcr.io/openclaw/openclaw` — stimmt; NomOS pins `2026.5.18` (no `:latest`)
 5. `bind: "lan"` fuer Docker — stimmt
 6. Hook-Namen (gateway_start, before_agent_start, etc.) — muessen noch verifiziert werden
 

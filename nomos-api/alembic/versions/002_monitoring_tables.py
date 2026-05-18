@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "monitoring_tables"
-down_revision = "001_initial"
+down_revision = "001_initial_schema"
 branch_labels = None
 depends_on = None
 

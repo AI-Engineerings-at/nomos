@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -156,7 +156,7 @@ class ContextPipeline:
             "summary_count": summary_count,
             "recent_messages": recent_count,
             "estimated_token_count": estimated_tokens,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     async def prune_old_context(self, db: AsyncSession, agent_id: str, session_id: str, keep_recent: int = 50) -> int:

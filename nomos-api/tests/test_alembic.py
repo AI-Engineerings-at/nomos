@@ -69,20 +69,23 @@ class TestMigrationHistory:
         assert len(revisions) >= 1, "At least the initial migration must exist"
 
     def test_all_models_covered_in_initial_migration(self) -> None:
-        """The initial migration creates all tables defined in models.py."""
+        """Every table defined in models.py is created by some migration.
+
+        Coverage is checked across the union of all migration files, not just
+        the initial one — monitoring tables live in 002_monitoring_tables.py.
+        """
         from nomos_api.models import Base
 
         model_tables = set(Base.metadata.tables.keys())
         assert len(model_tables) >= 9, f"Expected at least 9 tables in models, found {len(model_tables)}"
 
-        # Read the initial migration and verify it references all tables
         migration_files = sorted(VERSIONS_DIR.glob("*.py"))
         assert len(migration_files) >= 1, "No migration files found"
 
-        initial_migration = migration_files[0].read_text()
+        all_migrations = "\n".join(f.read_text() for f in migration_files)
         for table_name in model_tables:
-            assert table_name in initial_migration, (
-                f"Table '{table_name}' from models.py not found in initial migration"
+            assert table_name in all_migrations, (
+                f"Table '{table_name}' from models.py not found in any migration"
             )
 
 

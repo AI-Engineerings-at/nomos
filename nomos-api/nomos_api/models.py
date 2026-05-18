@@ -221,7 +221,8 @@ class AlertRule(Base):
     threshold_type: Mapped[str] = mapped_column(String(50), nullable=False)  # 'above', 'below', 'change'
     threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
     comparison_window: Mapped[str | None] = mapped_column(String(50))  # e.g., '5m', '1h'
-    severity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # 'critical', 'warning', 'info'
+    # No index on `severity`: migration 002 does not create ix_alert_rules_severity.
+    severity: Mapped[str] = mapped_column(String(50), nullable=False)  # 'critical', 'warning', 'info'
     notification_channels: Mapped[dict] = mapped_column(JSON, nullable=False)  # {"email": [...], "webhook": [...]}
     description: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -246,7 +247,9 @@ class Alert(Base):
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     rule_id: Mapped[int] = mapped_column(Integer, nullable=True)
-    severity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    # Index for `severity` is declared explicitly in __table_args__ above
+    # (name must match migration 002 op.f("ix_alerts_severity")); no index=True here.
+    severity: Mapped[str] = mapped_column(String(50), nullable=False)
     metric_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     current_value: Mapped[float] = mapped_column(Float, nullable=False)
     threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
@@ -275,14 +278,16 @@ class Metric(Base):
         Index("ix_metrics_name", "metric_name"),
     )
 
+    # Indexes for `timestamp` and `metric_name` are declared explicitly in
+    # __table_args__ above (names must match migration 002: ix_metrics_timestamp,
+    # ix_metrics_name); no index=True here to avoid duplicate-index DDL.
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        index=True,
         server_default=func.now(),
     )
-    metric_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
     dimensions: Mapped[dict] = mapped_column(JSON, nullable=False)  # {"endpoint": "/api/agents", "method": "GET"}
     value: Mapped[float] = mapped_column(Float, nullable=False)
     source: Mapped[str | None] = mapped_column(String(50))  # 'api', 'agent', 'system'

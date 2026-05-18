@@ -45,6 +45,7 @@ from nomos_api.errors import ERROR_CODES, NomOSErrorResponse
 from nomos_api.middleware.logging import JSONFormatter
 from nomos_api.middleware.metrics import APIMetricsMiddleware
 from nomos_api.middleware.request_id import RequestIDMiddleware
+from nomos_api.middleware.security_headers import SecurityHeadersMiddleware
 
 _handler = logging.StreamHandler()
 _handler.setFormatter(JSONFormatter())
@@ -201,6 +202,10 @@ app.add_middleware(
 
 # Add metrics middleware after CORS but before other middleware
 app.add_middleware(APIMetricsMiddleware)
+
+# L2: security headers — registered last so it is the OUTERMOST layer and
+# applies to every response, including auth rejections and error bodies.
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 app.include_router(health.router)

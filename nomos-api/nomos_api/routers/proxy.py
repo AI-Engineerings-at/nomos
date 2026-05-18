@@ -16,9 +16,11 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import check_agent_access
 from nomos_api.config import settings
 from nomos_api.database import get_db
-from nomos_api.models import Agent
+from nomos_api.models import Agent, User
+from nomos_api.routers.auth import get_current_user
 from nomos_api.schemas import (
     ProxyChatRequest,
     ProxyChatResponse,
@@ -79,7 +81,9 @@ async def _direct_llm_chat(messages: list[dict], model: str | None = None) -> di
         logger.warning("LLM provider timeout at %s", url)
         return None
     except httpx.HTTPStatusError as exc:
-        logger.warning("LLM provider error %d: %s", exc.response.status_code, exc.response.text[:200])
+        # Do NOT log the raw provider response body — it can echo back the
+        # Authorization bearer / API key or other secrets (H5).
+        logger.warning("LLM provider error %d (body suppressed)", exc.response.status_code)
         return {"error": {"message": f"LLM provider error: {exc.response.status_code}"}}
     except Exception as exc:
         logger.warning("LLM provider error at %s: %s", url, exc)
@@ -116,18 +120,32 @@ async def gateway_status() -> ProxyStatusResponse:
 
 @router.post("/proxy/chat", response_model=ProxyChatResponse)
 async def proxy_chat(
-    request: ProxyChatRequest, db: AsyncSession = Depends(get_db)
+    request: ProxyChatRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> ProxyChatResponse:
     """Proxy chat to LLM.
 
     Uses direct LLM provider if configured (NOMOS_LLM_BASE_URL),
     otherwise falls back to OpenClaw Gateway agent loop.
+
+    AuthZ: requires an authenticated user (console JWT cookie) and that the
+    user owns the target agent (IDOR fix — H3). Outbound provider/gateway
+    URLs are taken ONLY from settings (settings.gateway_url /
+    settings.llm_base_url), never from request- or agent-controlled input,
+    so this endpoint cannot be used as an SSRF pivot.
     """
     session_id = request.session_id or str(uuid.uuid4())
 
+    # Agent must exist and be owned by the caller (no chatting as arbitrary
+    # agent_id). check_agent_access allows admins and the owning user.
+    agent = await db.get(Agent, request.agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
+    check_agent_access(user, agent, "chat")
+
     # Resolve model from agent manifest if available
     model = None
-    agent = await db.get(Agent, request.agent_id)
     if agent and agent.manifest_data:
         manifest = agent.manifest_data if isinstance(agent.manifest_data, dict) else {}
         llm_provider = manifest.get("llm_provider")

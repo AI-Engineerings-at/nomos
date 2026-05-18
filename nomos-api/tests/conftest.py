@@ -6,7 +6,7 @@ import os
 
 # Set mandatory secrets for tests before any NomOS modules are imported
 os.environ["NOMOS_JWT_SECRET"] = "test-jwt-secret-at-least-32-chars-long-123"
-os.environ["NOMOS_PLUGIN_API_KEY"] = "test-plugin-key"
+os.environ["NOMOS_PLUGIN_API_KEY"] = "test-plugin-key-at-least-32-characters"
 os.environ["NOMOS_GATEWAY_TOKEN"] = "test-gateway-token"
 os.environ["NOMOS_DB_PASSWORD"] = "test-db-password"
 os.environ["NOMOS_DEV_MODE"] = "true"
@@ -93,13 +93,13 @@ async def client(db_engine, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "agents_dir", tmp_path / "agents")
 
     # Set a test plugin API key so all requests pass the auth middleware
-    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key")
+    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key-at-least-32-characters")
 
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
         base_url="http://test",
-        headers={"X-NomOS-API-Key": "test-plugin-key"},
+        headers={"X-NomOS-API-Key": "test-plugin-key-at-least-32-characters"},
     ) as ac:
         yield ac
 
@@ -124,7 +124,7 @@ async def authed_client(db_engine, tmp_path, monkeypatch):
 
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setattr(settings, "agents_dir", tmp_path / "agents")
-    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key")
+    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key-at-least-32-characters")
 
     # Seed a user that matches the default test agent email
     user_id = str(uuid.uuid4())
@@ -148,7 +148,7 @@ async def authed_client(db_engine, tmp_path, monkeypatch):
     async with AsyncClient(
         transport=transport,
         base_url="http://test",
-        headers={"X-NomOS-API-Key": "test-plugin-key"},
+        headers={"X-NomOS-API-Key": "test-plugin-key-at-least-32-characters"},
         cookies={"nomos_token": token},
     ) as ac:
         yield ac

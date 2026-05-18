@@ -24,11 +24,25 @@ _INSECURE_DEFAULTS: dict[str, set[str]] = {
     "db_password": {"nomos", "vault-pending"},
 }
 
+# Clearly-invalid placeholder for database_url. Fails closed: it contains no
+# working credentials, so an unconfigured deployment cannot silently connect
+# with a known cleartext password.
+_DATABASE_URL_PLACEHOLDER = (
+    "postgresql+asyncpg://CONFIGURE_NOMOS_DATABASE_URL@invalid-host:5432/nomos"
+)
+
+# Security-critical secrets that MUST always be real and strong, even when
+# dev_mode is on. A short or sentinel value here is never acceptable because
+# it gates authentication (jwt_secret signs the session cookie; plugin_api_key
+# is the service-to-service bearer for the plugin).
+_ALWAYS_REQUIRED_SECRETS: tuple[str, ...] = ("jwt_secret", "plugin_api_key")
+_MIN_SECRET_LENGTH = 32
+
 
 class Settings(BaseSettings):
     """API settings. Vault-first, then NOMOS_ prefixed env vars."""
 
-    database_url: str = "postgresql+asyncpg://nomos:nomos@localhost:5432/nomos"
+    database_url: str = _DATABASE_URL_PLACEHOLDER
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_title: str = "NomOS Fleet API"
@@ -85,13 +99,55 @@ class Settings(BaseSettings):
         )
 
 
+def _validate_always_required_secrets(s: Settings) -> list[str]:
+    """Validate security-critical secrets that apply even in dev_mode.
+
+    jwt_secret and plugin_api_key gate authentication, so an empty value, a
+    known insecure default / "vault-pending" sentinel, or a too-short value is
+    NEVER acceptable — not even in dev_mode. Returns a list of human-readable
+    violation strings (empty == OK).
+    """
+    violations: list[str] = []
+    for field in _ALWAYS_REQUIRED_SECRETS:
+        actual = getattr(s, field, None)
+        if not actual or not isinstance(actual, str):
+            violations.append(f"{field} (empty — must be set)")
+            continue
+        if actual in _INSECURE_DEFAULTS.get(field, set()):
+            violations.append(f"{field} (insecure default / vault-pending)")
+            continue
+        if len(actual) < _MIN_SECRET_LENGTH:
+            violations.append(
+                f"{field} (too short — needs >= {_MIN_SECRET_LENGTH} chars, got {len(actual)})"
+            )
+    return violations
+
+
 def validate_settings(s: Settings) -> None:
     """Validate that no insecure defaults are active. Exits on violation.
 
-    Skipped when dev_mode is True.
+    Security-critical secrets (jwt_secret, plugin_api_key) are ALWAYS validated,
+    even when dev_mode is True. dev_mode only relaxes non-security conveniences
+    (e.g. gateway_token / db_password placeholders, extra CORS origins).
     """
+    # Hard gate: always-required secrets are checked unconditionally.
+    critical = _validate_always_required_secrets(s)
+    if critical:
+        logger.critical(
+            "FATAL: Security-critical secrets are invalid even for dev_mode: %s. "
+            "Set NOMOS_JWT_SECRET and NOMOS_PLUGIN_API_KEY to real values "
+            "(>= %d chars) via Vault or environment variables.",
+            ", ".join(critical),
+            _MIN_SECRET_LENGTH,
+        )
+        sys.exit(1)
+
     if s.dev_mode:
-        logger.warning("DEV_MODE active — skipping secret validation. NOT for production!")
+        logger.warning(
+            "DEV_MODE active — relaxing non-security secret validation "
+            "(gateway_token/db_password). jwt_secret/plugin_api_key still enforced. "
+            "NOT for production!"
+        )
         return
 
     violations: list[str] = []

@@ -1,6 +1,7 @@
 # NomOS v2 — Complete Docker Compose Stack
 # docker compose up -d → alles laeuft
-# Ports: Console 3040, API 8060, Gateway 3050, Postgres 5432, Valkey 6380
+# Host-exposed ports: Console 3040, API 8060, Gateway 3050, Caddy 80/443.
+# Internal-only (M4, no host mapping): vault 8200, valkey 6379, postgres 5432.
 
 services:
   # ─── OpenClaw Gateway (headless, NomOS Plugin) ─────────
@@ -40,8 +41,12 @@ services:
     image: hashicorp/vault:1.17
     cap_add:
       - IPC_LOCK
-    ports:
-      - "${VAULT_PORT:-8200}:8200"
+    # M4: NO host port mapping. Vault is reached only over the internal
+    # compose network (http://vault:8200) by nomos-api / nomos-worker /
+    # vault-init. Exposing 8200 to the host needlessly widened the attack
+    # surface for the most security-critical service.
+    expose:
+      - "8200"
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
       - 'VAULT_LOCAL_CONFIG={"storage":{"file":{"path":"/vault/file"}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}},"disable_mlock":true,"ui":true}'
@@ -193,8 +198,12 @@ services:
 
   valkey:
     image: valkey/valkey:8-alpine
-    ports:
-      - "${NOMOS_VALKEY_PORT:-6380}:6379"
+    # M4: NO host port mapping. Valkey is reached only over the internal
+    # compose network (valkey://valkey:6379) by nomos-api / nomos-worker.
+    # Local test runs use a SEPARATE test Valkey, so removing the compose
+    # host port does not affect the test workflow.
+    expose:
+      - "6379"
     volumes:
       - nomos-valkey:/data
     healthcheck:

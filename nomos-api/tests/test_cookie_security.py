@@ -85,10 +85,24 @@ class TestCookieSecure:
         })
         assert resp.status_code == 200
 
-        cookie_header = resp.headers.get("set-cookie", "")
         cookie_header = resp.headers.get("set-cookie", "").lower()
         assert "; secure" not in cookie_header
-        assert "samesite=lax" in cookie_header
+        # M1 (CSRF): SameSite must be strict even when cookie_secure is false.
+        assert "samesite=strict" in cookie_header
+        assert "samesite=lax" not in cookie_header
+
+    async def test_samesite_strict_regardless_of_cookie_secure(self, cookie_client, monkeypatch):
+        """M1 regression: the auth cookie is always SameSite=strict."""
+        client, settings = cookie_client
+        for secure in (True, False):
+            monkeypatch.setattr(settings, "cookie_secure", secure)
+            resp = await client.post("/api/auth/login", json={
+                "email": "cookie@nomos.local",
+                "password": "CookieP@ss12!",
+            })
+            assert resp.status_code == 200
+            header = resp.headers.get("set-cookie", "").lower()
+            assert "samesite=strict" in header, f"cookie_secure={secure}"
 
     async def test_logout_cookie_respects_settings(self, cookie_client, monkeypatch):
         client, settings = cookie_client

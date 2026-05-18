@@ -206,7 +206,7 @@ async def test_status_endpoint_is_public(db_engine, tmp_path, monkeypatch) -> No
 
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setattr(settings, "agents_dir", tmp_path / "agents")
-    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key")
+    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key-at-least-32-characters")
 
     transport = ASGITransport(app=app)
     # No auth headers, no cookies — should still work

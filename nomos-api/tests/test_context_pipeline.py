@@ -215,43 +215,27 @@ async def test_context_manager_integration():
 
 @pytest.mark.asyncio
 async def test_prune_old_context():
-    """Test pruning old context."""
+    """Test pruning old context delegates to memory.prune_messages."""
     db = MagicMock(spec=AsyncSession)
 
     import nomos_api.services.memory as memory_module
 
-    mock_list = AsyncMock()
-    memory_module.list_messages = mock_list
+    # prune_old_context now performs real deletion via memory.prune_messages;
+    # patch that to assert delegation + returned rowcount passthrough.
+    mock_prune = AsyncMock(return_value=40)
+    memory_module.prune_messages = mock_prune
 
     pipeline = ContextPipeline()
 
-    # Create many mock messages
-    mock_messages = []
-    for i in range(100):
-        role = "user" if i % 2 == 0 else "assistant"
-        content = f"Message {i}" if i < 90 else f"[SUMMARY]: Summary {i}"
-        importance = 2.0 if content.startswith("[SUMMARY]") else 1.0
-
-        mock_msg = AgentMemory(
-            id=i,
-            agent_id="test-agent",
-            session_id="test-session",
-            role=role,
-            content=content,
-            importance_score=importance,
-        )
-        mock_messages.append(mock_msg)
-
-    mock_list.return_value = mock_messages
-
-    # Prune (should keep summaries and recent 50 messages)
     pruned_count = await pipeline.prune_old_context(db, "test-agent", "test-session", keep_recent=50)
 
-    # Should prune old non-summary messages
-    assert pruned_count > 0
+    # Returned the deleted-row count and delegated with correct args.
+    assert pruned_count == 40
+    mock_prune.assert_awaited_once_with(db, "test-agent", "test-session", 50)
 
 
-def test_empty_context_handling():
+@pytest.mark.asyncio
+async def test_empty_context_handling():
     """Test handling of empty context scenarios."""
     db = MagicMock(spec=AsyncSession)
 
@@ -265,8 +249,8 @@ def test_empty_context_handling():
     # Empty messages
     mock_list.return_value = []
 
-    context = pipeline.get_managed_context(db, "test-agent", "test-session")
+    context = await pipeline.get_managed_context(db, "test-agent", "test-session")
     assert context == []
 
-    stats = pipeline.get_context_stats(db, "test-agent", "test-session")
+    stats = await pipeline.get_context_stats(db, "test-agent", "test-session")
     assert stats["total_messages"] == 0

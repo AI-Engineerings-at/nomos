@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -109,6 +110,7 @@ class AlertService:
                 if not existing_alert:
                     # Create new alert
                     alert = Alert(
+                        id=str(uuid.uuid4()),
                         rule_id=rule.id,
                         severity=rule.severity,
                         metric_name=rule.metric_name,

@@ -21,6 +21,8 @@ from nomos_api.config import settings
 from nomos_api.database import get_db
 from nomos_api.models import Agent, User
 from nomos_api.routers.auth import get_current_user
+from nomos_api.services import memory
+from nomos_api.services.context_pipeline import ContextPipeline
 from nomos_api.schemas import (
     ProxyChatRequest,
     ProxyChatResponse,
@@ -152,7 +154,12 @@ async def proxy_chat(
         if llm_provider:
             model = llm_provider
 
-    messages = [{"role": "user", "content": request.message}]
+    # Persist the user turn and build the managed context (summaries +
+    # recent history). get_managed_context already includes the just-stored
+    # user message — do NOT also append request.message (would double-store).
+    pipeline = ContextPipeline()
+    await pipeline.process_new_message(db, request.agent_id, session_id, "user", request.message)
+    messages = await pipeline.get_managed_context(db, request.agent_id, session_id)
 
     # Mode 1: Direct LLM (preferred for chat)
     if _has_direct_llm():
@@ -172,6 +179,10 @@ async def proxy_chat(
         response_text = ""
         if choices:
             response_text = choices[0].get("message", {}).get("content", "")
+
+        # Persist the assistant turn so the next request retains context.
+        # Only on success — never on the 502/503 error branches above.
+        await memory.store_message(db, request.agent_id, session_id, "assistant", response_text)
 
         return ProxyChatResponse(response=response_text, session_id=session_id)
 
@@ -201,5 +212,9 @@ async def proxy_chat(
     response_text = ""
     if choices:
         response_text = choices[0].get("message", {}).get("content", "")
+
+    # Persist the assistant turn so the next request retains context.
+    # Only on success — never on the 502/503 error branches above.
+    await memory.store_message(db, request.agent_id, session_id, "assistant", response_text)
 
     return ProxyChatResponse(response=response_text, session_id=session_id)

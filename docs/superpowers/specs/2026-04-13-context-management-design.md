@@ -1,8 +1,21 @@
 # Context Management Solution for Large Prompts — Design Spec
 
-> **Status:** Draft
+> **Status:** Superseded by Batch C (2026-05-19)
 > **Scope:** Comprehensive context management for handling large prompts (122k+ tokens) in NomOS system
 > **Trigger:** Context overflow issues exceeding 131k token limit
+
+---
+
+> **Reconciliation note (Batch C, 2026-05-19):** This spec describes APIs that
+> were never built (`MemoryManager.process_context`, `is_summary`/`token_count`
+> columns, plugin hooks). Batch C did NOT chase the spec. Instead it wired the
+> existing `ContextPipeline` (`process_new_message` / `get_managed_context`)
+> into `routers/proxy.py`, implemented real DB pruning via
+> `memory.prune_messages` (summaries always retained — DSGVO-safe), and used
+> the existing `[SUMMARY]:` text marker (no new columns, no migration, no
+> plugin hooks — YAGNI). Treat the sections below as historical design intent,
+> not as the implemented contract. The implemented behaviour is the source of
+> truth: `nomos_api/services/context_pipeline.py` + `services/memory.py`.
 
 ---
 

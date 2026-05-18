@@ -119,6 +119,11 @@ class VaultClient:
                 logger.debug("Vault read successful for %s", path)
                 return data
             except Exception as exc:
+                # Vault-typed errors (e.g. VaultSecretNotFoundError raised
+                # above) are real, classified failures — propagate them
+                # instead of swallowing into graceful-degradation/None.
+                if isinstance(exc, VaultError):
+                    raise
                 if "invalid path" in str(exc).lower():
                     raise VaultSecretNotFoundError(f"Invalid path {path}: {exc}") from exc
                 elif "permission denied" in str(exc).lower() or "forbidden" in str(exc).lower():

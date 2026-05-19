@@ -550,6 +550,8 @@ class AlertCreate(BaseModel):
 class AlertResponse(BaseModel):
     """Response for alert endpoints."""
 
+    model_config = {"from_attributes": True}
+
     id: str
     rule_id: int | None
     severity: str
@@ -588,6 +590,8 @@ class AlertRuleCreate(BaseModel):
 
 class AlertRuleResponse(BaseModel):
     """Response for alert rule endpoints."""
+
+    model_config = {"from_attributes": True}
 
     id: int
     metric_name: str

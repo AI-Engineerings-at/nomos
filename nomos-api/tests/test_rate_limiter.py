@@ -1,12 +1,14 @@
 import pytest
 from nomos_api.auth.rate_limiter import RateLimiter
 
+
 @pytest.fixture
 async def limiter():
     rl = RateLimiter(max_attempts=3, window_seconds=10, lockout_seconds=10, valkey_url="redis://localhost:6379")
     await rl.reset("test-key")
     yield rl
     await rl.reset("test-key")
+
 
 class TestRateLimiter:
     @pytest.mark.asyncio

@@ -73,12 +73,15 @@ async def test_unseal_key_returns_key(client: AsyncClient, tmp_path: Path) -> No
     key_file.write_text("s.ABCDEF1234567890")
     marker = tmp_path / "served-marker"
 
-    with patch(
-        "nomos_api.routers.system._get_unseal_key_paths",
-        return_value=[key_file],
-    ), patch(
-        "nomos_api.routers.system._get_served_marker_path",
-        return_value=marker,
+    with (
+        patch(
+            "nomos_api.routers.system._get_unseal_key_paths",
+            return_value=[key_file],
+        ),
+        patch(
+            "nomos_api.routers.system._get_served_marker_path",
+            return_value=marker,
+        ),
     ):
         resp = await client.get("/api/system/unseal-key")
 
@@ -95,12 +98,15 @@ async def test_unseal_key_returns_410_on_second_call(client: AsyncClient, tmp_pa
     key_file.write_text("s.ABCDEF1234567890")
     marker = tmp_path / "served-marker"
 
-    with patch(
-        "nomos_api.routers.system._get_unseal_key_paths",
-        return_value=[key_file],
-    ), patch(
-        "nomos_api.routers.system._get_served_marker_path",
-        return_value=marker,
+    with (
+        patch(
+            "nomos_api.routers.system._get_unseal_key_paths",
+            return_value=[key_file],
+        ),
+        patch(
+            "nomos_api.routers.system._get_served_marker_path",
+            return_value=marker,
+        ),
     ):
         # First call — succeeds
         resp1 = await client.get("/api/system/unseal-key")
@@ -116,12 +122,15 @@ async def test_unseal_key_returns_410_on_second_call(client: AsyncClient, tmp_pa
 async def test_unseal_key_returns_404_when_no_file(client: AsyncClient, tmp_path: Path) -> None:
     """When unseal key file does not exist, return 404."""
     marker = tmp_path / "served-marker"
-    with patch(
-        "nomos_api.routers.system._get_unseal_key_paths",
-        return_value=[tmp_path / "nonexistent-key"],
-    ), patch(
-        "nomos_api.routers.system._get_served_marker_path",
-        return_value=marker,
+    with (
+        patch(
+            "nomos_api.routers.system._get_unseal_key_paths",
+            return_value=[tmp_path / "nonexistent-key"],
+        ),
+        patch(
+            "nomos_api.routers.system._get_served_marker_path",
+            return_value=marker,
+        ),
     ):
         resp = await client.get("/api/system/unseal-key")
 
@@ -138,12 +147,15 @@ async def test_unseal_key_reads_from_init_output_json(client: AsyncClient, tmp_p
     init_output.write_text(json.dumps({"unseal_keys_b64": ["s.FROM-INIT-OUTPUT"], "root_token": "ignored"}))
     marker = tmp_path / "served-marker"
 
-    with patch(
-        "nomos_api.routers.system._get_unseal_key_paths",
-        return_value=[tmp_path / "nonexistent-key", init_output],
-    ), patch(
-        "nomos_api.routers.system._get_served_marker_path",
-        return_value=marker,
+    with (
+        patch(
+            "nomos_api.routers.system._get_unseal_key_paths",
+            return_value=[tmp_path / "nonexistent-key", init_output],
+        ),
+        patch(
+            "nomos_api.routers.system._get_served_marker_path",
+            return_value=marker,
+        ),
     ):
         resp = await client.get("/api/system/unseal-key")
 
@@ -152,9 +164,7 @@ async def test_unseal_key_reads_from_init_output_json(client: AsyncClient, tmp_p
 
 
 @pytest.mark.asyncio
-async def test_unseal_key_forbidden_once_admin_exists(
-    client: AsyncClient, db_engine, tmp_path: Path
-) -> None:
+async def test_unseal_key_forbidden_once_admin_exists(client: AsyncClient, db_engine, tmp_path: Path) -> None:
     """Security: once an admin exists (setup complete), unseal-key is 403 forever."""
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -176,12 +186,15 @@ async def test_unseal_key_forbidden_once_admin_exists(
     key_file.write_text("s.SHOULD-NEVER-BE-RETURNED")
     marker = tmp_path / "served-marker"
 
-    with patch(
-        "nomos_api.routers.system._get_unseal_key_paths",
-        return_value=[key_file],
-    ), patch(
-        "nomos_api.routers.system._get_served_marker_path",
-        return_value=marker,
+    with (
+        patch(
+            "nomos_api.routers.system._get_unseal_key_paths",
+            return_value=[key_file],
+        ),
+        patch(
+            "nomos_api.routers.system._get_served_marker_path",
+            return_value=marker,
+        ),
     ):
         resp = await client.get("/api/system/unseal-key")
 

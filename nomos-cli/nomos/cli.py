@@ -41,6 +41,7 @@ log = get_logger()
 # Helpers for v2 commands
 # ---------------------------------------------------------------------------
 
+
 def _print_result(result: dict[str, Any], *, json_flag: bool, success_msg: str) -> None:
     """Print the result of an API call — human-readable or JSON."""
     if json_flag:
@@ -362,7 +363,9 @@ def retire(agent_id: str, json_flag: bool) -> None:
     result = api.retire_agent(agent_id)
     if not json_flag and result["success"]:
         data = result["data"]
-        _print_result(result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) wurde in den Ruhestand versetzt.")
+        _print_result(
+            result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) wurde in den Ruhestand versetzt."
+        )
     else:
         _print_result(result, json_flag=json_flag, success_msg="")
 

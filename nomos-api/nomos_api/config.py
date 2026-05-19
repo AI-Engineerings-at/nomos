@@ -24,12 +24,10 @@ _INSECURE_DEFAULTS: dict[str, set[str]] = {
     "db_password": {"nomos", "vault-pending"},
 }
 
-# Clearly-invalid placeholder for database_url. Fails closed: it contains no
+# Clearly-invalid sentinel for database_url. Fails closed: it contains no
 # working credentials, so an unconfigured deployment cannot silently connect
 # with a known cleartext password.
-_DATABASE_URL_PLACEHOLDER = (
-    "postgresql+asyncpg://CONFIGURE_NOMOS_DATABASE_URL@invalid-host:5432/nomos"
-)
+_DATABASE_URL_PLACEHOLDER = "postgresql+asyncpg://CONFIGURE_NOMOS_DATABASE_URL@invalid-host:5432/nomos"
 
 # Security-critical secrets that MUST always be real and strong, even when
 # dev_mode is on. A short or sentinel value here is never acceptable because
@@ -117,9 +115,7 @@ def _validate_always_required_secrets(s: Settings) -> list[str]:
             violations.append(f"{field} (insecure default / vault-pending)")
             continue
         if len(actual) < _MIN_SECRET_LENGTH:
-            violations.append(
-                f"{field} (too short — needs >= {_MIN_SECRET_LENGTH} chars, got {len(actual)})"
-            )
+            violations.append(f"{field} (too short — needs >= {_MIN_SECRET_LENGTH} chars, got {len(actual)})")
     return violations
 
 
@@ -128,7 +124,7 @@ def validate_settings(s: Settings) -> None:
 
     Security-critical secrets (jwt_secret, plugin_api_key) are ALWAYS validated,
     even when dev_mode is True. dev_mode only relaxes non-security conveniences
-    (e.g. gateway_token / db_password placeholders, extra CORS origins).
+    (e.g. gateway_token / db_password sentinels, extra CORS origins).
     """
     # Hard gate: always-required secrets are checked unconditionally.
     critical = _validate_always_required_secrets(s)

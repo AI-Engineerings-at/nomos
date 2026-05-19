@@ -66,6 +66,7 @@ async def run_compliance_gate(
 
     # Generate compliance documents
     from nomos.core.gate import generate_compliance_docs
+
     generate_compliance_docs(manifest, agent_dir / "compliance")
 
     # Re-check compliance (should now pass)
@@ -73,7 +74,9 @@ async def run_compliance_gate(
 
     # Log compliance event to hash chain
     chain = HashChain(storage_dir=agent_dir / "audit")
-    event_type = EventType.COMPLIANCE_CHECK_PASSED if result.status.value == "passed" else EventType.COMPLIANCE_CHECK_FAILED
+    event_type = (
+        EventType.COMPLIANCE_CHECK_PASSED if result.status.value == "passed" else EventType.COMPLIANCE_CHECK_FAILED
+    )
     chain.append(
         event_type=event_type,
         agent_id=agent_id,
@@ -138,13 +141,15 @@ async def get_compliance_matrix(
                 except Exception as exc:
                     logger.warning("Compliance check failed for %s: %s", agent.id, exc)
 
-        matrix.append(ComplianceMatrixEntry(
-            agent_id=agent.id,
-            agent_name=agent.name,
-            status=agent.compliance_status,
-            missing_docs=missing_docs,
-            risk_class=agent.risk_class,
-        ))
+        matrix.append(
+            ComplianceMatrixEntry(
+                agent_id=agent.id,
+                agent_name=agent.name,
+                status=agent.compliance_status,
+                missing_docs=missing_docs,
+                risk_class=agent.risk_class,
+            )
+        )
 
     return ComplianceMatrixResponse(matrix=matrix, total=len(matrix))
 

@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestTaskDetail:
     async def test_get_task_detail(self, client) -> None:
-        create_resp = await client.post("/api/tasks", json={
-            "agent_id": "agent-1",
-            "description": "Write blog post",
-            "priority": "high",
-        })
+        create_resp = await client.post(
+            "/api/tasks",
+            json={
+                "agent_id": "agent-1",
+                "description": "Write blog post",
+                "priority": "high",
+            },
+        )
         assert create_resp.status_code == 201
         task_id = create_resp.json()["id"]
 

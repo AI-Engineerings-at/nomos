@@ -37,6 +37,7 @@ def _base_url() -> str:
 # Result helpers
 # ---------------------------------------------------------------------------
 
+
 def _ok(data: Any) -> dict[str, Any]:
     """Return a success result."""
     return {"success": True, "data": data}
@@ -65,6 +66,7 @@ def _human_error(response: httpx.Response) -> str:
 # ---------------------------------------------------------------------------
 # Core request function with retry
 # ---------------------------------------------------------------------------
+
 
 def _request(
     method: str,
@@ -101,14 +103,9 @@ def _request(
             last_error = _human_error(response)
 
         except httpx.ConnectError:
-            last_error = (
-                f"Verbindung zu {_base_url()} fehlgeschlagen. "
-                "Laeuft der NomOS Server?"
-            )
+            last_error = f"Verbindung zu {_base_url()} fehlgeschlagen. Laeuft der NomOS Server?"
         except httpx.TimeoutException:
-            last_error = (
-                f"Timeout nach {timeout}s — Server antwortet nicht."
-            )
+            last_error = f"Timeout nach {timeout}s — Server antwortet nicht."
         except httpx.HTTPError as exc:
             last_error = f"HTTP Fehler: {exc}"
 
@@ -121,6 +118,7 @@ def _request(
 # ---------------------------------------------------------------------------
 # Agent lifecycle
 # ---------------------------------------------------------------------------
+
 
 def pause_agent(agent_id: str) -> dict[str, Any]:
     """POST /api/agents/{agent_id}/pause"""
@@ -141,6 +139,7 @@ def retire_agent(agent_id: str) -> dict[str, Any]:
 # DSGVO
 # ---------------------------------------------------------------------------
 
+
 def forget_email(email: str) -> dict[str, Any]:
     """POST /api/dsgvo/forget — Art. 17 DSGVO right to be forgotten."""
     return _request("POST", "/api/dsgvo/forget", json={"email": email})
@@ -149,6 +148,7 @@ def forget_email(email: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
+
 
 def create_task(
     agent_id: str,
@@ -173,6 +173,7 @@ def create_task(
 # Costs
 # ---------------------------------------------------------------------------
 
+
 def get_costs() -> dict[str, Any]:
     """GET /api/costs — cost overview across all agents."""
     return _request("GET", "/api/costs")
@@ -187,6 +188,7 @@ def get_agent_costs(agent_id: str) -> dict[str, Any]:
 # Incidents
 # ---------------------------------------------------------------------------
 
+
 def get_incidents() -> dict[str, Any]:
     """GET /api/incidents — list all incidents."""
     return _request("GET", "/api/incidents")
@@ -195,6 +197,7 @@ def get_incidents() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Workspace
 # ---------------------------------------------------------------------------
+
 
 def mount_collection(agent_id: str, collection_name: str) -> dict[str, Any]:
     """POST /api/workspace/mount — mount a collection to an agent workspace."""

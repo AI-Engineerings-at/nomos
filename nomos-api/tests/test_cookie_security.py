@@ -47,6 +47,7 @@ async def cookie_client(cookie_engine, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setattr(settings, "jwt_secret", "test-secret-key-for-cookies-32ch")
     from unittest.mock import AsyncMock
+
     mock_limiter = AsyncMock()
     mock_limiter.is_allowed = AsyncMock(return_value=True)
     mock_limiter.record_attempt = AsyncMock()
@@ -65,10 +66,13 @@ class TestCookieSecure:
         client, settings = cookie_client
         monkeypatch.setattr(settings, "cookie_secure", True)
 
-        resp = await client.post("/api/auth/login", json={
-            "email": "cookie@nomos.local",
-            "password": "CookieP@ss12!",
-        })
+        resp = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "cookie@nomos.local",
+                "password": "CookieP@ss12!",
+            },
+        )
         assert resp.status_code == 200
 
         cookie_header = resp.headers.get("set-cookie", "").lower()
@@ -79,10 +83,13 @@ class TestCookieSecure:
         client, settings = cookie_client
         monkeypatch.setattr(settings, "cookie_secure", False)
 
-        resp = await client.post("/api/auth/login", json={
-            "email": "cookie@nomos.local",
-            "password": "CookieP@ss12!",
-        })
+        resp = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "cookie@nomos.local",
+                "password": "CookieP@ss12!",
+            },
+        )
         assert resp.status_code == 200
 
         cookie_header = resp.headers.get("set-cookie", "").lower()
@@ -96,10 +103,13 @@ class TestCookieSecure:
         client, settings = cookie_client
         for secure in (True, False):
             monkeypatch.setattr(settings, "cookie_secure", secure)
-            resp = await client.post("/api/auth/login", json={
-                "email": "cookie@nomos.local",
-                "password": "CookieP@ss12!",
-            })
+            resp = await client.post(
+                "/api/auth/login",
+                json={
+                    "email": "cookie@nomos.local",
+                    "password": "CookieP@ss12!",
+                },
+            )
             assert resp.status_code == 200
             header = resp.headers.get("set-cookie", "").lower()
             assert "samesite=strict" in header, f"cookie_secure={secure}"
@@ -109,10 +119,13 @@ class TestCookieSecure:
         monkeypatch.setattr(settings, "cookie_secure", True)
 
         # Login first
-        login_resp = await client.post("/api/auth/login", json={
-            "email": "cookie@nomos.local",
-            "password": "CookieP@ss12!",
-        })
+        login_resp = await client.post(
+            "/api/auth/login",
+            json={
+                "email": "cookie@nomos.local",
+                "password": "CookieP@ss12!",
+            },
+        )
         cookies = dict(login_resp.cookies)
 
         # Logout

@@ -110,7 +110,7 @@ async def list_alerts(
     result = await db.execute(query.order_by(Alert.triggered_at.desc()))
     alerts = result.scalars().all()
 
-    return [AlertResponse.from_orm(alert) for alert in alerts]
+    return [AlertResponse.model_validate(alert) for alert in alerts]
 
 
 @router.post("/alerts", response_model=AlertResponse, status_code=201)
@@ -135,7 +135,7 @@ async def create_alert(
     await db.commit()
     await db.refresh(alert)
 
-    return AlertResponse.from_orm(alert)
+    return AlertResponse.model_validate(alert)
 
 
 @router.patch("/alerts/{alert_id}", response_model=AlertResponse)
@@ -163,7 +163,7 @@ async def update_alert(
     await db.commit()
     await db.refresh(alert)
 
-    return AlertResponse.from_orm(alert)
+    return AlertResponse.model_validate(alert)
 
 
 @router.get("/alert-rules", response_model=list[AlertRuleResponse])
@@ -175,7 +175,7 @@ async def list_alert_rules(
     result = await db.execute(select(AlertRule).where(AlertRule.is_active.is_(True)))
     rules = result.scalars().all()
 
-    return [AlertRuleResponse.from_orm(rule) for rule in rules]
+    return [AlertRuleResponse.model_validate(rule) for rule in rules]
 
 
 @router.post("/alert-rules", response_model=AlertRuleResponse, status_code=201)
@@ -200,7 +200,7 @@ async def create_alert_rule(
     await db.commit()
     await db.refresh(rule)
 
-    return AlertRuleResponse.from_orm(rule)
+    return AlertRuleResponse.model_validate(rule)
 
 
 @router.delete("/alert-rules/{rule_id}")

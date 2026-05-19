@@ -84,9 +84,7 @@ class TestMigrationHistory:
 
         all_migrations = "\n".join(f.read_text() for f in migration_files)
         for table_name in model_tables:
-            assert table_name in all_migrations, (
-                f"Table '{table_name}' from models.py not found in any migration"
-            )
+            assert table_name in all_migrations, f"Table '{table_name}' from models.py not found in any migration"
 
 
 class TestMainNoCreateAll:

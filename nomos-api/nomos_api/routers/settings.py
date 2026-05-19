@@ -1,4 +1,5 @@
 """System settings — read config from Vault, write via PATCH (admin-only)."""
+
 from __future__ import annotations
 
 import logging
@@ -112,18 +113,9 @@ def _vault_get_str(vault, path: str, key: str) -> str | None:
 def _read_current_settings(vault) -> SystemSettingsResponse:
     """Build SystemSettingsResponse from Vault (with app_settings fallback)."""
     return SystemSettingsResponse(
-        gateway_url=(
-            _vault_get_str(vault, "config/settings", "gateway_url")
-            or app_settings.gateway_url
-        ),
-        retention_days=int(
-            _vault_get_str(vault, "config/settings", "retention_days")
-            or app_settings.retention_days
-        ),
-        pii_filter_mode=(
-            _vault_get_str(vault, "config/settings", "pii_filter_mode")
-            or app_settings.pii_filter_mode
-        ),
+        gateway_url=(_vault_get_str(vault, "config/settings", "gateway_url") or app_settings.gateway_url),
+        retention_days=int(_vault_get_str(vault, "config/settings", "retention_days") or app_settings.retention_days),
+        pii_filter_mode=(_vault_get_str(vault, "config/settings", "pii_filter_mode") or app_settings.pii_filter_mode),
         openai_api_key_set=_vault_get_str(vault, "secrets/llm_keys", "openai_api_key") is not None,
         anthropic_api_key_set=_vault_get_str(vault, "secrets/llm_keys", "anthropic_api_key") is not None,
         nvidia_api_key_set=_vault_get_str(vault, "secrets/llm_keys", "nvidia_api_key") is not None,
@@ -139,7 +131,7 @@ async def get_settings(
     Requires authentication (H4). Secrets are exposed only as booleans. The
     SSRF-relevant cleartext ``gateway_url`` is admin-only; non-admin users
     (who need the provider-configured banner on the chat page) receive a
-    redacted placeholder instead of the real internal URL.
+    a redacted value instead of the real internal URL.
     """
     vault = _get_vault_client()
     resp = _read_current_settings(vault)

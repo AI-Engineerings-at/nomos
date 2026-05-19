@@ -44,33 +44,45 @@ class TestProxyStatus:
 class TestProxyChat:
     async def test_proxy_chat_returns_error_when_gateway_offline(self, authed_client) -> None:
         agent_id = await _create_owned_agent(authed_client)
-        resp = await authed_client.post("/api/proxy/chat", json={
-            "agent_id": agent_id,
-            "message": "Hello",
-        })
+        resp = await authed_client.post(
+            "/api/proxy/chat",
+            json={
+                "agent_id": agent_id,
+                "message": "Hello",
+            },
+        )
         assert resp.status_code == 502
         data = resp.json()
         assert "detail" in data
 
     async def test_proxy_chat_with_session_id(self, authed_client) -> None:
         agent_id = await _create_owned_agent(authed_client, "Proxy Session Agent")
-        resp = await authed_client.post("/api/proxy/chat", json={
-            "agent_id": agent_id,
-            "message": "Hello",
-            "session_id": "sess-123",
-        })
+        resp = await authed_client.post(
+            "/api/proxy/chat",
+            json={
+                "agent_id": agent_id,
+                "message": "Hello",
+                "session_id": "sess-123",
+            },
+        )
         assert resp.status_code == 502
 
     async def test_proxy_chat_missing_agent_id(self, authed_client) -> None:
-        resp = await authed_client.post("/api/proxy/chat", json={
-            "message": "Hello",
-        })
+        resp = await authed_client.post(
+            "/api/proxy/chat",
+            json={
+                "message": "Hello",
+            },
+        )
         assert resp.status_code == 422
 
     async def test_proxy_chat_missing_message(self, authed_client) -> None:
-        resp = await authed_client.post("/api/proxy/chat", json={
-            "agent_id": "test-agent",
-        })
+        resp = await authed_client.post(
+            "/api/proxy/chat",
+            json={
+                "agent_id": "test-agent",
+            },
+        )
         assert resp.status_code == 422
 
 
@@ -79,37 +91,48 @@ class TestProxyChatAuthZ:
 
     async def test_unauthenticated_plugin_only_is_rejected(self, client) -> None:
         # `client` fixture has the plugin API key but NO user cookie.
-        resp = await client.post("/api/proxy/chat", json={
-            "agent_id": "whatever",
-            "message": "Hello",
-        })
+        resp = await client.post(
+            "/api/proxy/chat",
+            json={
+                "agent_id": "whatever",
+                "message": "Hello",
+            },
+        )
         assert resp.status_code == 401
 
     async def test_chat_unknown_agent_is_404_not_silent(self, authed_client) -> None:
-        resp = await authed_client.post("/api/proxy/chat", json={
-            "agent_id": "does-not-exist",
-            "message": "Hello",
-        })
+        resp = await authed_client.post(
+            "/api/proxy/chat",
+            json={
+                "agent_id": "does-not-exist",
+                "message": "Hello",
+            },
+        )
         assert resp.status_code == 404
 
     async def test_cannot_chat_as_other_users_agent(self, authed_client, db_session) -> None:
         # Seed an agent owned by a DIFFERENT user (not test@test.com).
         other_id = f"other-{uuid.uuid4().hex[:8]}"
-        db_session.add(Agent(
-            id=other_id,
-            name="Foreign Agent",
-            role="r",
-            company="C",
-            email="someone-else@evil.test",
-            manifest_hash="0" * 64,
-            manifest_data={},
-            agents_dir="/tmp/x",
-        ))
+        db_session.add(
+            Agent(
+                id=other_id,
+                name="Foreign Agent",
+                role="r",
+                company="C",
+                email="someone-else@evil.test",
+                manifest_hash="0" * 64,
+                manifest_data={},
+                agents_dir="/tmp/x",
+            )
+        )
         await db_session.commit()
-        resp = await authed_client.post("/api/proxy/chat", json={
-            "agent_id": other_id,
-            "message": "Hello",
-        })
+        resp = await authed_client.post(
+            "/api/proxy/chat",
+            json={
+                "agent_id": other_id,
+                "message": "Hello",
+            },
+        )
         assert resp.status_code == 403
         assert "Not authorized" in resp.json()["detail"]
 

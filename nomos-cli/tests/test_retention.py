@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
 
-from nomos.core.retention import RetentionEngine, RetentionResult
+from nomos.core.retention import RetentionEngine
 
 
 def test_nothing_to_delete_when_fresh():

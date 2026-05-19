@@ -24,7 +24,8 @@ async def users_client(users_engine, tmp_path, monkeypatch):
     from nomos_api.config import settings
     from nomos_api.database import get_db
     from nomos_api.main import app
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import AsyncMock
+
     # Rate limiter is Valkey-backed since v2026.3.27 — mock it for unit tests
     mock_limiter = AsyncMock()
     mock_limiter.is_allowed = AsyncMock(return_value=True)
@@ -69,10 +70,13 @@ async def admin_user(users_engine):
 
 async def _login_as_admin(client):
     """Helper: login as admin and return cookies."""
-    resp = await client.post("/api/auth/login", json={
-        "email": "admin@nomos.local",
-        "password": "AdminP@ssword1!",
-    })
+    resp = await client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@nomos.local",
+            "password": "AdminP@ssword1!",
+        },
+    )
     assert resp.status_code == 200
     return dict(resp.cookies)
 
@@ -93,11 +97,15 @@ async def test_list_users_as_admin(users_client, admin_user):
 
 async def test_create_user_returns_recovery_key(users_client, admin_user):
     cookies = await _login_as_admin(users_client)
-    resp = await users_client.post("/api/users", json={
-        "email": "newuser@nomos.local",
-        "password": "NewUserP@ss12!",
-        "role": "user",
-    }, cookies=cookies)
+    resp = await users_client.post(
+        "/api/users",
+        json={
+            "email": "newuser@nomos.local",
+            "password": "NewUserP@ss12!",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["email"] == "newuser@nomos.local"
@@ -111,34 +119,50 @@ async def test_create_user_returns_recovery_key(users_client, admin_user):
 async def test_create_user_duplicate_email(users_client, admin_user):
     cookies = await _login_as_admin(users_client)
     # Create first user
-    await users_client.post("/api/users", json={
-        "email": "dup@nomos.local",
-        "password": "DupUserP@ss12!!",
-        "role": "user",
-    }, cookies=cookies)
+    await users_client.post(
+        "/api/users",
+        json={
+            "email": "dup@nomos.local",
+            "password": "DupUserP@ss12!!",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
     # Try duplicate
-    resp = await users_client.post("/api/users", json={
-        "email": "dup@nomos.local",
-        "password": "DupUserP@ss12!!",
-        "role": "user",
-    }, cookies=cookies)
+    resp = await users_client.post(
+        "/api/users",
+        json={
+            "email": "dup@nomos.local",
+            "password": "DupUserP@ss12!!",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
     assert resp.status_code == 409
 
 
 async def test_update_user(users_client, admin_user):
     cookies = await _login_as_admin(users_client)
     # Create a user first
-    create_resp = await users_client.post("/api/users", json={
-        "email": "patchme@nomos.local",
-        "password": "PatchMeP@ss12!",
-        "role": "user",
-    }, cookies=cookies)
+    create_resp = await users_client.post(
+        "/api/users",
+        json={
+            "email": "patchme@nomos.local",
+            "password": "PatchMeP@ss12!",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
     user_id = create_resp.json()["id"]
 
     # Update role to officer
-    resp = await users_client.patch(f"/api/users/{user_id}", json={
-        "role": "officer",
-    }, cookies=cookies)
+    resp = await users_client.patch(
+        f"/api/users/{user_id}",
+        json={
+            "role": "officer",
+        },
+        cookies=cookies,
+    )
     assert resp.status_code == 200
     assert resp.json()["role"] == "officer"
 
@@ -146,11 +170,15 @@ async def test_update_user(users_client, admin_user):
 async def test_deactivate_user(users_client, admin_user):
     cookies = await _login_as_admin(users_client)
     # Create a user
-    create_resp = await users_client.post("/api/users", json={
-        "email": "delete-me@nomos.local",
-        "password": "DeleteMeP@ss1!",
-        "role": "user",
-    }, cookies=cookies)
+    create_resp = await users_client.post(
+        "/api/users",
+        json={
+            "email": "delete-me@nomos.local",
+            "password": "DeleteMeP@ss1!",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
     user_id = create_resp.json()["id"]
 
     # Deactivate
@@ -162,18 +190,25 @@ async def test_deactivate_user(users_client, admin_user):
 async def test_non_admin_cannot_list_users(users_client, users_engine, admin_user):
     # Create a regular user
     cookies = await _login_as_admin(users_client)
-    await users_client.post("/api/users", json={
-        "email": "regular@nomos.local",
-        "password": "RegularP@ss12!",
-        "role": "user",
-    }, cookies=cookies)
+    await users_client.post(
+        "/api/users",
+        json={
+            "email": "regular@nomos.local",
+            "password": "RegularP@ss12!",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
 
     # Login as regular user (rate limiter is mocked via fixture)
 
-    login_resp = await users_client.post("/api/auth/login", json={
-        "email": "regular@nomos.local",
-        "password": "RegularP@ss12!",
-    })
+    login_resp = await users_client.post(
+        "/api/auth/login",
+        json={
+            "email": "regular@nomos.local",
+            "password": "RegularP@ss12!",
+        },
+    )
     assert login_resp.status_code == 200
     user_cookies = dict(login_resp.cookies)
 
@@ -184,11 +219,15 @@ async def test_non_admin_cannot_list_users(users_client, users_engine, admin_use
 
 async def test_create_user_weak_password(users_client, admin_user):
     cookies = await _login_as_admin(users_client)
-    resp = await users_client.post("/api/users", json={
-        "email": "weak@nomos.local",
-        "password": "short",
-        "role": "user",
-    }, cookies=cookies)
+    resp = await users_client.post(
+        "/api/users",
+        json={
+            "email": "weak@nomos.local",
+            "password": "short",
+            "role": "user",
+        },
+        cookies=cookies,
+    )
     assert resp.status_code == 422
 
 

@@ -29,9 +29,7 @@ async def save_revision(
     under concurrent requests.
     """
     for _attempt in range(3):
-        result = await db.execute(
-            select(func.max(ConfigRevision.version)).where(ConfigRevision.agent_id == agent_id)
-        )
+        result = await db.execute(select(func.max(ConfigRevision.version)).where(ConfigRevision.agent_id == agent_id))
         max_version = result.scalar() or 0
 
         revision = ConfigRevision(

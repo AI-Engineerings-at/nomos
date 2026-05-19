@@ -212,8 +212,7 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
             expected_hmac = _compute_hmac(stored_hash)
             if not hmac.compare_digest(expected_hmac, str(stored_hmac)):
                 errors.append(
-                    f"Entry {i}: HMAC mismatch — entry tampered or wrong key "
-                    f"(stored={str(stored_hmac)[:16]}...)"
+                    f"Entry {i}: HMAC mismatch — entry tampered or wrong key (stored={str(stored_hmac)[:16]}...)"
                 )
 
         if raw["previous_hash"] != previous_hash:

@@ -51,9 +51,7 @@ async def resolve_approval(
     Raises ValueError if resolution is not 'approved' or 'denied'.
     """
     if resolution not in _VALID_RESOLUTIONS:
-        raise ValueError(
-            f"Invalid resolution: {resolution!r}. Must be one of {sorted(_VALID_RESOLUTIONS)}"
-        )
+        raise ValueError(f"Invalid resolution: {resolution!r}. Must be one of {sorted(_VALID_RESOLUTIONS)}")
 
     result = await db.execute(select(Approval).where(Approval.id == approval_id))
     approval = result.scalar_one_or_none()

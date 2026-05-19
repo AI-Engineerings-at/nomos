@@ -206,7 +206,5 @@ class TestHmacAnchoring:
         monkeypatch.setenv(_HMAC_ENV_VAR, "a-different-production-key-value-1234")
         chain = HashChain(storage_dir=tmp_path)
         entry = chain.append(event_type="agent.created", agent_id="test", data={})
-        expected = _hmac.new(
-            b"a-different-production-key-value-1234", entry.hash.encode(), hashlib.sha256
-        ).hexdigest()
+        expected = _hmac.new(b"a-different-production-key-value-1234", entry.hash.encode(), hashlib.sha256).hexdigest()
         assert entry.hmac == expected

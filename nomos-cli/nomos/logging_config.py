@@ -102,9 +102,7 @@ def configure_logging(level_env: str | None = None) -> logging.Logger:
     logger.addHandler(handler)
 
     if invalid:
-        logger.warning(
-            "Invalid NOMOS_LOG_LEVEL=%r — falling back to %s", raw, _DEFAULT_LEVEL
-        )
+        logger.warning("Invalid NOMOS_LOG_LEVEL=%r — falling back to %s", raw, _DEFAULT_LEVEL)
     return logger
 
 

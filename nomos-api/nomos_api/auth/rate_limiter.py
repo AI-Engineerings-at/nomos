@@ -3,14 +3,22 @@
 Uses sorted sets for sliding window rate limiting.
 State persists across restarts and is shared across API instances.
 """
+
 from __future__ import annotations
 import time
+import uuid
 import valkey.asyncio as valkey
 
 
 class RateLimiter:
-    def __init__(self, max_attempts: int = 5, window_seconds: int = 900, lockout_seconds: int = 900,
-                 valkey_url: str = "redis://valkey:6379", key_prefix: str = "nomos:ratelimit:") -> None:
+    def __init__(
+        self,
+        max_attempts: int = 5,
+        window_seconds: int = 900,
+        lockout_seconds: int = 900,
+        valkey_url: str = "redis://valkey:6379",
+        key_prefix: str = "nomos:ratelimit:",
+    ) -> None:
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
         self.lockout_seconds = lockout_seconds
@@ -36,7 +44,13 @@ class RateLimiter:
     async def record_attempt(self, key: str) -> None:
         now = time.time()
         attempts_key = self._attempts_key(key)
-        await self._client.zadd(attempts_key, {str(now): now})
+        # Member must be UNIQUE per attempt. Using str(now) as the member
+        # caused same-tick attempts to collide (Valkey ZADD updates the
+        # score instead of adding a row), so zcard undercounted and a fast
+        # burst could bypass the limit. Score stays `now` for the
+        # sliding-window zremrangebyscore prune.
+        member = f"{now}:{uuid.uuid4().hex}"
+        await self._client.zadd(attempts_key, {member: now})
         await self._client.expire(attempts_key, self.window_seconds + self.lockout_seconds)
         window_start = now - self.window_seconds
         await self._client.zremrangebyscore(attempts_key, "-inf", window_start)

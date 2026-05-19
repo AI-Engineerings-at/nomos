@@ -14,15 +14,20 @@ _FAKE_KEY = "sk-proj-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdef"
 
 def _fmt(msg: str, *, exc_info=None) -> dict:
     rec = logging.LogRecord(
-        name="t", level=logging.WARNING, pathname="", lineno=0,
-        msg=msg, args=(), exc_info=exc_info,
+        name="t",
+        level=logging.WARNING,
+        pathname="",
+        lineno=0,
+        msg=msg,
+        args=(),
+        exc_info=exc_info,
     )
     return json.loads(JSONFormatter().format(rec))
 
 
 class TestRedactHelper:
     def test_kv_secret_is_redacted(self):
-        out = redact('jwt_secret=supersecretvalue123')
+        out = redact("jwt_secret=supersecretvalue123")
         assert "supersecretvalue123" not in out
         assert "REDACTED" in out
 

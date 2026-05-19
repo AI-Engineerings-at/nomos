@@ -93,9 +93,13 @@ async def bootstrap_admin(
     logger.info("Bootstrap admin created: %s", body.email)
 
     return UserCreateResponse(
-        id=user.id, email=user.email, role="admin",
+        id=user.id,
+        email=user.email,
+        role="admin",
         recovery_key=" ".join(recovery_words),
-        totp_enabled=False, session_timeout_hours=8, is_active=True,
+        totp_enabled=False,
+        session_timeout_hours=8,
+        is_active=True,
     )
 
 

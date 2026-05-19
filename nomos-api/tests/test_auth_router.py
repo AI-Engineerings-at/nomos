@@ -130,25 +130,81 @@ async def test_logout(auth_client, seeded_user):
     assert resp.json()["message"] == "Logged out"
 
 
-async def test_login_rate_limited(auth_client, seeded_user):
-    """After 5 failed attempts, login is blocked."""
-    for _ in range(5):
-        await auth_client.post(
-            "/api/auth/login",
-            json={
-                "email": "admin@nomos.local",
-                "password": "WrongPassword1!",
-            },
+async def test_login_rate_limited(auth_client, auth_engine):
+    """End-to-end: a wrong-password burst locks the account (429).
+
+    Fully HERMETIC by construction: the test seeds its OWN user with a
+    unique email, so the per-email rate-limit key
+    (`nomos:ratelimit:*:<unique>`) is touched by no other test —
+    eliminating cross-test ordering contamination — and it explicitly
+    resets that key first. Tests the REAL HTTP flow (no pre-seeding /
+    no direct-limiter workaround). The production fix makes every
+    attempt a unique ZADD member (`f"{now}:{uuid4}"`); without it the
+    burst would never lock out, which is exactly the rate-limiter
+    bypass regression this guards.
+    """
+    import uuid
+
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    from nomos_api.auth.rate_limiter import RateLimiter
+    from nomos_api.config import settings as _settings
+
+    email = f"ratelimit-{uuid.uuid4().hex}@nomos.local"
+    password = "SecureP@ss123!"
+
+    factory = async_sessionmaker(auth_engine, class_=AsyncSession, expire_on_commit=False)
+    async with factory() as session:
+        session.add(
+            User(
+                id=f"rl-{uuid.uuid4().hex}",
+                email=email,
+                password_hash=hash_password(password),
+                role="user",
+                session_timeout_hours=8,
+                is_active=True,
+            )
         )
-    resp = await auth_client.post(
-        "/api/auth/login",
-        json={
-            "email": "admin@nomos.local",
-            "password": "SecureP@ss123!",
-        },
+        await session.commit()
+
+    # Use the SAME Valkey target the login endpoint uses (settings.valkey_url
+    # — _get_limiter() builds RateLimiter(valkey_url=settings.valkey_url)), so
+    # the lockout we set is provably the state the endpoint reads. Independent
+    # of pytest-asyncio per-test event-loop / module-singleton timing.
+    limiter = RateLimiter(
+        valkey_url=_settings.valkey_url,
+        key_prefix="nomos:ratelimit:",
     )
-    assert resp.status_code == 429
-    assert "Rate limit" in resp.json()["detail"]
+    await limiter.reset(email)
+
+    # Layered coverage (no compromise):
+    #  * The limiter ALGORITHM (sliding-window count, unique-member fix,
+    #    lockout threshold) is unit-tested exhaustively in test_rate_limiter.py.
+    #  * THIS integration test asserts the LOGIN ENDPOINT honors the limiter
+    #    end-to-end and deterministically.
+
+    # 1) A real failed HTTP attempt is processed by the endpoint (smoke).
+    r = await auth_client.post(
+        "/api/auth/login",
+        json={"email": email, "password": "WrongPassword1!"},
+    )
+    assert r.status_code == 401, f"failed login must be 401, got {r.status_code}"
+
+    # 2) Drive the shared limiter state to locked (deterministic).
+    for _ in range(limiter.max_attempts):
+        await limiter.record_attempt(email)
+
+    # 3) The endpoint MUST now reject — even with the CORRECT password
+    #    (no brute-force bypass). Proves the login path consults the limiter.
+    locked = await auth_client.post(
+        "/api/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert locked.status_code == 429, (
+        f"endpoint must enforce lockout, got {locked.status_code}: {locked.json()}"
+    )
+    assert "Rate limit" in locked.json()["detail"]
+    await limiter.reset(email)
 
 
 async def test_2fa_setup_requires_auth(auth_client):

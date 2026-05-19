@@ -31,17 +31,23 @@ async def admin_client(db_engine, monkeypatch):
 
     uid = str(uuid.uuid4())
     async with factory() as s:
-        s.add(User(
-            id=uid, email="admin@nomos.local",
-            password_hash=hash_password("Str0ngP@ss!1"),
-            role="admin", is_active=True, session_timeout_hours=8,
-        ))
+        s.add(
+            User(
+                id=uid,
+                email="admin@nomos.local",
+                password_hash=hash_password("Str0ngP@ss!1"),
+                role="admin",
+                is_active=True,
+                session_timeout_hours=8,
+            )
+        )
         await s.commit()
     token = create_token(TokenPayload(user_id=uid, email="admin@nomos.local", role="admin"), _JWT)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(
-        transport=transport, base_url="http://test",
+        transport=transport,
+        base_url="http://test",
         headers={"X-NomOS-API-Key": _PLUGIN},
         cookies={"nomos_token": token},
     ) as ac:
@@ -57,7 +63,8 @@ async def test_settings_patch_requires_admin(client: AsyncClient):
     response = await client.patch("/api/settings", json={"retention_days": 30})
     # Since the client uses X-NomOS-API-Key which maps to role=service
     # And settings router uses _require_admin which checks nomos_token cookie
-    assert response.status_code == 401 # No cookie
+    assert response.status_code == 401  # No cookie
+
 
 @pytest.mark.asyncio
 async def test_get_settings_requires_auth(client: AsyncClient):
@@ -111,8 +118,6 @@ async def test_patch_gateway_url_rejects_unsafe_scheme(admin_client: AsyncClient
 @pytest.mark.asyncio
 async def test_patch_gateway_url_accepts_https(admin_client: AsyncClient):
     """A valid https URL passes validation (then fails on Vault unavailable)."""
-    resp = await admin_client.patch(
-        "/api/settings", json={"gateway_url": "https://gateway.example.com:18789"}
-    )
+    resp = await admin_client.patch("/api/settings", json={"gateway_url": "https://gateway.example.com:18789"})
     # Validation passed; without Vault the handler returns 503 (not 422).
     assert resp.status_code != 422

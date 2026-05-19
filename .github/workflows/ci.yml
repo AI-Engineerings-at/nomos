@@ -110,12 +110,28 @@ jobs:
     env:
       NOMOS_VALKEY_URL: valkey://localhost:6379
       NOMOS_DATABASE_URL: postgresql+asyncpg://nomos:nomos@localhost:5432/nomos
+      # Hash chain HMAC anchoring fails closed without a key (>=32 bytes).
+      # CI must inject a clearly-non-production key so any code path that
+      # touches hash_chain can run; production injects via Vault.
+      NOMOS_HASHCHAIN_HMAC_KEY: ci-only-hmac-test-key-not-for-production-32+
+      # Both auth secrets are hard-gated by K3 (>=32 chars, not a sentinel).
+      NOMOS_JWT_SECRET: ci-only-jwt-test-secret-not-for-prod-32+chars
+      NOMOS_PLUGIN_API_KEY: ci-only-plugin-test-api-key-not-for-prod-32+
+      NOMOS_DB_PASSWORD: nomos
+      NOMOS_DEV_MODE: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
+      # Apply Alembic migrations against the postgres service container BEFORE
+      # pytest. Tests build via Base.metadata.create_all (SQLite in-memory),
+      # which cannot catch model<->migration drift (the agent_memory
+      # importance_score drift class). Running migrations on real Postgres in
+      # CI fails-fast on any future drift before any test runs.
+      - name: Apply Alembic migrations on real Postgres
+        run: uv run alembic upgrade head
       - run: PYTHONPATH="../nomos-cli" uv run pytest -v --tb=short --junitxml=../test-results/api.xml
       - name: Upload test results
         uses: actions/upload-artifact@v4

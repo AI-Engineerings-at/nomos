@@ -9,7 +9,7 @@ from nomos_api.models import AgentMemory
 
 
 @pytest.mark.asyncio
-async def test_process_new_message():
+async def test_process_new_message(monkeypatch):
     """Test processing a new message through the pipeline."""
     # Create mock database session
     db = MagicMock(spec=AsyncSession)
@@ -21,8 +21,8 @@ async def test_process_new_message():
     # Import and patch the functions
     import nomos_api.services.memory as memory_module
 
-    memory_module.store_message = mock_store
-    memory_module.list_messages = mock_list
+    monkeypatch.setattr(memory_module, "store_message", mock_store)
+    monkeypatch.setattr(memory_module, "list_messages", mock_list)
 
     # Create pipeline
     pipeline = ContextPipeline()
@@ -46,7 +46,7 @@ async def test_process_new_message():
 
 
 @pytest.mark.asyncio
-async def test_context_management_trigger():
+async def test_context_management_trigger(monkeypatch):
     """Test that context management is triggered after threshold."""
     db = MagicMock(spec=AsyncSession)
 
@@ -55,8 +55,14 @@ async def test_context_management_trigger():
 
     mock_store = AsyncMock()
     mock_list = AsyncMock()
-    memory_module.store_message = mock_store
-    memory_module.list_messages = mock_list
+    # H1 post-judgment-day: _manage_context now calls memory.prune_messages
+    # after summarizing to prevent exponential summary growth. The test uses
+    # a MagicMock db, so prune_messages would crash on db.execute(...).all();
+    # mock it to a no-op that records it was called.
+    mock_prune = AsyncMock(return_value=0)
+    monkeypatch.setattr(memory_module, "store_message", mock_store)
+    monkeypatch.setattr(memory_module, "list_messages", mock_list)
+    monkeypatch.setattr(memory_module, "prune_messages", mock_prune)
 
     pipeline = ContextPipeline()
     pipeline.summary_threshold = 5  # Lower threshold for testing
@@ -92,14 +98,14 @@ async def test_context_management_trigger():
 
 
 @pytest.mark.asyncio
-async def test_get_managed_context():
+async def test_get_managed_context(monkeypatch):
     """Test getting managed context with summaries and recent messages."""
     db = MagicMock(spec=AsyncSession)
 
     import nomos_api.services.memory as memory_module
 
     mock_list = AsyncMock()
-    memory_module.list_messages = mock_list
+    monkeypatch.setattr(memory_module, "list_messages", mock_list)
 
     pipeline = ContextPipeline()
 
@@ -144,14 +150,14 @@ async def test_get_managed_context():
 
 
 @pytest.mark.asyncio
-async def test_context_stats():
+async def test_context_stats(monkeypatch):
     """Test context statistics calculation."""
     db = MagicMock(spec=AsyncSession)
 
     import nomos_api.services.memory as memory_module
 
     mock_list = AsyncMock()
-    memory_module.list_messages = mock_list
+    monkeypatch.setattr(memory_module, "list_messages", mock_list)
 
     pipeline = ContextPipeline()
 
@@ -183,7 +189,7 @@ async def test_context_stats():
 
 
 @pytest.mark.asyncio
-async def test_context_manager_integration():
+async def test_context_manager_integration(monkeypatch):
     """Test full context manager integration."""
     db = MagicMock(spec=AsyncSession)
 
@@ -192,8 +198,8 @@ async def test_context_manager_integration():
 
     mock_store = AsyncMock()
     mock_list = AsyncMock()
-    memory_module.store_message = mock_store
-    memory_module.list_messages = mock_list
+    monkeypatch.setattr(memory_module, "store_message", mock_store)
+    monkeypatch.setattr(memory_module, "list_messages", mock_list)
 
     manager = ContextManager()
 
@@ -214,7 +220,7 @@ async def test_context_manager_integration():
 
 
 @pytest.mark.asyncio
-async def test_prune_old_context():
+async def test_prune_old_context(monkeypatch):
     """Test pruning old context delegates to memory.prune_messages."""
     db = MagicMock(spec=AsyncSession)
 
@@ -223,7 +229,7 @@ async def test_prune_old_context():
     # prune_old_context now performs real deletion via memory.prune_messages;
     # patch that to assert delegation + returned rowcount passthrough.
     mock_prune = AsyncMock(return_value=40)
-    memory_module.prune_messages = mock_prune
+    monkeypatch.setattr(memory_module, "prune_messages", mock_prune)
 
     pipeline = ContextPipeline()
 
@@ -235,14 +241,14 @@ async def test_prune_old_context():
 
 
 @pytest.mark.asyncio
-async def test_empty_context_handling():
+async def test_empty_context_handling(monkeypatch):
     """Test handling of empty context scenarios."""
     db = MagicMock(spec=AsyncSession)
 
     import nomos_api.services.memory as memory_module
 
     mock_list = AsyncMock()
-    memory_module.list_messages = mock_list
+    monkeypatch.setattr(memory_module, "list_messages", mock_list)
 
     pipeline = ContextPipeline()
 

@@ -200,9 +200,7 @@ async def test_login_rate_limited(auth_client, auth_engine):
         "/api/auth/login",
         json={"email": email, "password": password},
     )
-    assert locked.status_code == 429, (
-        f"endpoint must enforce lockout, got {locked.status_code}: {locked.json()}"
-    )
+    assert locked.status_code == 429, f"endpoint must enforce lockout, got {locked.status_code}: {locked.json()}"
     assert "Rate limit" in locked.json()["detail"]
     await limiter.reset(email)
 

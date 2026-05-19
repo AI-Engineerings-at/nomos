@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -149,24 +150,32 @@ async def get_unseal_key(db: AsyncSession = Depends(get_db)) -> UnsealKeyRespons
             detail="Setup is complete; unseal key retrieval is permanently disabled",
         )
 
-    marker = _get_served_marker_path()
-    if marker.exists():
-        raise HTTPException(status_code=410, detail="Unseal key has already been served")
-
     paths = _get_unseal_key_paths()
     key = _read_unseal_key(paths)
-
     if key is None:
         raise HTTPException(status_code=404, detail="Unseal key file not found")
 
+    # ATOMIC one-shot via O_CREAT|O_EXCL — closes the TOCTOU race between the
+    # marker.exists() check and the write that existed in the prior version
+    # (two concurrent requests across uvicorn workers could both pass the
+    # check before either wrote). Only the OS-arbitrated winner returns the
+    # key; every other concurrent or later request gets 410. No marker is
+    # written if the key file is missing (404 path above).
+    marker = _get_served_marker_path()
     try:
         marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.write_text("served")
+        fd = os.open(str(marker), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        raise HTTPException(status_code=410, detail="Unseal key has already been served") from None
     except OSError:
         logger.exception("Failed to persist unseal-key served marker at %s", marker)
         raise HTTPException(
             status_code=500,
             detail="Unable to record unseal-key retrieval; refusing to serve key",
         ) from None
+    try:
+        os.write(fd, b"served")
+    finally:
+        os.close(fd)
 
     return UnsealKeyResponse(unseal_key=key)

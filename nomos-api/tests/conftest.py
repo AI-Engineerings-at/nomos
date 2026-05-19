@@ -10,6 +10,12 @@ os.environ["NOMOS_PLUGIN_API_KEY"] = "test-plugin-key-at-least-32-characters"
 os.environ["NOMOS_GATEWAY_TOKEN"] = "test-gateway-token"
 os.environ["NOMOS_DB_PASSWORD"] = "test-db-password"
 os.environ["NOMOS_DEV_MODE"] = "true"
+# hash_chain HMAC anchoring fails closed without a real key (post-judgment-day
+# C1). Inject a clearly-non-production key for the test process.
+os.environ.setdefault(
+    "NOMOS_HASHCHAIN_HMAC_KEY",
+    "TEST-ONLY-HMAC-key-do-not-use-in-production-32bytes+++",
+)
 # Tests run against a REAL Valkey (rule 02: no mocks for infra services).
 # Locally: `docker compose up -d valkey`. In CI: a `valkey` service container.
 # Default config points at the docker hostname `valkey`; override to localhost

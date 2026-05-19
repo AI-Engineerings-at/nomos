@@ -20,6 +20,7 @@ dependencies = [
     "bcrypt>=4.0,<6",
     "pyotp>=2.9,<3",
     "hvac>=2.1,<3",
+    "mnemonic>=0.20,<1",
     "valkey>=6.0,<7",
     "alembic>=1.13,<2",
     "arq>=0.26,<1",

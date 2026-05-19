@@ -190,17 +190,20 @@ class TestHmacAnchoring:
         assert result.valid is True
         assert len(result.errors) == 0
 
-    def test_legacy_entry_without_hmac_still_verifies(self, tmp_path: Path) -> None:
-        """Backward compat: pre-HMAC JSONL (no hmac field) still validates."""
+    def test_entry_without_hmac_is_rejected(self, tmp_path: Path) -> None:
+        """Post-judgment-day H4: dropping the hmac field is the bypass we
+        explicitly closed. The earlier "legacy compatibility" path let an
+        attacker rewrite the chain and simply omit hmac to defeat the
+        anchor. verify_chain now requires hmac on every entry."""
         chain = HashChain(storage_dir=tmp_path)
-        e = chain.append(event_type="agent.created", agent_id="test", data={"x": 1})
+        chain.append(event_type="agent.created", agent_id="test", data={"x": 1})
         chain_file = tmp_path / "chain.jsonl"
         raw = json.loads(chain_file.read_text().strip())
-        del raw["hmac"]  # simulate a legacy entry
+        del raw["hmac"]  # simulate the dropped-field attack
         chain_file.write_text(json.dumps(raw, sort_keys=True, separators=(",", ":")) + "\n")
         result = verify_chain(tmp_path)
-        assert result.valid is True
-        assert e.hash == raw["hash"]
+        assert result.valid is False
+        assert any("missing HMAC" in e for e in result.errors)
 
     def test_hmac_key_is_env_injectable(self, tmp_path: Path, monkeypatch) -> None:
         monkeypatch.setenv(_HMAC_ENV_VAR, "a-different-production-key-value-1234")

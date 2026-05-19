@@ -87,7 +87,7 @@ class TestMigrationHistory:
             assert table_name in all_migrations, f"Table '{table_name}' from models.py not found in any migration"
 
     def test_all_model_columns_covered_by_migrations(self) -> None:
-        """Every model column appears in some migration.
+        """Every model column is created as a Column() in some migration.
 
         Guards the model<->migration drift class that shipped a broken
         product: AgentMemory.importance_score existed in the model (so
@@ -95,7 +95,14 @@ class TestMigrationHistory:
         it, so the real Postgres deployment 500'd on every chat turn.
         Unit tests build via create_all and cannot catch this — only a
         migration-text check does.
+
+        Stricter than a substring match (post-judgment-day M3 finding):
+        the column name must appear as the FIRST argument of a Column(),
+        i.e. ``Column("name"``. This avoids false positives from common
+        words appearing in docstrings, table names, comments, etc.
         """
+        import re
+
         from nomos_api.models import Base
 
         migration_files = sorted(VERSIONS_DIR.glob("*.py"))
@@ -104,9 +111,10 @@ class TestMigrationHistory:
         missing: list[str] = []
         for table_name, table in Base.metadata.tables.items():
             for col in table.columns:
-                if col.name not in all_migrations:
+                pattern = rf'Column\(\s*["\']{re.escape(col.name)}["\']'
+                if not re.search(pattern, all_migrations):
                     missing.append(f"{table_name}.{col.name}")
-        assert not missing, f"Model columns absent from every migration: {missing}"
+        assert not missing, f"Model columns absent from any migration Column(): {missing}"
 
 
 class TestMainNoCreateAll:

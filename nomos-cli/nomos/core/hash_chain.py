@@ -28,14 +28,29 @@ GENESIS_HASH = "0" * 64
 # any tampering detectable even on a writable volume.
 #
 # The key is env-injectable via NOMOS_HASHCHAIN_HMAC_KEY (inject from Vault in
-# production). For tests/dev a clearly-labelled default is used.
+# production). There is NO fallback: a missing key fails closed. Tests inject
+# the key via conftest. Length must be >= 32 bytes (HMAC-SHA256 best practice).
 _HMAC_ENV_VAR = "NOMOS_HASHCHAIN_HMAC_KEY"
-_TEST_HMAC_KEY = "nomos-test-hashchain-hmac-key-do-not-use-in-production"
+_HMAC_MIN_KEY_BYTES = 32
+
+
+class HashChainKeyMissing(RuntimeError):
+    """Raised when NOMOS_HASHCHAIN_HMAC_KEY is unset or too short.
+
+    Fail-closed: under no circumstances should the hash-chain operate with a
+    weak/missing key. A weak key reduces HMAC anchoring to security theater.
+    """
 
 
 def _hmac_key() -> bytes:
-    """Resolve the HMAC key (env first, documented test key fallback)."""
-    return os.environ.get(_HMAC_ENV_VAR, _TEST_HMAC_KEY).encode("utf-8")
+    """Resolve the HMAC key. Fail-closed on missing/short key."""
+    raw = os.environ.get(_HMAC_ENV_VAR, "")
+    if not raw or len(raw.encode("utf-8")) < _HMAC_MIN_KEY_BYTES:
+        raise HashChainKeyMissing(
+            f"{_HMAC_ENV_VAR} must be set and >= {_HMAC_MIN_KEY_BYTES} bytes "
+            "(inject from Vault in production; configure in tests/conftest)."
+        )
+    return raw.encode("utf-8")
 
 
 def _compute_hmac(content_hash: str) -> str:
@@ -204,11 +219,14 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
                 f"Entry {i}: hash mismatch (stored={stored_hash[:16]}..., computed={recomputed.hash[:16]}...)"
             )
 
-        # M3: HMAC anchoring. Validate when present; recompute over the
-        # *stored* hash so a forged hash with a stale HMAC is caught, and a
-        # rewritten entry without the secret key cannot produce a valid HMAC.
+        # M3+H4 (post-judgment-day): HMAC anchoring is MANDATORY for every
+        # entry. A missing `hmac` field would let an attacker drop the field
+        # to bypass integrity — that legacy escape hatch is closed. Recompute
+        # over the *stored* hash so a forged hash with a stale HMAC is caught.
         stored_hmac = raw.get("hmac")
-        if stored_hmac is not None:
+        if stored_hmac is None:
+            errors.append(f"Entry {i}: missing HMAC field — integrity not anchored")
+        else:
             expected_hmac = _compute_hmac(stored_hash)
             if not hmac.compare_digest(expected_hmac, str(stored_hmac)):
                 errors.append(

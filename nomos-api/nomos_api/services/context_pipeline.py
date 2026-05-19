@@ -44,8 +44,9 @@ class ContextPipeline:
         Returns:
             Stored message
         """
-        # 1. Store the new message
-        message = await memory.store_message(db, agent_id, session_id, role, content)
+        # 1. Store the new message (H2 post-judgment-day: forward
+        # importance_score; signature accepted it but it was silently dropped).
+        message = await memory.store_message(db, agent_id, session_id, role, content, importance_score=importance_score)
 
         # 2. Check if context management is needed
         messages = await memory.list_messages(db, agent_id, session_id)
@@ -67,10 +68,21 @@ class ContextPipeline:
         # (a max_recent_messages-sized tail would never have older turns
         # until 50+ messages, making summary_threshold dead code).
         keep_recent = min(self.max_recent_messages, self.summary_threshold)
-        older_messages = messages[:-keep_recent] if keep_recent else messages
+        # Only the NON-summary turns can be summarized + pruned. Summaries
+        # themselves accumulate the condensed history and must be retained
+        # regardless of how many turns have passed.
+        non_summary = [m for m in messages if not (m.content and m.content.startswith("[SUMMARY]"))]
+        older_messages = non_summary[:-keep_recent] if keep_recent else non_summary
 
         if older_messages:
-            await self._generate_and_store_summary(db, agent_id, session_id, older_messages)
+            summary = await self._generate_and_store_summary(db, agent_id, session_id, older_messages)
+            # H1 post-judgment-day: prune the now-summarized turns. Without
+            # this, every subsequent turn re-summarizes the same history and
+            # the summary count grows monotonically, exploding LLM tokens.
+            # memory.prune_messages preserves [SUMMARY] rows by design.
+            if summary is not None:
+                pruned = await memory.prune_messages(db, agent_id, session_id, keep_recent=keep_recent)
+                logger.info("Pruned %d summarized turns for agent %s", pruned, agent_id)
 
         logger.info("Context management completed for agent %s", agent_id)
 

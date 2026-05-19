@@ -30,20 +30,19 @@ depends_on = None
 def upgrade() -> None:
     """Add importance_score (NOT NULL, server_default 1.0) to agent_memory.
 
-    server_default keeps any pre-existing rows valid and matches the
-    model's Python-side default=1.0.
+    Plain ``op.add_column`` (not ``batch_alter_table``): Postgres can ADD
+    COLUMN with a server_default in O(1) (PG11+ fast-path for non-volatile
+    defaults). ``batch_alter_table`` defaults to copy-and-rename for
+    portability, which would rewrite the entire (potentially multi-million
+    row) ``agent_memory`` table under lock — gratuitous on a Postgres-only
+    deployment. SQLite isn't a production target; test suite uses
+    create_all anyway.
     """
-    with op.batch_alter_table("agent_memory") as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "importance_score",
-                sa.Float(),
-                nullable=False,
-                server_default="1.0",
-            )
-        )
+    op.add_column(
+        "agent_memory",
+        sa.Column("importance_score", sa.Float(), nullable=False, server_default="1.0"),
+    )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("agent_memory") as batch_op:
-        batch_op.drop_column("importance_score")
+    op.drop_column("agent_memory", "importance_score")

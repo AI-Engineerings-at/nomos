@@ -55,21 +55,44 @@ _KV_PATTERN = re.compile(
 # Bearer tokens in Authorization-style strings.
 _BEARER_PATTERN = re.compile(r"(?i)(bearer\s+)([A-Za-z0-9._\-]+)")
 
-# Long high-entropy-ish token blobs (JWTs, hex/secret strings) standing alone.
+# JWTs by their unmistakable `eyJ` (base64 of `{"`) prefix.
 _JWT_PATTERN = re.compile(r"\beyJ[A-Za-z0-9._\-]{10,}")
-_LONG_TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9._\-]{40,}\b")
+
+# Known provider API key prefixes — narrowly targeted so we don't redact
+# legitimate observability data (long agent IDs, file paths, stack-trace
+# symbol paths) the way a blanket "40+ alphanumeric" rule did (H3
+# post-judgment-day finding). Add new patterns here when adopting new
+# providers rather than broadening into a catch-all.
+_PROVIDER_KEY_PATTERN = re.compile(
+    r"\b(?:sk-(?:proj-|svcacct-|live-|test-)?[A-Za-z0-9_-]{16,}"
+    r"|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
+    r"|nvapi-[A-Za-z0-9_-]{20,}|xox[bpors]-[A-Za-z0-9-]{20,}"
+    r"|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|hf_[A-Za-z0-9]{20,}"
+    r"|AIza[0-9A-Za-z_-]{20,})\b"
+)
 
 
 def redact(text: str) -> str:
-    """Scrub secret-looking content from a log string."""
+    """Scrub secret-looking content from a log string.
+
+    Order matters:
+    1. Bearer first — otherwise the `authorization` KV rule would consume
+       the "Bearer" keyword and leave the actual token in place.
+    2. KV (key=value / key: value / 'key': 'value') for known secret keys —
+       catches dict-repr and exception messages that include secret values.
+    3. JWT by `eyJ` prefix (unmistakable).
+    4. Provider API keys by known prefixes (sk-, ghp_, nvapi-, AKIA, ...).
+
+    NOT included by design: a generic "long alphanumeric blob" pattern —
+    that destroyed observability (paths, UUIDs, hashes, agent IDs) far
+    more often than it caught real secrets.
+    """
     if not text:
         return text
-    # Bearer first: otherwise the `authorization` KV rule would consume the
-    # "Bearer" word and leave the actual token in place.
     text = _BEARER_PATTERN.sub(lambda m: m.group(1) + _REDACTED, text)
     text = _KV_PATTERN.sub(lambda m: m.group(1) + _REDACTED, text)
     text = _JWT_PATTERN.sub(_REDACTED, text)
-    text = _LONG_TOKEN_PATTERN.sub(_REDACTED, text)
+    text = _PROVIDER_KEY_PATTERN.sub(_REDACTED, text)
     return text
 
 

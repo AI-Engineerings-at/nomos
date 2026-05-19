@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from urllib.parse import urlparse
 
@@ -10,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.auth.jwt import decode_token
+from nomos_api.auth.rbac import require_admin
 from nomos_api.config import settings as app_settings
 from nomos_api.database import get_db
 from nomos_api.models import User
@@ -23,19 +25,49 @@ logger = logging.getLogger(__name__)
 # rejected to prevent a PATCH from pivoting requests to internal resources.
 _ALLOWED_URL_SCHEMES = {"http", "https"}
 
+# Internal compose service names this product itself runs — never a legitimate
+# gateway_url. Blocks an admin (or stolen admin token) from pivoting
+# `_gateway_fetch` to the product's own infrastructure (Vault, DB, cache).
+_BLOCKED_HOSTNAMES = {"vault", "valkey", "postgres", "localhost", "nomos-api", "nomos-worker"}
+
 
 def _validate_gateway_url(value: str) -> str:
-    """Validate a gateway URL. Raises HTTP 422 on an unsafe/invalid value."""
+    """Validate a gateway URL. Raises HTTP 422 on an unsafe/invalid value.
+
+    SSRF defense (post-judgment-day):
+    - scheme MUST be http or https (no file://, unix://, gopher://, ...);
+    - host MUST be present;
+    - if the host is an IP literal, it must NOT be in a private, loopback,
+      link-local (incl. AWS/GCP IMDS 169.254.0.0/16), multicast, or
+      unspecified range — for both IPv4 and IPv6;
+    - hostnames matching internal infra (vault, valkey, postgres, ...) are
+      blocked so the gateway URL cannot be flipped to the product's own
+      services.
+    """
     parsed = urlparse(value)
     if parsed.scheme.lower() not in _ALLOWED_URL_SCHEMES:
+        raise HTTPException(status_code=422, detail="gateway_url must use http or https scheme")
+    host = (parsed.hostname or "").strip()
+    if not host:
+        raise HTTPException(status_code=422, detail="gateway_url must include a host")
+
+    if host.lower() in _BLOCKED_HOSTNAMES:
         raise HTTPException(
             status_code=422,
-            detail="gateway_url must use http or https scheme",
+            detail=f"gateway_url host '{host}' is an internal infrastructure target",
         )
-    if not parsed.netloc:
+
+    # IP-literal: reject private/loopback/link-local/multicast/unspecified.
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        ip = None
+    if ip is not None and (
+        ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_multicast or ip.is_unspecified or ip.is_reserved
+    ):
         raise HTTPException(
             status_code=422,
-            detail="gateway_url must include a host",
+            detail=f"gateway_url IP {host} is in a private, loopback, link-local, or reserved range",
         )
     return value
 
@@ -55,27 +87,6 @@ _VAULT_SECRET_MAP: dict[str, tuple[str, str]] = {
 }
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
-
-
-async def _require_admin(
-    nomos_token: str | None = Cookie(default=None),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """Dependency: require admin role via JWT cookie."""
-    if not nomos_token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = decode_token(nomos_token, app_settings.jwt_secret)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    result = await db.execute(
-        select(User).where(User.id == payload.user_id, User.is_active == True)  # noqa: E712
-    )
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found or deactivated")
-    if user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return user
 
 
 async def _require_user(
@@ -143,7 +154,7 @@ async def get_settings(
 @router.patch("", response_model=SystemSettingsResponse)
 async def update_settings(
     updates: SettingsUpdateRequest,
-    _admin: User = Depends(_require_admin),
+    _admin: User = Depends(require_admin),
 ) -> SystemSettingsResponse:
     """Update system settings (admin-only). Writes config and secrets to Vault."""
     changed: list[str] = []

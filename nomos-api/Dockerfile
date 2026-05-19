@@ -27,4 +27,7 @@ USER nomos
 
 EXPOSE 8000
 
+# Logging is configured by nomos_api.main._force_json_stdout_logging()
+# (at import + re-applied in lifespan startup, AFTER uvicorn's own
+# dictConfig). Single source of truth in Python; no external JSON.
 CMD ["uvicorn", "nomos_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

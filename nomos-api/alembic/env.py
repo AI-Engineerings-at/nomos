@@ -23,8 +23,15 @@ config = context.config
 # Set the SQLAlchemy URL from application config (never hardcoded)
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-# Standard Python logging from alembic.ini
-if config.config_file_name is not None:
+# Standard Python logging from alembic.ini — DISABLED.
+# In a long-running uvicorn process (lifespan startup migrations),
+# alembic.fileConfig() would overwrite the app's JSON-to-stdout root
+# handler with alembic.ini's plain `[handler_console]` formatter, and
+# subsequent per-request logs would never reach docker stdout. The app
+# configures logging itself (nomos_api.main._force_json_stdout_logging);
+# alembic uses whatever the host process has set up. Stand-alone
+# alembic CLI usage still gets the basicConfig fallback below.
+if config.config_file_name is not None and config.attributes.get("configure_logger") is True:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata

@@ -13,6 +13,10 @@ COPY nomos-api/alembic /app/alembic/
 COPY nomos-api/nomos_api /app/nomos_api/
 
 ENV PYTHONPATH="/app/nomos-cli:${PYTHONPATH}"
+# Unbuffered stdout/stderr: without this Python block-buffers in the
+# container (non-TTY) so request/error logs never reach `docker logs`
+# until the buffer fills — invisible runtime observability.
+ENV PYTHONUNBUFFERED=1
 
 RUN uv pip install --system "."
 

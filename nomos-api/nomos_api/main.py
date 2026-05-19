@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -47,10 +48,36 @@ from nomos_api.middleware.metrics import APIMetricsMiddleware
 from nomos_api.middleware.request_id import RequestIDMiddleware
 from nomos_api.middleware.security_headers import SecurityHeadersMiddleware
 
-_handler = logging.StreamHandler()
-_handler.setFormatter(JSONFormatter())
-logging.root.handlers = [_handler]
-logging.root.setLevel(logging.INFO)
+_VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
+
+def configure_logging() -> None:
+    """Install the JSON stdout handler as the sole root handler.
+
+    Must be (re)applied in the lifespan startup as well: the Docker CMD runs
+    `uvicorn` with no --log-config, so uvicorn's dictConfig overwrites
+    root handlers AFTER this module is imported — without re-applying here
+    every request/error log would be lost in the container (observability
+    gap). Idempotent; honors NOMOS_LOG_LEVEL (default INFO, invalid->INFO).
+    Routes uvicorn's own loggers through the same JSON handler so access
+    and error lines are structured + SIEM-ingestible too.
+    """
+    raw = os.environ.get("NOMOS_LOG_LEVEL", "INFO").strip().upper()
+    level = raw if raw in _VALID_LOG_LEVELS else "INFO"
+    handler = logging.StreamHandler()
+    handler.setFormatter(JSONFormatter())
+    root = logging.root
+    root.handlers = [handler]
+    root.setLevel(level)
+    if raw not in _VALID_LOG_LEVELS and raw != "":
+        root.warning("Invalid NOMOS_LOG_LEVEL %r — falling back to INFO", raw)
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        ul = logging.getLogger(name)
+        ul.handlers = []
+        ul.propagate = True
+
+
+configure_logging()
 
 logger = logging.getLogger("nomos-api")
 
@@ -92,6 +119,11 @@ def _run_alembic_upgrade() -> None:
 async def lifespan(app: FastAPI):
     """Validate settings and run Alembic migrations on startup."""
     from nomos_api.config import validate_settings
+
+    # Re-apply AFTER uvicorn has installed its own logging dictConfig,
+    # otherwise app request/error logs never reach container stdout.
+    configure_logging()
+    logger.info("nomos-api logging configured (level=%s)", logging.getLevelName(logging.root.level))
 
     validate_settings(settings)
     loop = asyncio.get_running_loop()

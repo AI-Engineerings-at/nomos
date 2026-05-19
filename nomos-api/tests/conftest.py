@@ -160,3 +160,53 @@ async def authed_client(db_engine, tmp_path, monkeypatch):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def admin_client(db_engine, tmp_path, monkeypatch):
+    """HTTPX test client with an authenticated ADMIN user cookie.
+
+    Use for admin-only endpoints (e.g. global audit, settings PATCH).
+    Mirrors authed_client but role=admin.
+    """
+    from nomos_api.config import settings
+    from nomos_api.database import get_db
+    from nomos_api.main import app
+
+    session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    monkeypatch.setattr(settings, "agents_dir", tmp_path / "agents")
+    monkeypatch.setattr(settings, "plugin_api_key", "test-plugin-key-at-least-32-characters")
+
+    user_id = str(uuid.uuid4())
+    async with session_factory() as session:
+        session.add(
+            User(
+                id=user_id,
+                email="admin@test.com",
+                password_hash=hash_password("Str0ngP@ssword!"),
+                role="admin",
+                is_active=True,
+                session_timeout_hours=24,
+            )
+        )
+        await session.commit()
+
+    payload = TokenPayload(user_id=user_id, email="admin@test.com", role="admin")
+    token = create_token(payload, "test-jwt-secret-at-least-32-chars-long-123")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test",
+        headers={"X-NomOS-API-Key": "test-plugin-key-at-least-32-characters"},
+        cookies={"nomos_token": token},
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()

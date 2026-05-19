@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import require_admin, require_agent_actor
 from nomos_api.config import settings
 from nomos_api.database import get_db
-from nomos_api.models import AuditLog
+from nomos_api.models import AuditLog, User
 from nomos_api.schemas import (
     AuditEntryCreateRequest,
     AuditEntryCreateResponse,
@@ -33,8 +34,13 @@ async def get_global_audit(
     agent_id: str | None = None,
     event_type: str | None = None,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> AuditResponse:
-    """Global audit trail -- aggregates all agents with optional filters."""
+    """Global audit trail -- aggregates all agents with optional filters.
+
+    AuthZ (post-judgment-day-2): admin-only. A non-admin user must not be
+    able to enumerate the audit trails of agents they do not own.
+    """
     query = select(AuditLog).order_by(AuditLog.id.desc())
     count_query = select(func.count()).select_from(AuditLog)
 
@@ -72,7 +78,11 @@ async def get_global_audit(
 async def get_agent_audit(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
+    _agent=Depends(require_agent_actor),
 ) -> AuditResponse:
+    """AuthZ: service principal (plugin) OR the agent's owning user OR admin
+    — same pattern as heartbeat. Closes the IDOR vector where any logged-in
+    user could read every agent's audit trail."""
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
@@ -99,8 +109,13 @@ async def get_agent_audit(
 async def export_agent_audit(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
+    _agent=Depends(require_agent_actor),
 ) -> PlainTextResponse:
-    """Export audit trail as downloadable JSONL file."""
+    """Export audit trail as downloadable JSONL file.
+
+    AuthZ: owner-or-service-or-admin (require_agent_actor). The chain file
+    contains the full event history including data payloads — exporting it
+    must be gated by agent ownership."""
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
@@ -126,6 +141,7 @@ async def export_agent_audit(
 async def verify_agent_audit(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
+    _agent=Depends(require_agent_actor),
 ) -> AuditVerifyResponse:
     agent = await get_agent(db, agent_id)
     if agent is None:
@@ -146,13 +162,24 @@ async def verify_agent_audit(
 @router.post("/audit/entry", response_model=AuditEntryCreateResponse, status_code=201)
 async def create_audit_entry(
     request: AuditEntryCreateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> AuditEntryCreateResponse:
     """Add a new audit hash chain entry for an agent.
 
     Used by the NomOS Plugin to log events from OpenClaw Gateway hooks.
     Validates the event_type against the canonical NomOS event types.
+
+    AuthZ (post-judgment-day-2): the principal MUST be the service
+    (Plugin API key) OR the owning user OR an admin. Closes the tampering
+    vector where any authenticated user could append arbitrary audit
+    entries to any agent's chain (defeating both integrity and
+    provenance). The check is inline because agent_id lives in the body,
+    so the path-param-based require_agent_actor cannot be reused here.
     """
+    principal = getattr(http_request.state, "user", None)
+    if not principal:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     if not validate_event_type(request.event_type):
         raise HTTPException(
             status_code=422,
@@ -162,6 +189,19 @@ async def create_audit_entry(
     agent = await get_agent(db, request.agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
+
+    # AuthZ check: service principal OR the agent's owning user OR admin.
+    role = principal.get("role")
+    if role != "service":
+        from nomos_api.auth.rbac import check_agent_access
+
+        class _P:
+            pass
+
+        actor = _P()
+        actor.role = role or "user"
+        actor.email = principal.get("email") or ""
+        check_agent_access(actor, agent, "write audit entry")
 
     agent_dir = Path(agent.agents_dir).resolve()
     safe_base = settings.agents_dir.resolve()

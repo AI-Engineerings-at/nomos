@@ -50,8 +50,8 @@ class TestAudit:
 
 
 class TestGlobalAudit:
-    async def test_global_audit_endpoint(self, client) -> None:
-        response = await client.get("/api/audit")
+    async def test_global_audit_endpoint(self, admin_client) -> None:
+        response = await admin_client.get("/api/audit")
         assert response.status_code == 200
         data = response.json()
         assert "entries" in data
@@ -59,8 +59,8 @@ class TestGlobalAudit:
         assert isinstance(data["entries"], list)
         assert data["agent_id"] == "*"
 
-    async def test_global_audit_returns_all_agents(self, client) -> None:
-        await client.post(
+    async def test_global_audit_returns_all_agents(self, admin_client) -> None:
+        await admin_client.post(
             "/api/agents",
             json={
                 "name": "Global A",
@@ -69,7 +69,7 @@ class TestGlobalAudit:
                 "email": "a@t.com",
             },
         )
-        await client.post(
+        await admin_client.post(
             "/api/agents",
             json={
                 "name": "Global B",
@@ -78,20 +78,20 @@ class TestGlobalAudit:
                 "email": "b@t.com",
             },
         )
-        response = await client.get("/api/audit")
+        response = await admin_client.get("/api/audit")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 2
         agent_ids = {e["agent_id"] for e in data["entries"]}
         assert len(agent_ids) >= 2
 
-    async def test_global_audit_filter_by_agent(self, client) -> None:
-        response = await client.get("/api/audit?agent_id=nonexistent")
+    async def test_global_audit_filter_by_agent(self, admin_client) -> None:
+        response = await admin_client.get("/api/audit?agent_id=nonexistent")
         assert response.status_code == 200
         assert response.json()["total"] == 0
 
-    async def test_global_audit_filter_by_event_type(self, client) -> None:
-        await client.post(
+    async def test_global_audit_filter_by_event_type(self, admin_client) -> None:
+        await admin_client.post(
             "/api/agents",
             json={
                 "name": "Event Filter",
@@ -100,14 +100,14 @@ class TestGlobalAudit:
                 "email": "ef@t.com",
             },
         )
-        response = await client.get("/api/audit?event_type=agent.created")
+        response = await admin_client.get("/api/audit?event_type=agent.created")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 1
         assert all(e["event_type"] == "agent.created" for e in data["entries"])
 
-    async def test_global_audit_pagination(self, client) -> None:
-        response = await client.get("/api/audit?limit=1&offset=0")
+    async def test_global_audit_pagination(self, admin_client) -> None:
+        response = await admin_client.get("/api/audit?limit=1&offset=0")
         assert response.status_code == 200
         data = response.json()
         assert len(data["entries"]) <= 1

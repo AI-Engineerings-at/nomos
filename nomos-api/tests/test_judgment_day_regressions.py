@@ -117,9 +117,7 @@ async def test_chat_does_not_orphan_user_turn_on_llm_failure(monkeypatch) -> Non
         manifest_data={},
     )
     fake_db.get = AsyncMock(return_value=agent)
-    user = User(
-        id="u1", email="user@acme", password_hash="x", role="user", is_active=True, session_timeout_hours=8
-    )
+    user = User(id="u1", email="user@acme", password_hash="x", role="user", is_active=True, session_timeout_hours=8)
 
     # Spy on persistence — must NOT be called on the failure path.
     pipeline_spy = AsyncMock()
@@ -164,3 +162,46 @@ def test_recovery_wordlist_is_full_bip39() -> None:
     # Sanity: known first/last words from the canonical English list.
     assert _WORDLIST[0] == "abandon"
     assert _WORDLIST[-1] == "zoo"
+
+
+# -----------------------------------------------------------------------
+# Audit-endpoints AuthZ (post-judgment-day-2 — found during this run):
+# every audit route had ZERO route-level authZ — any authenticated caller
+# could read or even APPEND audit entries on any agent (tampering).
+# -----------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_audit_global_requires_admin(authed_client: AsyncClient) -> None:
+    """authed_client is role=user — not admin. Global audit MUST 403."""
+    resp = await authed_client.get("/api/audit")
+    assert resp.status_code == 403, f"non-admin must NOT see global audit, got {resp.status_code}"
+
+
+@pytest.mark.asyncio
+async def test_audit_global_no_cookie_returns_401(client: AsyncClient) -> None:
+    """client has only the plugin API key (service principal). Global
+    audit requires an admin USER — service alone must NOT pass."""
+    resp = await client.get("/api/audit")
+    # require_admin needs a cookie -> not authenticated for the user path.
+    assert resp.status_code in (401, 403), f"service-only must NOT see global audit, got {resp.status_code}"
+
+
+@pytest.mark.asyncio
+async def test_audit_entry_unauthenticated_returns_401(monkeypatch) -> None:
+    """A request without any auth principal must be rejected before
+    reaching the chain-write path. Calls the handler directly with a
+    cleared request.state to bypass middleware-set principals."""
+    from unittest.mock import MagicMock
+
+    from nomos_api.routers import audit as audit_module
+    from nomos_api.schemas import AuditEntryCreateRequest
+
+    fake_db = MagicMock()
+    fake_request = MagicMock()
+    fake_request.state = MagicMock(spec=[])  # no `user` attribute -> unauth
+
+    body = AuditEntryCreateRequest(agent_id="any", event_type="agent.created", payload={"x": 1})
+    with pytest.raises(HTTPException) as exc:
+        await audit_module.create_audit_entry(body, fake_request, db=fake_db)
+    assert exc.value.status_code == 401, f"unauthenticated audit-entry write must be 401, got {exc.value.status_code}"

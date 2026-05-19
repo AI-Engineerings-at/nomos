@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestCompliance:
     async def test_compliance_check_for_created_agent(self, client) -> None:
-        create_resp = await client.post("/api/agents", json={
-            "name": "Compliance Test",
-            "role": "test",
-            "company": "Co",
-            "email": "t@t.com",
-        })
+        create_resp = await client.post(
+            "/api/agents",
+            json={
+                "name": "Compliance Test",
+                "role": "test",
+                "company": "Co",
+                "email": "t@t.com",
+            },
+        )
         agent_id = create_resp.json()["id"]
         response = await client.get(f"/api/agents/{agent_id}/compliance")
         assert response.status_code == 200
@@ -29,12 +30,15 @@ class TestCompliance:
 class TestGate:
     async def test_gate_generates_docs_and_passes(self, client) -> None:
         # Create agent (auto-onboarding generates docs, agent is immediately compliant)
-        create_resp = await client.post("/api/agents", json={
-            "name": "Gate Test",
-            "role": "test",
-            "company": "Co",
-            "email": "t@t.com",
-        })
+        create_resp = await client.post(
+            "/api/agents",
+            json={
+                "name": "Gate Test",
+                "role": "test",
+                "company": "Co",
+                "email": "t@t.com",
+            },
+        )
         agent_id = create_resp.json()["id"]
 
         # Agent should be passed immediately (auto-onboarding)
@@ -52,9 +56,15 @@ class TestGate:
         assert resp.status_code == 404
 
     async def test_gate_creates_audit_entry(self, client) -> None:
-        create_resp = await client.post("/api/agents", json={
-            "name": "Audit Gate Test", "role": "test", "company": "Co", "email": "t@t.com",
-        })
+        create_resp = await client.post(
+            "/api/agents",
+            json={
+                "name": "Audit Gate Test",
+                "role": "test",
+                "company": "Co",
+                "email": "t@t.com",
+            },
+        )
         agent_id = create_resp.json()["id"]
         await client.post(f"/api/agents/{agent_id}/gate")
         audit_resp = await client.get(f"/api/agents/{agent_id}/audit")

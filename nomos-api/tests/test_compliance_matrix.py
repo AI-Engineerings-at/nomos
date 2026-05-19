@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestComplianceMatrix:
     async def test_compliance_matrix_empty(self, client) -> None:
@@ -14,19 +12,25 @@ class TestComplianceMatrix:
         assert data["total"] == 0
 
     async def test_compliance_matrix_with_agents(self, client) -> None:
-        await client.post("/api/agents", json={
-            "name": "Matrix Agent 1",
-            "role": "test",
-            "company": "Co",
-            "email": "a1@test.com",
-        })
-        await client.post("/api/agents", json={
-            "name": "Matrix Agent 2",
-            "role": "test",
-            "company": "Co",
-            "email": "a2@test.com",
-            "risk_class": "high",
-        })
+        await client.post(
+            "/api/agents",
+            json={
+                "name": "Matrix Agent 1",
+                "role": "test",
+                "company": "Co",
+                "email": "a1@test.com",
+            },
+        )
+        await client.post(
+            "/api/agents",
+            json={
+                "name": "Matrix Agent 2",
+                "role": "test",
+                "company": "Co",
+                "email": "a2@test.com",
+                "risk_class": "high",
+            },
+        )
         resp = await client.get("/api/compliance/matrix")
         assert resp.status_code == 200
         data = resp.json()
@@ -39,12 +43,15 @@ class TestComplianceMatrix:
         assert "risk_class" in entry
 
     async def test_compliance_matrix_reflects_gate_status(self, client) -> None:
-        create_resp = await client.post("/api/agents", json={
-            "name": "Gate Matrix Agent",
-            "role": "test",
-            "company": "Co",
-            "email": "gm@test.com",
-        })
+        create_resp = await client.post(
+            "/api/agents",
+            json={
+                "name": "Gate Matrix Agent",
+                "role": "test",
+                "company": "Co",
+                "email": "gm@test.com",
+            },
+        )
         agent_id = create_resp.json()["id"]
 
         # Auto-onboarding: agent should be passed immediately

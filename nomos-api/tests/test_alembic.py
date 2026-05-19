@@ -69,21 +69,44 @@ class TestMigrationHistory:
         assert len(revisions) >= 1, "At least the initial migration must exist"
 
     def test_all_models_covered_in_initial_migration(self) -> None:
-        """The initial migration creates all tables defined in models.py."""
+        """Every table defined in models.py is created by some migration.
+
+        Coverage is checked across the union of all migration files, not just
+        the initial one — monitoring tables live in 002_monitoring_tables.py.
+        """
         from nomos_api.models import Base
 
         model_tables = set(Base.metadata.tables.keys())
         assert len(model_tables) >= 9, f"Expected at least 9 tables in models, found {len(model_tables)}"
 
-        # Read the initial migration and verify it references all tables
         migration_files = sorted(VERSIONS_DIR.glob("*.py"))
         assert len(migration_files) >= 1, "No migration files found"
 
-        initial_migration = migration_files[0].read_text()
+        all_migrations = "\n".join(f.read_text() for f in migration_files)
         for table_name in model_tables:
-            assert table_name in initial_migration, (
-                f"Table '{table_name}' from models.py not found in initial migration"
-            )
+            assert table_name in all_migrations, f"Table '{table_name}' from models.py not found in any migration"
+
+    def test_all_model_columns_covered_by_migrations(self) -> None:
+        """Every model column appears in some migration.
+
+        Guards the model<->migration drift class that shipped a broken
+        product: AgentMemory.importance_score existed in the model (so
+        Base.metadata.create_all in tests had it) but no migration created
+        it, so the real Postgres deployment 500'd on every chat turn.
+        Unit tests build via create_all and cannot catch this — only a
+        migration-text check does.
+        """
+        from nomos_api.models import Base
+
+        migration_files = sorted(VERSIONS_DIR.glob("*.py"))
+        all_migrations = "\n".join(f.read_text() for f in migration_files)
+
+        missing: list[str] = []
+        for table_name, table in Base.metadata.tables.items():
+            for col in table.columns:
+                if col.name not in all_migrations:
+                    missing.append(f"{table_name}.{col.name}")
+        assert not missing, f"Model columns absent from every migration: {missing}"
 
 
 class TestMainNoCreateAll:

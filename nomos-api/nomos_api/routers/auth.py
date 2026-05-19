@@ -108,11 +108,15 @@ async def login(
     payload = TokenPayload(user_id=user.id, email=user.email, role=user.role)
     token = create_token(payload, settings.jwt_secret, expires_hours=user.session_timeout_hours)
 
+    # M1 (CSRF): SameSite=strict UNCONDITIONALLY. Previously this dropped to
+    # 'lax' when cookie_secure was false, which allows top-level cross-site
+    # navigations to send the auth cookie. The console is same-origin, so
+    # strict does not break the golden path.
     response.set_cookie(
         key="nomos_token",
         value=token,
         httponly=True,
-        samesite="strict" if settings.cookie_secure else "lax",
+        samesite="strict",
         secure=settings.cookie_secure,
         max_age=user.session_timeout_hours * 3600,
     )
@@ -137,7 +141,7 @@ async def login(
 async def logout(response: Response) -> LogoutResponse:
     response.delete_cookie(
         "nomos_token",
-        samesite="strict" if settings.cookie_secure else "lax",
+        samesite="strict",
         secure=settings.cookie_secure,
     )
     return LogoutResponse(message="Logged out")

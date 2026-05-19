@@ -49,9 +49,7 @@ _PATTERNS: list[tuple[str, re.Pattern, str]] = [
     ),
     (
         "address",
-        re.compile(
-            r"\b[A-ZÄÖÜ][a-zäöüß]+(?:strasse|gasse|weg|platz)\s+\d+[a-z]?,\s*\d{4,5}\s+[A-ZÄÖÜ][a-zäöüß]+\b"
-        ),
+        re.compile(r"\b[A-ZÄÖÜ][a-zäöüß]+(?:strasse|gasse|weg|platz)\s+\d+[a-z]?,\s*\d{4,5}\s+[A-ZÄÖÜ][a-zäöüß]+\b"),
         "[ADDRESS_REDACTED]",
     ),
     ("tax_id", re.compile(r"\b\d{2,3}/\d{3,4}/\d{4,5}\b"), "[TAX_ID_REDACTED]"),

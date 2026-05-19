@@ -44,6 +44,27 @@ NVIDIA_API_KEY=nvapi-your-key-here
 # or: OPENAI_API_KEY=sk-...
 ```
 
+### Recommended additional secret
+
+| Variable | Description |
+|---|---|
+| `NOMOS_HASHCHAIN_HMAC_KEY` | HMAC key for the tamper-evident audit chain. Set this (inject from Vault in production) — without it the chain falls back to plain SHA-256. Read by `nomos-cli/nomos/core/hash_chain.py:30-43`. |
+
+### Optional runtime tuning (non-secret)
+
+| Variable | Default | Description |
+|---|---|---|
+| `NOMOS_LOG_LEVEL` | `INFO` | CLI diagnostics verbosity: `DEBUG`/`INFO`/`WARNING`/`ERROR` (case-insensitive). Invalid values fall back to `INFO` with a warning. JSON diagnostics go to **stderr**; normal CLI output stays on stdout. |
+| `NOMOS_VALKEY_URL` | `valkey://valkey:6379` | Valkey URL (rate limiting + ARQ worker). |
+| `NOMOS_DEV_MODE` | `false` | Keep `false` in production. |
+| `NOMOS_COOKIE_SECURE` | `true` | Secure-cookie + HSTS toggle. |
+| `NOMOS_DOMAIN` | `localhost` | Public domain for Caddy automatic TLS. |
+
+> **OpenClaw pin:** the gateway image is pinned to the current stable
+> release `2026.5.18` in `nomos-plugin/Dockerfile.gateway:1` (never
+> `:latest`). Earlier docs referenced `v2026.3.28`; the running pin is
+> the authoritative version.
+
 ## 2. Start NomOS
 
 ```bash
@@ -61,13 +82,16 @@ All services should show `healthy` or `running`:
 | Service | Port | Purpose |
 |---|---|---|
 | `caddy` | 80 / 443 | Reverse proxy with automatic TLS |
-| `nomos-console` | 3040 | Next.js dashboard |
-| `nomos-api` | 8060 | FastAPI control plane |
-| `nomos-worker` | — | Background job processor |
-| `openclaw-gateway` | 3050 | Headless plugin framework |
-| `postgres` | — | PostgreSQL 16 + pgvector (internal) |
-| `valkey` | 6380 | Cache and rate limiting (internal) |
+| `nomos-console` | `${NOMOS_CONSOLE_PORT:-3040}` | Next.js dashboard |
+| `nomos-api` | `${NOMOS_API_PORT:-8060}` | FastAPI control plane |
+| `nomos-worker` | — | ARQ background job processor (no host port) |
+| `openclaw-gateway` | `${NOMOS_GATEWAY_PORT:-3050}` | Headless plugin framework |
+| `postgres` | — | PostgreSQL 16 + pgvector (compose-internal, no host port) |
+| `valkey` | — | Cache + rate limiting + ARQ broker (compose-internal, no host port) |
 | `vault` | 8200 | HashiCorp Vault secret management |
+
+> Ports are per `docker-compose.yml` (`:3,13-14,90-91,166-167`,
+> `185-202`). `postgres` and `valkey` are not host-published.
 
 Verify the API is healthy:
 
@@ -75,11 +99,23 @@ Verify the API is healthy:
 curl http://localhost:8060/health
 ```
 
-Expected response:
+Expected response (shape per `routers/health.py:71-87` —
+`HealthResponse` with per-component statuses):
 
 ```json
-{"status": "ok", "service": "NomOS API"}
+{
+  "status": "healthy",
+  "service": "NomOS Fleet API",
+  "version": "0.1.0",
+  "vault": "healthy",
+  "components": { "vault": "healthy", "postgres": "healthy",
+                  "valkey": "healthy", "gateway": "online" }
+}
 ```
+
+`status` is `healthy` only when PostgreSQL is reachable, otherwise
+`degraded`. The gateway being `offline` does not by itself fail the
+health check.
 
 ## 3. First Login
 
@@ -88,18 +124,23 @@ Open **http://localhost:3040** in your browser.
 On first launch, the console shows a **Bootstrap** screen. Create your admin account:
 
 ```bash
-curl -X POST http://localhost:8060/api/auth/bootstrap \
+curl -X POST http://localhost:8060/api/users/bootstrap \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "admin",
     "email": "admin@example.com",
-    "password": "change-me-now"
+    "password": "a-strong-passphrase",
+    "role": "admin"
   }'
 ```
 
-Or fill in the bootstrap form in the browser. After bootstrap, log in with your credentials.
+Or fill in the bootstrap form in the browser. The response includes a
+one-time **recovery phrase** — store it safely; it is the only way back
+in if 2FA is lost. After bootstrap, log in with your credentials.
 
-> **Note:** The bootstrap endpoint is only available when no users exist. It disables itself after first use.
+> **Note:** The bootstrap endpoint is `POST /api/users/bootstrap`
+> (`routers/users.py:66`). It only works while no users exist and
+> returns **403** afterwards. The password must pass strength
+> validation (`422` otherwise).
 
 ## 4. Configure LLM Provider
 
@@ -169,7 +210,12 @@ NOMOS_API_PORT=8061
 docker compose logs vault --tail 30
 ```
 
-**docker compose fails immediately** — You have placeholder values in `.env`. Replace all `CHANGE_ME_REQUIRED_*` values with real secrets (see Step 1).
+**docker compose fails immediately with "Set NOMOS_DB_PASSWORD in .env"**
+— A required secret is unset. `docker-compose.yml` uses
+`${NOMOS_DB_PASSWORD:?...}` and similar guards, so compose refuses to
+start until the required secrets from Step 1 are set in `.env` (the
+shipped `.env.example` ships placeholder values such as
+`your_secure_password_here` that must be replaced).
 
 ---
 
@@ -178,4 +224,5 @@ docker compose logs vault --tail 30
 - [API Reference](api-reference.md) — all REST endpoints
 - [Compliance Guide](compliance-guide.md) — EU AI Act coverage in detail
 - [Architecture](architecture.md) — system design and data flow
+- [Operations Runbook](operations-runbook.md) — bring-up order, backups, troubleshooting
 - [CLI Reference](cli-reference.md) — command-line interface for automation

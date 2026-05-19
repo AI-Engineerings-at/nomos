@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 
 from nomos.core.manifest import AgentManifest, BudgetConfig, ApprovalConfig
 
@@ -35,9 +34,7 @@ def test_budget_config_defaults():
 
 
 def test_approval_config():
-    approval = ApprovalConfig(
-        required_for=["external_api_calls", "file_deletion", "data_export"]
-    )
+    approval = ApprovalConfig(required_for=["external_api_calls", "file_deletion", "data_export"])
     assert len(approval.required_for) == 3
 
 

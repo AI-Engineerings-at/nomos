@@ -62,11 +62,7 @@ async def track_cost(
 
     Uses SQL UPDATE with expression to avoid lost updates under concurrent requests.
     """
-    stmt = (
-        update(Agent)
-        .where(Agent.id == agent_id)
-        .values(budget_used_eur=Agent.budget_used_eur + cost)
-    )
+    stmt = update(Agent).where(Agent.id == agent_id).values(budget_used_eur=Agent.budget_used_eur + cost)
     result = await db.execute(stmt)
     if result.rowcount == 0:
         return None

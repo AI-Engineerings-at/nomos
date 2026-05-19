@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from nomos_api.auth.rbac import check_agent_access
+from nomos_api.auth.rbac import check_agent_access, require_agent_actor
 from nomos_api.database import get_db
 from nomos_api.models import Agent, User
 from nomos_api.routers.auth import get_current_user
@@ -57,7 +57,14 @@ async def record_heartbeat(
     agent_id: str,
     request: HeartbeatRequest,
     db: AsyncSession = Depends(get_db),
+    _agent: Agent = Depends(require_agent_actor),
 ) -> HeartbeatResponse:
+    """Record an agent heartbeat.
+
+    AuthZ (H3): require_agent_actor enforces that the caller is the trusted
+    plugin (service principal) or a user who owns this agent before any
+    state change. The agent existence is already validated there.
+    """
     result = await _record_heartbeat(db, agent_id, request.metrics)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")

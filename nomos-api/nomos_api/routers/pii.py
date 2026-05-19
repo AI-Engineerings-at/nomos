@@ -17,8 +17,5 @@ async def filter_pii(request: PIIFilterRequest) -> PIIFilterResponse:
     return PIIFilterResponse(
         filtered=result.filtered,
         pii_count=result.pii_count,
-        matches=[
-            PIIMatchResponse(type=m["type"], start=m["start"], end=m["end"])
-            for m in result.matches
-        ],
+        matches=[PIIMatchResponse(type=m["type"], start=m["start"], end=m["end"]) for m in result.matches],
     )

@@ -17,8 +17,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import require_admin
 from nomos_api.database import get_db
-from nomos_api.models import Alert, AlertRule, Metric
+from nomos_api.models import Alert, AlertRule, Metric, User
 from nomos_api.schemas import (
     AlertCreate,
     AlertResponse,
@@ -34,7 +35,10 @@ router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 
 
 @router.get("/metrics", response_model=MetricsResponse)
-async def get_metrics(db: AsyncSession = Depends(get_db)) -> MetricsResponse:
+async def get_metrics(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> MetricsResponse:
     """Get current system metrics aggregated over the last 5 minutes."""
     five_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
 
@@ -86,7 +90,10 @@ def format_metrics(metrics: Sequence[Metric]) -> dict[str, Any]:
 
 @router.get("/alerts", response_model=list[AlertResponse])
 async def list_alerts(
-    severity: str | None = None, status: str | None = None, db: AsyncSession = Depends(get_db)
+    severity: str | None = None,
+    status: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> list[AlertResponse]:
     """List active alerts, optionally filtered by severity and status."""
     query = select(Alert)
@@ -103,11 +110,15 @@ async def list_alerts(
     result = await db.execute(query.order_by(Alert.triggered_at.desc()))
     alerts = result.scalars().all()
 
-    return [AlertResponse.from_orm(alert) for alert in alerts]
+    return [AlertResponse.model_validate(alert) for alert in alerts]
 
 
 @router.post("/alerts", response_model=AlertResponse, status_code=201)
-async def create_alert(alert_data: AlertCreate, db: AsyncSession = Depends(get_db)) -> AlertResponse:
+async def create_alert(
+    alert_data: AlertCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> AlertResponse:
     """Create a manual alert (for testing or manual triggers)."""
     alert = Alert(
         id=alert_data.id or f"alert_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
@@ -124,11 +135,16 @@ async def create_alert(alert_data: AlertCreate, db: AsyncSession = Depends(get_d
     await db.commit()
     await db.refresh(alert)
 
-    return AlertResponse.from_orm(alert)
+    return AlertResponse.model_validate(alert)
 
 
 @router.patch("/alerts/{alert_id}", response_model=AlertResponse)
-async def update_alert(alert_id: str, update_data: AlertUpdate, db: AsyncSession = Depends(get_db)) -> AlertResponse:
+async def update_alert(
+    alert_id: str,
+    update_data: AlertUpdate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> AlertResponse:
     """Acknowledge or resolve an alert."""
     result = await db.execute(select(Alert).where(Alert.id == alert_id))
     alert = result.scalar_one_or_none()
@@ -147,20 +163,27 @@ async def update_alert(alert_id: str, update_data: AlertUpdate, db: AsyncSession
     await db.commit()
     await db.refresh(alert)
 
-    return AlertResponse.from_orm(alert)
+    return AlertResponse.model_validate(alert)
 
 
 @router.get("/alert-rules", response_model=list[AlertRuleResponse])
-async def list_alert_rules(db: AsyncSession = Depends(get_db)) -> list[AlertRuleResponse]:
+async def list_alert_rules(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> list[AlertRuleResponse]:
     """List all configured alert rules."""
     result = await db.execute(select(AlertRule).where(AlertRule.is_active.is_(True)))
     rules = result.scalars().all()
 
-    return [AlertRuleResponse.from_orm(rule) for rule in rules]
+    return [AlertRuleResponse.model_validate(rule) for rule in rules]
 
 
 @router.post("/alert-rules", response_model=AlertRuleResponse, status_code=201)
-async def create_alert_rule(rule_data: AlertRuleCreate, db: AsyncSession = Depends(get_db)) -> AlertRuleResponse:
+async def create_alert_rule(
+    rule_data: AlertRuleCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> AlertRuleResponse:
     """Create a new alert rule."""
     rule = AlertRule(
         metric_name=rule_data.metric_name,
@@ -177,11 +200,15 @@ async def create_alert_rule(rule_data: AlertRuleCreate, db: AsyncSession = Depen
     await db.commit()
     await db.refresh(rule)
 
-    return AlertRuleResponse.from_orm(rule)
+    return AlertRuleResponse.model_validate(rule)
 
 
 @router.delete("/alert-rules/{rule_id}")
-async def delete_alert_rule(rule_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_alert_rule(
+    rule_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
     """Delete an alert rule."""
     result = await db.execute(select(AlertRule).where(AlertRule.id == rule_id))
     rule = result.scalar_one_or_none()

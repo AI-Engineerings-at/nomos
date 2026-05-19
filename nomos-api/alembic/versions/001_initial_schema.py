@@ -1,6 +1,6 @@
 """Initial schema — all NomOS tables.
 
-Revision ID: 001_initial
+Revision ID: 001_initial_schema
 Revises: None
 Create Date: 2026-03-31
 

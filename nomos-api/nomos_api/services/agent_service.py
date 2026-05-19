@@ -36,8 +36,7 @@ def check_fcl_limit_with_message(active_count: int) -> tuple[bool, str]:
     if allowed:
         return True, f"FCL: {active_count}/{FCL_MAX_AGENTS} agents active. You can add more."
     return False, (
-        f"FCL: {active_count}/{FCL_MAX_AGENTS} agents active. "
-        f"Free license limit reached. Upgrade to add more agents."
+        f"FCL: {active_count}/{FCL_MAX_AGENTS} agents active. Free license limit reached. Upgrade to add more agents."
     )
 
 
@@ -82,6 +81,7 @@ async def create_agent(
 
     # Auto-set kill_switch_authority to creating user (Art. 14 EU AI Act)
     import yaml
+
     manifest_path = forge_result.output_dir / "manifest.yaml"
     manifest_raw = yaml.safe_load(manifest_path.read_text())
     if "governance" not in manifest_raw:

@@ -7,6 +7,7 @@ from nomos.core.events import EventType, validate_event_type
 
 # --- Control Plane Events (Sub-B) ---
 
+
 def test_task_events_exist():
     assert hasattr(EventType, "TASK_CREATED")
     assert hasattr(EventType, "TASK_ASSIGNED")
@@ -52,6 +53,7 @@ def test_config_event_values():
 
 
 # --- Compliance Runtime Events (Sub-C) ---
+
 
 class TestIncidentEvents:
     def test_incident_detected(self) -> None:

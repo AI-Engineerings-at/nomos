@@ -70,8 +70,9 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 - **Production Readiness: 10/10**
 - **Verifiziert:** docker compose up → Login → Hire → Compliant → Chat → LLM antwortet
 
-## OpenClaw Versionsstand (01.04.2026)
-- **Gepinnt auf:** v2026.3.28 (Dockerfile.gateway)
+## OpenClaw Versionsstand (Stand 2026-05-19)
+- **Gepinnt auf:** `2026.5.18` (Dockerfile.gateway) — current stable per GitHub releases/latest 2026-05-19, ghcr manifest verified. War vorher faelschlich `:latest` (Doku behauptete v2026.3.28).
+- **Plugin-Kompat. zuletzt voll validiert:** v2026.3.28 — Golden Path bei jedem Bump erneut pruefen.
 - **Entry Point:** `definePluginEntry()` (v2026.3.22+ Pattern)
 - **Neue Features verfuegbar:** `requireApproval`, `prependSystemContext`, ContextEngine Plugin Slot
 - **NemoClaw:** Alpha, optional, kein Handlungsbedarf

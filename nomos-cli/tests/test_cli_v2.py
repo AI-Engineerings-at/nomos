@@ -124,13 +124,15 @@ class TestRetire:
 class TestForget:
     @patch("nomos.core.api.forget_email")
     def test_forget_success(self, mock_forget, runner: CliRunner) -> None:
-        mock_forget.return_value = _ok({
-            "deleted_messages": 3,
-            "search_term": "max@example.com",
-            "audit_event": "dsgvo.forget",
-            "audit_preserved": True,
-            "timestamp": "2026-03-25T10:00:00Z",
-        })
+        mock_forget.return_value = _ok(
+            {
+                "deleted_messages": 3,
+                "search_term": "max@example.com",
+                "audit_event": "dsgvo.forget",
+                "audit_preserved": True,
+                "timestamp": "2026-03-25T10:00:00Z",
+            }
+        )
         result = runner.invoke(main, ["forget", "max@example.com"])
         assert result.exit_code == 0
         assert "3 Nachrichten" in result.output
@@ -152,15 +154,17 @@ class TestForget:
 class TestAssign:
     @patch("nomos.core.api.create_task")
     def test_assign_success(self, mock_create, runner: CliRunner) -> None:
-        mock_create.return_value = _ok({
-            "id": "task-001",
-            "agent_id": "mani-ruf-01",
-            "description": "Write blog post",
-            "priority": "normal",
-            "status": "queued",
-            "timeout_minutes": 60,
-            "created_at": "2026-03-25T10:00:00Z",
-        })
+        mock_create.return_value = _ok(
+            {
+                "id": "task-001",
+                "agent_id": "mani-ruf-01",
+                "description": "Write blog post",
+                "priority": "normal",
+                "status": "queued",
+                "timeout_minutes": 60,
+                "created_at": "2026-03-25T10:00:00Z",
+            }
+        )
         result = runner.invoke(main, ["assign", "mani-ruf-01", "--task", "Write blog post"])
         assert result.exit_code == 0
         assert "task-001" in result.output
@@ -175,15 +179,17 @@ class TestAssign:
 
     @patch("nomos.core.api.create_task")
     def test_assign_with_priority(self, mock_create, runner: CliRunner) -> None:
-        mock_create.return_value = _ok({
-            "id": "task-002",
-            "agent_id": "mani-ruf-01",
-            "description": "Urgent task",
-            "priority": "urgent",
-            "status": "queued",
-            "timeout_minutes": 30,
-            "created_at": "2026-03-25T10:00:00Z",
-        })
+        mock_create.return_value = _ok(
+            {
+                "id": "task-002",
+                "agent_id": "mani-ruf-01",
+                "description": "Urgent task",
+                "priority": "urgent",
+                "status": "queued",
+                "timeout_minutes": 30,
+                "created_at": "2026-03-25T10:00:00Z",
+            }
+        )
         result = runner.invoke(
             main,
             ["assign", "mani-ruf-01", "--task", "Urgent task", "--priority", "urgent", "--timeout", "30"],
@@ -200,18 +206,20 @@ class TestAssign:
 class TestCostsAll:
     @patch("nomos.core.api.get_costs")
     def test_costs_all_success(self, mock_costs, runner: CliRunner) -> None:
-        mock_costs.return_value = _ok({
-            "costs": [
-                {
-                    "agent_id": "mani-ruf-01",
-                    "total_cost_eur": 12.50,
-                    "budget_limit_eur": 50.0,
-                    "budget_status": "ok",
-                    "percent_used": 25.0,
-                },
-            ],
-            "total": 1,
-        })
+        mock_costs.return_value = _ok(
+            {
+                "costs": [
+                    {
+                        "agent_id": "mani-ruf-01",
+                        "total_cost_eur": 12.50,
+                        "budget_limit_eur": 50.0,
+                        "budget_status": "ok",
+                        "percent_used": 25.0,
+                    },
+                ],
+                "total": 1,
+            }
+        )
         result = runner.invoke(main, ["costs"])
         assert result.exit_code == 0
         assert "mani-ruf-01" in result.output
@@ -239,13 +247,15 @@ class TestCostsAll:
 class TestCostsSingle:
     @patch("nomos.core.api.get_agent_costs")
     def test_costs_single_success(self, mock_costs, runner: CliRunner) -> None:
-        mock_costs.return_value = _ok({
-            "agent_id": "mani-ruf-01",
-            "total_cost_eur": 12.50,
-            "budget_limit_eur": 50.0,
-            "budget_status": "ok",
-            "percent_used": 25.0,
-        })
+        mock_costs.return_value = _ok(
+            {
+                "agent_id": "mani-ruf-01",
+                "total_cost_eur": 12.50,
+                "budget_limit_eur": 50.0,
+                "budget_status": "ok",
+                "percent_used": 25.0,
+            }
+        )
         result = runner.invoke(main, ["costs", "mani-ruf-01"])
         assert result.exit_code == 0
         assert "mani-ruf-01" in result.output
@@ -266,21 +276,23 @@ class TestCostsSingle:
 class TestIncidents:
     @patch("nomos.core.api.get_incidents")
     def test_incidents_success(self, mock_incidents, runner: CliRunner) -> None:
-        mock_incidents.return_value = _ok({
-            "incidents": [
-                {
-                    "id": 1,
-                    "agent_id": "mani-ruf-01",
-                    "incident_type": "data_breach",
-                    "description": "Unauthorized access detected",
-                    "severity": "high",
-                    "status": "detected",
-                    "detected_at": "2026-03-25T10:00:00Z",
-                    "report_deadline": "2026-03-28T10:00:00Z",
-                },
-            ],
-            "total": 1,
-        })
+        mock_incidents.return_value = _ok(
+            {
+                "incidents": [
+                    {
+                        "id": 1,
+                        "agent_id": "mani-ruf-01",
+                        "incident_type": "data_breach",
+                        "description": "Unauthorized access detected",
+                        "severity": "high",
+                        "status": "detected",
+                        "detected_at": "2026-03-25T10:00:00Z",
+                        "report_deadline": "2026-03-28T10:00:00Z",
+                    },
+                ],
+                "total": 1,
+            }
+        )
         result = runner.invoke(main, ["incidents"])
         assert result.exit_code == 0
         # Rich may truncate column values — check for prefix
@@ -309,12 +321,16 @@ class TestIncidents:
 class TestWorkspaceMount:
     @patch("nomos.core.api.mount_collection")
     def test_mount_success(self, mock_mount, runner: CliRunner) -> None:
-        mock_mount.return_value = _ok({
-            "agent_id": "mani-ruf-01",
-            "collection_name": "brand-guidelines",
-            "mounted": True,
-        })
-        result = runner.invoke(main, ["workspace", "mount", "--agent", "mani-ruf-01", "--collection", "brand-guidelines"])
+        mock_mount.return_value = _ok(
+            {
+                "agent_id": "mani-ruf-01",
+                "collection_name": "brand-guidelines",
+                "mounted": True,
+            }
+        )
+        result = runner.invoke(
+            main, ["workspace", "mount", "--agent", "mani-ruf-01", "--collection", "brand-guidelines"]
+        )
         assert result.exit_code == 0
         assert "gemountet" in result.output
         assert "brand-guidelines" in result.output
@@ -335,12 +351,16 @@ class TestWorkspaceMount:
 class TestWorkspaceUnmount:
     @patch("nomos.core.api.unmount_collection")
     def test_unmount_success(self, mock_unmount, runner: CliRunner) -> None:
-        mock_unmount.return_value = _ok({
-            "agent_id": "mani-ruf-01",
-            "collection_name": "brand-guidelines",
-            "mounted": False,
-        })
-        result = runner.invoke(main, ["workspace", "unmount", "--agent", "mani-ruf-01", "--collection", "brand-guidelines"])
+        mock_unmount.return_value = _ok(
+            {
+                "agent_id": "mani-ruf-01",
+                "collection_name": "brand-guidelines",
+                "mounted": False,
+            }
+        )
+        result = runner.invoke(
+            main, ["workspace", "unmount", "--agent", "mani-ruf-01", "--collection", "brand-guidelines"]
+        )
         assert result.exit_code == 0
         assert "ausgehaengt" in result.output
         assert "brand-guidelines" in result.output
@@ -348,7 +368,9 @@ class TestWorkspaceUnmount:
     @patch("nomos.core.api.unmount_collection")
     def test_unmount_not_found(self, mock_unmount, runner: CliRunner) -> None:
         mock_unmount.return_value = _err("Collection brand-guidelines not mounted", 404)
-        result = runner.invoke(main, ["workspace", "unmount", "--agent", "mani-ruf-01", "--collection", "brand-guidelines"])
+        result = runner.invoke(
+            main, ["workspace", "unmount", "--agent", "mani-ruf-01", "--collection", "brand-guidelines"]
+        )
         assert result.exit_code != 0
         assert "Fehler" in result.output
 
@@ -371,14 +393,16 @@ class TestApiClient:
 
     def test_ok_helper(self) -> None:
         from nomos.core.api import _ok
+
         r = _ok({"x": 1})
         assert r == {"success": True, "data": {"x": 1}}
 
     def test_err_helper(self) -> None:
         from nomos.core.api import _err
+
         r = _err("boom", 500)
         assert r == {"success": False, "error": "boom", "status_code": 500}
 
 
 # Import api at module level so TestApiClient can reference it
-from nomos.core import api
+from nomos.core import api  # noqa: E402

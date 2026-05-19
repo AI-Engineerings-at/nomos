@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from fastapi import HTTPException
+from fastapi import Cookie, Depends, HTTPException, Request
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class _HasEmailRole(Protocol):
@@ -32,3 +34,87 @@ def check_agent_access(user: _HasEmailRole, agent: _HasEmailId, action: str) -> 
         status_code=403,
         detail=f"Not authorized to {action} agent {agent.id}",
     )
+
+
+def _get_db_dep():
+    """Indirection so FastAPI resolves get_db (honoring dependency_overrides)."""
+    from nomos_api.database import get_db
+
+    return get_db
+
+
+async def require_admin(
+    nomos_token: str | None = Cookie(default=None),
+    db: AsyncSession = Depends(_get_db_dep()),
+):
+    """FastAPI dependency: require an authenticated, active admin user.
+
+    Same DB-backed JWT-cookie scheme used by the users/settings admin
+    endpoints (decode cookie -> load active User -> assert role == 'admin').
+    Centralized here so admin-only routers (monitoring, ...) share one
+    implementation instead of re-inventing per-router checks.
+    """
+    from nomos_api.auth.jwt import decode_token
+    from nomos_api.config import settings
+    from nomos_api.models import User
+
+    if not nomos_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    payload = decode_token(nomos_token, settings.jwt_secret)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    result = await db.execute(
+        select(User).where(User.id == payload.user_id, User.is_active == True)  # noqa: E712
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found or deactivated")
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+async def require_agent_actor(
+    agent_id: str,
+    request: Request,
+    db: AsyncSession = Depends(_get_db_dep()),
+):
+    """Authorize the caller to act on *agent_id*.
+
+    The global AuthMiddleware already authenticates every non-public request
+    (plugin `X-NomOS-API-Key` -> service principal, or `nomos_token` JWT ->
+    user principal) and stores it on `request.state.user`. This dependency
+    closes the route-level gap (H3): it requires that principal AND, for
+    non-service users, verifies agent ownership via check_agent_access.
+
+    - Plugin/service principal: trusted infra — may heartbeat any agent.
+    - User principal: must own the agent (or be admin).
+    Returns the loaded Agent so the handler need not re-query.
+    """
+    from nomos_api.models import Agent
+
+    principal = getattr(request.state, "user", None)
+    if not principal:
+        # Defense in depth — should already be enforced by AuthMiddleware.
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    agent = await db.get(Agent, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+
+    role = principal.get("role")
+    if role == "service":
+        return agent
+
+    email = principal.get("email")
+    if email is None:
+        raise HTTPException(status_code=401, detail="Invalid principal")
+
+    class _P:
+        pass
+
+    actor = _P()
+    actor.role = role or "user"
+    actor.email = email
+    check_agent_access(actor, agent, "heartbeat")
+    return agent

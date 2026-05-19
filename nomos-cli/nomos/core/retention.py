@@ -38,11 +38,7 @@ class RetentionEngine:
         Only sessions strictly older than retention_days are deleted.
         """
         cutoff = datetime.now(timezone.utc) - timedelta(days=self.retention_days)
-        expired = [
-            sid
-            for sid, created in self._sessions.items()
-            if created < cutoff
-        ]
+        expired = [sid for sid, created in self._sessions.items() if created < cutoff]
         for sid in expired:
             del self._sessions[sid]
 

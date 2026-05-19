@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from nomos.core.incident import detect_incident, IncidentType, Incident
+from nomos.core.incident import detect_incident, IncidentType
 
 
 class TestPIIInLogDetection:

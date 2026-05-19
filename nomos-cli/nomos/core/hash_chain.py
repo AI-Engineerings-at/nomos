@@ -11,7 +11,9 @@ exportable for regulators.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,26 @@ from pathlib import Path
 
 CHAIN_FILENAME = "chain.jsonl"
 GENESIS_HASH = "0" * 64
+
+# M3: HMAC anchoring. The plain SHA-256 chain is fully recomputable, so a
+# consistent rewrite of the JSONL file passes verify_chain. An HMAC over each
+# entry's content hash, keyed by a secret the attacker does not have, makes
+# any tampering detectable even on a writable volume.
+#
+# The key is env-injectable via NOMOS_HASHCHAIN_HMAC_KEY (inject from Vault in
+# production). For tests/dev a clearly-labelled default is used.
+_HMAC_ENV_VAR = "NOMOS_HASHCHAIN_HMAC_KEY"
+_TEST_HMAC_KEY = "nomos-test-hashchain-hmac-key-do-not-use-in-production"
+
+
+def _hmac_key() -> bytes:
+    """Resolve the HMAC key (env first, documented test key fallback)."""
+    return os.environ.get(_HMAC_ENV_VAR, _TEST_HMAC_KEY).encode("utf-8")
+
+
+def _compute_hmac(content_hash: str) -> str:
+    """Compute the HMAC-SHA256 anchor over an entry's content hash."""
+    return hmac.new(_hmac_key(), content_hash.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -32,6 +54,7 @@ class HashChainEntry:
     data: dict
     previous_hash: str
     hash: str = field(init=False)
+    hmac: str = field(init=False)
 
     def __post_init__(self) -> None:
         canonical = json.dumps(
@@ -49,6 +72,7 @@ class HashChainEntry:
         )
         computed = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         object.__setattr__(self, "hash", computed)
+        object.__setattr__(self, "hmac", _compute_hmac(computed))
 
     def to_dict(self) -> dict:
         return {
@@ -59,6 +83,7 @@ class HashChainEntry:
             "data": self.data,
             "previous_hash": self.previous_hash,
             "hash": self.hash,
+            "hmac": self.hmac,
         }
 
 
@@ -137,6 +162,12 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
     1. Each entry's hash matches its content.
     2. Each entry's previous_hash matches the prior entry's hash.
     3. The first entry's previous_hash is the genesis hash.
+    4. (M3) When an entry carries an ``hmac`` field, the HMAC is recomputed
+       with the configured key and must match. Tampering without the key is
+       therefore detectable even if the SHA-256 chain is consistently
+       rewritten. Legacy entries written before HMAC anchoring (no ``hmac``
+       field) are still accepted on the SHA-256 chain alone for backward
+       compatibility.
     """
     chain_file = storage_dir / CHAIN_FILENAME
     if not chain_file.exists():
@@ -172,6 +203,17 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
             errors.append(
                 f"Entry {i}: hash mismatch (stored={stored_hash[:16]}..., computed={recomputed.hash[:16]}...)"
             )
+
+        # M3: HMAC anchoring. Validate when present; recompute over the
+        # *stored* hash so a forged hash with a stale HMAC is caught, and a
+        # rewritten entry without the secret key cannot produce a valid HMAC.
+        stored_hmac = raw.get("hmac")
+        if stored_hmac is not None:
+            expected_hmac = _compute_hmac(stored_hash)
+            if not hmac.compare_digest(expected_hmac, str(stored_hmac)):
+                errors.append(
+                    f"Entry {i}: HMAC mismatch — entry tampered or wrong key (stored={str(stored_hmac)[:16]}...)"
+                )
 
         if raw["previous_hash"] != previous_hash:
             errors.append(

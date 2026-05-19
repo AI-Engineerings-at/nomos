@@ -1,10 +1,23 @@
 # NomOS API Reference
 
+> Last reconciled against router source: 2026-05-19 (Batch F).
+
 Base URL: `http://localhost:8060`
 
 All endpoints return JSON. The API is built with FastAPI and provides automatic OpenAPI documentation at `/docs` (Swagger UI) and `/redoc` (ReDoc) when running.
 
 **Authentication:** Most endpoints require either a JWT cookie (browser sessions) or an `X-NomOS-API-Key` header (plugin/service calls). Exceptions are noted below.
+
+**Authorization:** beyond authentication, some surfaces are role- or
+ownership-gated:
+- `/api/monitoring/*` is **admin-only** (`require_admin` on every
+  endpoint, `routers/monitoring.py`).
+- `GET /api/settings` is **admin-only** (`routers/settings.py:59,154`).
+- Agent state-change endpoints and `POST /api/proxy/chat` require an
+  authenticated user **and** agent ownership (admin or owning user) via
+  `check_agent_access` (`routers/agents.py`, `routers/proxy.py:147`).
+- `GET /api/system/unseal-key` is **bootstrap-only**: 403 once an admin
+  exists, 410 after one-shot retrieval (`routers/system.py:129-156`).
 
 ---
 
@@ -35,12 +48,12 @@ All endpoints return JSON. The API is built with FastAPI and provides automatic 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/api/agents` | JWT/Key | Create a new agent (manifest, hash chain, DB record) |
-| `PATCH` | `/api/agents/{id}` | JWT/Key | Update agent fields (role, risk class, status, etc.) |
-| `POST` | `/api/agents/{id}/heartbeat` | JWT/Key | Record an agent heartbeat (marks agent as alive) |
-| `POST` | `/api/agents/{id}/pause` | JWT/Key | Pause a running agent |
-| `POST` | `/api/agents/{id}/resume` | JWT/Key | Resume a paused agent |
-| `POST` | `/api/agents/{id}/kill` | JWT/Key | Immediately terminate an agent (kill switch) |
-| `POST` | `/api/agents/{id}/retire` | JWT/Key | Retire an agent permanently |
+| `POST` | `/api/agents/{id}/heartbeat` | Agent actor | Record a heartbeat — caller must be the trusted plugin service principal or the owning user (`require_agent_actor`, `routers/agents.py:60`) |
+| `POST` | `/api/agents/{id}/pause` | JWT + owner | Pause a running agent (`check_agent_access(..., "pause")`) |
+| `POST` | `/api/agents/{id}/resume` | JWT + owner | Resume a paused agent |
+| `POST` | `/api/agents/{id}/kill` | JWT + owner | Immediately terminate an agent (kill switch) |
+| `POST` | `/api/agents/{id}/retire` | JWT + owner | Retire an agent permanently |
+| `PATCH` | `/api/agents/{id}` | JWT + owner | Update agent fields (`check_agent_access(..., "patch")`) |
 
 ---
 
@@ -170,7 +183,7 @@ All endpoints return JSON. The API is built with FastAPI and provides automatic 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/proxy/status` | JWT/Key | Check OpenClaw gateway connectivity |
-| `POST` | `/api/proxy/chat` | JWT/Key | Relay a chat message through the OpenClaw gateway to the LLM |
+| `POST` | `/api/proxy/chat` | JWT + owner | Relay a chat message. Requires an authenticated user that owns the target agent (`get_current_user` + `check_agent_access(..., "chat")`, `routers/proxy.py:126,147`). Persists conversation history via the context pipeline (`routers/proxy.py:158-160,185,218`). |
 
 ---
 
@@ -178,7 +191,34 @@ All endpoints return JSON. The API is built with FastAPI and provides automatic 
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/settings` | JWT | Retrieve current system settings |
+| `GET` | `/api/settings` | Admin | Retrieve current system settings — admin-only (`_require_admin`, `routers/settings.py:59,154`) |
+
+---
+
+## Monitoring (admin-only)
+
+Every endpoint requires an admin user (`Depends(require_admin)`,
+`routers/monitoring.py:40,96,120,146,172,185,210`).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/monitoring/metrics` | Admin | Current API/system metrics |
+| `GET` | `/api/monitoring/health` | Admin | Extended health check with metrics |
+| `GET` | `/api/monitoring/alerts` | Admin | List active alerts |
+| `POST` | `/api/monitoring/alerts` | Admin | Create a manual alert |
+| `PATCH` | `/api/monitoring/alerts/{alert_id}` | Admin | Acknowledge / resolve an alert |
+| `GET` | `/api/monitoring/alert-rules` | Admin | List alert rules |
+| `POST` | `/api/monitoring/alert-rules` | Admin | Create an alert rule |
+| `DELETE` | `/api/monitoring/alert-rules/{rule_id}` | Admin | Delete an alert rule |
+
+---
+
+## System (setup wizard)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/system/status` | No | Setup-wizard status (initialized / admin exists / setup-required) |
+| `GET` | `/api/system/unseal-key` | Bootstrap-only | Returns the Vault unseal key during first-run setup only. **403** once any admin user exists; **410** after a durable one-shot serve (`routers/system.py:129-156`). |
 
 ---
 

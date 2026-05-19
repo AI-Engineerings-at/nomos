@@ -54,3 +54,6 @@ tsconfig.tsbuildinfo
 
 # Codex CLI local agent configs
 .codex/
+/tmp/
+scripts/g_verify.sh
+scripts/g_chat_diag.sh

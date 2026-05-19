@@ -40,9 +40,7 @@ async def create_incident(
 
 async def list_incidents(db: AsyncSession) -> list[IncidentRecord]:
     """List all incidents, newest first."""
-    result = await db.execute(
-        select(IncidentRecord).order_by(IncidentRecord.id.desc())
-    )
+    result = await db.execute(select(IncidentRecord).order_by(IncidentRecord.id.desc()))
     return list(result.scalars().all())
 
 
@@ -52,9 +50,7 @@ async def update_incident_status(
     status: str,
 ) -> IncidentRecord | None:
     """Update incident status (detected -> reported -> resolved)."""
-    result = await db.execute(
-        select(IncidentRecord).where(IncidentRecord.id == incident_id)
-    )
+    result = await db.execute(select(IncidentRecord).where(IncidentRecord.id == incident_id))
     record = result.scalar_one_or_none()
     if record is None:
         return None

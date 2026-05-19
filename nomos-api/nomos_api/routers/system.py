@@ -22,8 +22,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
-# In-memory flag: once the unseal key has been served, it cannot be retrieved again.
-_unseal_key_served: bool = False
+
+def _get_served_marker_path() -> Path:
+    """Durable one-shot marker for unseal-key retrieval.
+
+    A filesystem marker (not an in-memory flag) so the one-time guarantee
+    survives container restarts and is shared across uvicorn workers.
+    Extracted for test patching.
+    """
+    return Path("/vault/init/unseal-key-served")
 
 
 def _get_init_file_path() -> Path:
@@ -120,16 +127,30 @@ async def system_status(db: AsyncSession = Depends(get_db)) -> SystemStatusRespo
 
 
 @router.get("/unseal-key", response_model=UnsealKeyResponse)
-async def get_unseal_key() -> UnsealKeyResponse:
-    """Return the Vault unseal key. One-time retrieval only.
+async def get_unseal_key(db: AsyncSession = Depends(get_db)) -> UnsealKeyResponse:
+    """Return the Vault unseal key — bootstrap-only, one-time retrieval.
 
-    - First call: returns the key and sets the served flag.
-    - Subsequent calls: 410 Gone.
-    - File not found: 404 Not Found.
+    Two independent, restart-durable gates protect this public endpoint:
+
+    1. Setup-complete gate: once any admin user exists, setup is finished
+       and the unseal key is NEVER served again (403). This is derived from
+       persistent DB state, so it survives restarts and worker recycling.
+    2. One-shot gate: a filesystem marker is written on first successful
+       retrieval; subsequent calls get 410. The marker (not an in-memory
+       flag) holds across restarts and across uvicorn workers.
+
+    - Setup already complete (admin exists): 403 Forbidden.
+    - Already served: 410 Gone.
+    - Key file not found: 404 Not Found.
     """
-    global _unseal_key_served
+    if await _admin_exists(db):
+        raise HTTPException(
+            status_code=403,
+            detail="Setup is complete; unseal key retrieval is permanently disabled",
+        )
 
-    if _unseal_key_served:
+    marker = _get_served_marker_path()
+    if marker.exists():
         raise HTTPException(status_code=410, detail="Unseal key has already been served")
 
     paths = _get_unseal_key_paths()
@@ -138,5 +159,14 @@ async def get_unseal_key() -> UnsealKeyResponse:
     if key is None:
         raise HTTPException(status_code=404, detail="Unseal key file not found")
 
-    _unseal_key_served = True
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("served")
+    except OSError:
+        logger.exception("Failed to persist unseal-key served marker at %s", marker)
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to record unseal-key retrieval; refusing to serve key",
+        ) from None
+
     return UnsealKeyResponse(unseal_key=key)

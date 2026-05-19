@@ -61,9 +61,15 @@ class TestGenerateComplianceDocs:
         docs = generate_compliance_docs(manifest, agent_dir / "compliance")
         names = {d.name for d in docs}
         expected = {
-            "dpia", "verarbeitungsverzeichnis", "art50_transparency",
-            "art14_killswitch", "art12_logging",
-            "avv", "risk_management", "betroffenenrechte", "ai_literacy",
+            "dpia",
+            "verarbeitungsverzeichnis",
+            "art50_transparency",
+            "art14_killswitch",
+            "art12_logging",
+            "avv",
+            "risk_management",
+            "betroffenenrechte",
+            "ai_literacy",
         }
         assert names == expected
 

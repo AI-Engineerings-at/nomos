@@ -31,13 +31,16 @@ from nomos.core.compliance_engine import check_compliance
 from nomos.core.forge import forge_agent
 from nomos.core.hash_chain import HashChain, verify_chain
 from nomos.core.manifest_validator import compute_manifest_hash, load_manifest, validate_manifest
+from nomos.logging_config import configure_logging, get_logger
 
 console = Console()
+log = get_logger()
 
 
 # ---------------------------------------------------------------------------
 # Helpers for v2 commands
 # ---------------------------------------------------------------------------
+
 
 def _print_result(result: dict[str, Any], *, json_flag: bool, success_msg: str) -> None:
     """Print the result of an API call — human-readable or JSON."""
@@ -48,6 +51,11 @@ def _print_result(result: dict[str, Any], *, json_flag: bool, success_msg: str) 
     if result["success"]:
         console.print(f"[green]{success_msg}[/green]")
     else:
+        log.error(
+            "API call failed: %s (status=%s)",
+            result.get("error"),
+            result.get("status_code"),
+        )
         console.print(f"[red]Fehler:[/red] {result['error']}")
         raise SystemExit(1)
 
@@ -56,6 +64,10 @@ def _print_result(result: dict[str, Any], *, json_flag: bool, success_msg: str) 
 @click.version_option(version="0.1.0", prog_name="nomos")
 def main() -> None:
     """NomOS — The agentic framework that enforces EU AI Act compliance."""
+    # Re-read NOMOS_LOG_LEVEL at invocation so the env is honored per run
+    # (the module-level get_logger() configures with the import-time env).
+    configure_logging()
+    log.debug("nomos CLI invoked")
 
 
 @main.command()
@@ -68,6 +80,7 @@ def main() -> None:
 def hire(name: str, role: str, company: str, email: str, risk_class: str, output_dir: str) -> None:
     """Hire a new AI agent with full compliance."""
     out = Path(output_dir)
+    log.info("hire: forging agent role=%s risk_class=%s", role, risk_class)
     result = forge_agent(
         agent_name=name,
         agent_role=role,
@@ -78,11 +91,17 @@ def hire(name: str, role: str, company: str, email: str, risk_class: str, output
     )
 
     if not result.success:
+        log.error("hire: forge_agent failed: %s", result.error)
         console.print(f"[red]Error:[/red] {result.error}")
         raise SystemExit(1)
 
     manifest = load_manifest(out / "manifest.yaml")
     compliance = check_compliance(manifest, out / "compliance")
+    log.info(
+        "hire: agent created id=%s compliance=%s",
+        manifest.agent.id,
+        compliance.status.value,
+    )
 
     console.print(
         Panel(
@@ -110,6 +129,7 @@ def verify(agent_dir: str) -> None:
     manifest_file = agent_path / "manifest.yaml"
 
     if not manifest_file.exists():
+        log.error("verify: no manifest.yaml in %s", agent_path)
         console.print(f"[red]Error:[/red] No manifest.yaml found in {agent_path}")
         raise SystemExit(1)
 
@@ -164,6 +184,13 @@ def verify(agent_dir: str) -> None:
         console.print(f"\n[yellow]Missing:[/yellow] {', '.join(compliance.missing_documents)}")
 
     if compliance.status.value == "blocked" or not hash_ok or not chain_result.valid:
+        log.warning(
+            "verify: agent %s failed (compliance=%s hash_ok=%s chain_valid=%s)",
+            manifest.agent.id,
+            compliance.status.value,
+            hash_ok,
+            chain_result.valid,
+        )
         raise SystemExit(1)
 
 
@@ -336,7 +363,9 @@ def retire(agent_id: str, json_flag: bool) -> None:
     result = api.retire_agent(agent_id)
     if not json_flag and result["success"]:
         data = result["data"]
-        _print_result(result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) wurde in den Ruhestand versetzt.")
+        _print_result(
+            result, json_flag=False, success_msg=f"Agent {data['name']} ({agent_id}) wurde in den Ruhestand versetzt."
+        )
     else:
         _print_result(result, json_flag=json_flag, success_msg="")
 

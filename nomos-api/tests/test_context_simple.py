@@ -121,29 +121,30 @@ def test_context_manager_initialization():
     assert manager.pipeline.chunker is not None
     assert manager.pipeline.summarizer is not None
 
-    @pytest.mark.asyncio
-    async def test_context_manager_mocked():
-        """Test context manager with mocked dependencies."""
-        manager = ContextManager()
 
-        # Create a mock message object
-        mock_message = MagicMock()
-        mock_message.id = 123
+@pytest.mark.asyncio
+async def test_context_manager_mocked():
+    """Test context manager with mocked dependencies."""
+    manager = ContextManager()
 
-        # Mock the pipeline methods
-        manager.pipeline.process_new_message = AsyncMock(return_value=mock_message)
-        manager.pipeline.get_context_stats = AsyncMock(return_value={"estimated_token_count": 100000})
+    # Create a mock message object
+    mock_message = MagicMock()
+    mock_message.id = 123
 
-        # Mock database session
-        mock_db = MagicMock()
+    # Mock the pipeline methods
+    manager.pipeline.process_new_message = AsyncMock(return_value=mock_message)
+    manager.pipeline.get_context_stats = AsyncMock(return_value={"estimated_token_count": 100000})
 
-        # Test process_message
-        result = await manager.process_message(mock_db, "test-agent", "test-session", "user", "Hello")
+    # Mock database session
+    mock_db = MagicMock()
 
-        assert result is not None
-        assert "message_id" in result
-        assert result["message_id"] == 123
-        manager.pipeline.process_new_message.assert_awaited_once()
+    # Test process_message
+    result = await manager.process_message(mock_db, "test-agent", "test-session", "user", "Hello")
+
+    assert result is not None
+    assert "message_id" in result
+    assert result["message_id"] == 123
+    manager.pipeline.process_new_message.assert_awaited_once()
 
 
 def test_chunking_performance():

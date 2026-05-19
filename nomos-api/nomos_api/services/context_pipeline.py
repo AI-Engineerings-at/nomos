@@ -7,13 +7,13 @@ from __future__ import annotations
 
 import logging
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.services.context_chunker import ContextChunker
 from nomos_api.services.context_summarizer import ContextSummarizer
-from nomos_api.services.memory import store_message, list_messages
+from nomos_api.services import memory
 from nomos_api.models import AgentMemory
 
 logger = logging.getLogger("nomos-api")
@@ -45,10 +45,10 @@ class ContextPipeline:
             Stored message
         """
         # 1. Store the new message
-        message = await store_message(db, agent_id, session_id, role, content)
+        message = await memory.store_message(db, agent_id, session_id, role, content)
 
         # 2. Check if context management is needed
-        messages = await list_messages(db, agent_id, session_id)
+        messages = await memory.list_messages(db, agent_id, session_id)
 
         if len(messages) >= self.summary_threshold:
             await self._manage_context(db, agent_id, session_id, messages)
@@ -61,15 +61,16 @@ class ContextPipeline:
         """Apply context management strategies."""
         logger.info("Applying context management for agent %s, session %s", agent_id, session_id)
 
-        # Generate summary of older messages (keep recent messages in memory)
-        older_messages = messages[: -self.max_recent_messages]
+        # Summarize the turns older than the most recent summary_threshold
+        # window. The trigger fires at summary_threshold, so the retained
+        # tail must be threshold-sized for the trigger to be meaningful
+        # (a max_recent_messages-sized tail would never have older turns
+        # until 50+ messages, making summary_threshold dead code).
+        keep_recent = min(self.max_recent_messages, self.summary_threshold)
+        older_messages = messages[:-keep_recent] if keep_recent else messages
 
         if older_messages:
             await self._generate_and_store_summary(db, agent_id, session_id, older_messages)
-
-        # 3. Prune excess messages (implementation would go here)
-        # Note: Actual pruning would require additional database operations
-        # This is a placeholder for the concept
 
         logger.info("Context management completed for agent %s", agent_id)
 
@@ -90,7 +91,7 @@ class ContextPipeline:
         # Store summary as a system message
         summary_text = f"[SUMMARY]: {summary_result.summary}"
 
-        summary_message = await store_message(
+        summary_message = await memory.store_message(
             db,
             agent_id,
             session_id,
@@ -113,7 +114,7 @@ class ContextPipeline:
         Returns:
             List of messages ready for LLM processing
         """
-        messages = await list_messages(db, agent_id, session_id)
+        messages = await memory.list_messages(db, agent_id, session_id)
 
         if not messages:
             return []
@@ -139,7 +140,7 @@ class ContextPipeline:
 
     async def get_context_stats(self, db: AsyncSession, agent_id: str, session_id: str) -> Dict:
         """Get statistics about current context state."""
-        messages = await list_messages(db, agent_id, session_id)
+        messages = await memory.list_messages(db, agent_id, session_id)
 
         total_messages = len(messages)
         summary_count = len([m for m in messages if m.content and m.content.startswith("[SUMMARY]")])
@@ -156,35 +157,22 @@ class ContextPipeline:
             "summary_count": summary_count,
             "recent_messages": recent_count,
             "estimated_token_count": estimated_tokens,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     async def prune_old_context(self, db: AsyncSession, agent_id: str, session_id: str, keep_recent: int = 50) -> int:
-        """Prune old messages, keeping only recent ones and summaries.
+        """Prune old messages, keeping only recent turns and all summaries.
+
+        Delegates to ``memory.prune_messages`` which performs the actual
+        DB deletion. Summaries are always retained (DSGVO-safe: only the
+        oldest non-summary turns beyond ``keep_recent`` are deleted).
 
         Returns:
-            Number of messages pruned
+            Number of messages actually pruned (rows deleted).
         """
-        messages = await list_messages(db, agent_id, session_id)
-
-        if len(messages) <= keep_recent:
-            return 0
-
-        # Keep summaries and recent messages
-        summaries = [msg for msg in messages if msg.content and msg.content.startswith("[SUMMARY]")]
-        recent = messages[-keep_recent:]
-
-        # Identify messages to prune (old non-summary messages)
-        to_prune = [msg for msg in messages if msg not in summaries and msg not in recent]
-
-        prune_count = len(to_prune)
-
-        # Note: Actual deletion would require database operations
-        # This is a logical representation of what would be pruned
-
-        logger.info("Would prune %d old messages for agent %s", prune_count, agent_id)
-
-        return prune_count
+        pruned = await memory.prune_messages(db, agent_id, session_id, keep_recent)
+        logger.info("Pruned %d old messages for agent %s", pruned, agent_id)
+        return pruned
 
 
 class ContextManager:

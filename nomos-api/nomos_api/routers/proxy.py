@@ -98,7 +98,12 @@ async def _direct_llm_chat(
         logger.warning("LLM provider error %d (body suppressed)", exc.response.status_code)
         return {"error": {"message": f"LLM provider error: {exc.response.status_code}"}}
     except Exception as exc:
-        logger.warning("LLM provider error at %s: %s", url, exc)
+        # v0.4.0 (Q / audit D-#7): log type only, never the str(exc).
+        # httpx exception reprs can include the response body for some
+        # error classes — even when the body would have been suppressed
+        # above. Type-only keeps logs operator-actionable without leaking
+        # provider credentials.
+        logger.warning("LLM provider error at %s type=%s", url, type(exc).__name__)
         return None
 
 

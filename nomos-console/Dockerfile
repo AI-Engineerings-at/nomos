@@ -23,7 +23,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nomos:nomos /app/.next ./.next
 COPY --from=builder --chown=nomos:nomos /app/package.json ./package.json
 COPY --from=builder --chown=nomos:nomos /app/package-lock.json ./package-lock.json
-RUN npm ci --omit=dev
+# v0.4.0 P8 (audit A-#21): switch to the non-root user BEFORE the final
+# `npm ci`. Previously `npm ci --omit=dev` ran as root, leaving the
+# production node_modules + temp files root-owned, then `nomos` ran
+# against root-owned trees. Now everything is created and consumed as
+# the same non-root uid.
 USER nomos
+RUN npm ci --omit=dev
 EXPOSE 3000
 CMD ["sh", "-c", "npm run start || while true; do sleep 30; done"]

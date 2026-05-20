@@ -60,15 +60,35 @@ class TestConfigValidation:
         assert exc_info.value.code == 1
 
     def test_safe_values_pass_validation(self):
+        # v0.4.0 (M3d): cors_origins with localhost is rejected in production.
+        # This regression test must therefore supply a non-localhost origin.
         s = Settings(
             jwt_secret="production-secret-32chars-min!!!!!!!!",
             plugin_api_key="prod-plugin-key-abc123-32chars-min!!!",
             gateway_token="prod-gateway-token-xyz789",
             db_password="strong-db-password-2024",
+            cors_origins=["https://app.example.com"],
             dev_mode=False,
         )
         # Should NOT exit
         validate_settings(s)
+
+    def test_cors_localhost_rejected_in_production(self):
+        """v0.4.0 (M3d / audit A-#19): production startup must refuse
+        ``cors_origins`` that contains a localhost entry. Otherwise an
+        allow_credentials=True deployment would accept credentialed
+        cross-origin requests from any service on localhost."""
+        s = Settings(
+            jwt_secret="production-secret-32chars-min!!!!!!!!",
+            plugin_api_key="prod-plugin-key-abc123-32chars-min!!!",
+            gateway_token="prod-gateway-token-xyz789",
+            db_password="strong-db-password-2024",
+            cors_origins=["http://localhost:3040", "https://app.example.com"],
+            dev_mode=False,
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            validate_settings(s)
+        assert exc_info.value.code == 1
 
     def test_vault_pending_default_causes_exit(self):
         """vault-pending sentinel must be rejected in production."""

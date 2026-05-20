@@ -133,8 +133,26 @@ async def lifespan(app: FastAPI):
     # bug judge B flagged).
     _force_json_stdout_logging()
     logger.info("nomos-api ready (logging re-pinned after alembic)")
-    yield
-    await engine.dispose()
+
+    # v0.4.0 (P2 / audit C-F9): start background metrics-drain loop.
+    from nomos_api.services.metrics_buffer import metrics_drain_loop
+
+    metrics_drain_task = asyncio.create_task(metrics_drain_loop())
+    logger.info("nomos-api metrics drain loop started")
+
+    try:
+        yield
+    finally:
+        # Cancel the drain loop; metrics_drain_loop's CancelledError
+        # handler does a final flush before re-raising.
+        metrics_drain_task.cancel()
+        try:
+            await metrics_drain_task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.exception("metrics drain loop shutdown failed")
+        await engine.dispose()
 
 
 # Public routes that don't need authentication.

@@ -83,6 +83,7 @@ async def get_current_user_info(
     }
 
 
+# router-coverage-skip: /login is unauthenticated by design — issues the JWT cookie.
 @router.post("/login", response_model=LoginResponse)
 async def login(
     body: LoginRequest,
@@ -112,9 +113,14 @@ async def login(
     # 'lax' when cookie_secure was false, which allows top-level cross-site
     # navigations to send the auth cookie. The console is same-origin, so
     # strict does not break the golden path.
+    # v0.4.0 P6 (audit A-#14): path="/api" — the cookie is only ever sent
+    # to /api/* endpoints, not to /docs, /openapi.json, or any future
+    # subpath. Defense-in-depth: a future XSS-able non-API path no longer
+    # automatically receives the session cookie.
     response.set_cookie(
         key="nomos_token",
         value=token,
+        path="/api",
         httponly=True,
         samesite="strict",
         secure=settings.cookie_secure,
@@ -137,16 +143,22 @@ async def login(
     )
 
 
+# router-coverage-skip: /logout only clears the JWT cookie. AuthMiddleware enforces principal presence.
 @router.post("/logout", response_model=LogoutResponse)
 async def logout(response: Response) -> LogoutResponse:
+    # v0.4.0 P6 (A-#14): match the path used by /login so the browser
+    # actually deletes the cookie. Without `path="/api"` a cookie set at
+    # /api wouldn't be cleared by a delete at /.
     response.delete_cookie(
         "nomos_token",
+        path="/api",
         samesite="strict",
         secure=settings.cookie_secure,
     )
     return LogoutResponse(message="Logged out")
 
 
+# router-coverage-skip: /2fa/setup is in PUBLIC_PREFIXES (/api/auth/2fa). Authenticated-cookie users only; role-check N/A.
 @router.post("/2fa/setup", response_model=TotpSetupResponse)
 async def setup_2fa(
     current_user: User = Depends(_get_current_user),
@@ -165,6 +177,7 @@ async def setup_2fa(
     return TotpSetupResponse(secret=secret, provisioning_uri=uri)
 
 
+# router-coverage-skip: /2fa/verify is in PUBLIC_PREFIXES (/api/auth/2fa) — must run before the post-login cookie is upgraded.
 @router.post("/2fa/verify", response_model=TotpVerifyResponse)
 async def verify_2fa(
     body: TotpVerifyRequest,
@@ -193,6 +206,7 @@ async def verify_2fa(
     )
 
 
+# router-coverage-skip: /recovery is unauthenticated — second-factor / cookie loss recovery.
 @router.post("/recovery", response_model=RecoveryResponse)
 async def recovery(
     body: RecoveryRequest,

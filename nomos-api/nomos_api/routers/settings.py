@@ -57,9 +57,16 @@ def _validate_gateway_url(value: str) -> str:
             detail=f"gateway_url host '{host}' is an internal infrastructure target",
         )
 
+    # v0.4.0 P7 (audit A-#20): IPv6 link-local zone-id evasion. urlparse
+    # may return "fe80::1%eth0" as the host; ipaddress.ip_address raises
+    # on the zone id, so the IP-literal branch was skipped, and the
+    # hostname-block list never caught fe80::1 because it's not in the
+    # set. Strip any zone id BEFORE parsing.
+    ip_host = host.split("%", 1)[0] if "%" in host else host
+
     # IP-literal: reject private/loopback/link-local/multicast/unspecified.
     try:
-        ip = ipaddress.ip_address(host)
+        ip = ipaddress.ip_address(ip_host)
     except ValueError:
         ip = None
     if ip is not None and (
@@ -193,6 +200,17 @@ async def update_settings(
         existing_secrets = vault.get_secret("secrets/llm_keys") or {}
         merged_secrets = {**existing_secrets, **secret_updates}
         vault.put_secret("secrets/llm_keys", merged_secrets)
+
+    # v0.4.0 P9 (audit A-#24): refresh the in-process Settings instance
+    # for fields that downstream services read directly (notably
+    # gateway_url, which proxy._gateway_fetch reads from settings.*).
+    # Without this, an admin's PATCH was persisted to Vault but the
+    # running API kept calling the old gateway until restart.
+    if "gateway_url" in config_updates:
+        from nomos_api.config import settings as app_settings
+
+        app_settings.gateway_url = config_updates["gateway_url"]
+        logger.info("In-process settings.gateway_url refreshed after PATCH")
 
     logger.info(
         "Settings updated: %s",

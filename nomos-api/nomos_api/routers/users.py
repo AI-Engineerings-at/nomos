@@ -63,6 +63,7 @@ async def _require_admin(
     return user
 
 
+# router-coverage-skip: /bootstrap is unauthenticated by design — runs once when no admin exists; fails-closed via the existing-user check below.
 @router.post("/bootstrap", response_model=UserCreateResponse, status_code=201)
 async def bootstrap_admin(
     body: UserCreateRequest,

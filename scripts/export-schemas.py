@@ -2,6 +2,7 @@
 """Export all Pydantic schemas from nomos-api as JSON Schema.
 Usage: python scripts/export-schemas.py > schemas.json
 """
+
 import json
 import sys
 from pathlib import Path

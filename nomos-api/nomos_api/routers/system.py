@@ -72,6 +72,11 @@ def _get_vault_status() -> str:
             return "sealed"
         return status
     except Exception:
+        # v0.4.0 (Q / audit D-#14): the setup wizard surfaces three
+        # different "unavailable"-shaped outcomes (file missing,
+        # permission denied, Vault unreachable). Log so an operator
+        # can tell them apart from /docker compose logs/.
+        logger.exception("vault status probe failed (setup wizard)")
         return "unavailable"
 
 

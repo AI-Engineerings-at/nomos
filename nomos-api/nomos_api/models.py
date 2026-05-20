@@ -29,6 +29,10 @@ class Agent(Base):
     manifest_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     manifest_data: Mapped[dict] = mapped_column(JSON, nullable=False)
     compliance_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    # v0.4.0 (P1 / audit C-F2): denormalised list of missing compliance
+    # doc-names. Written by hire + gate paths; read by /compliance/matrix.
+    # Closes the per-request YAML-parse N+1 on the matrix endpoint.
+    missing_docs: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     agents_dir: Mapped[str] = mapped_column(Text, nullable=False)
     budget_used_eur: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     budget_limit_eur: Mapped[float] = mapped_column(Float, nullable=False, default=50.0)

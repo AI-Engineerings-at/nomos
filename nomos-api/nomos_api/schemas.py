@@ -89,6 +89,12 @@ class AuditVerifyResponse(BaseModel):
     valid: bool
     entries_checked: int
     errors: list[str]
+    # Phase-A5: most recent anchor record for this agent (set by the
+    # audit_anchor cron). Lets external auditors confirm the chain head
+    # matches the externally-anchored value without inspecting the chain.
+    last_anchored_at: str | None = None
+    last_anchored_head_hash: str | None = None
+    head_matches_anchor: bool | None = None
 
 
 class ComplianceMatrixEntry(BaseModel):

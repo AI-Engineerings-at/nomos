@@ -147,7 +147,11 @@ class GovernanceConfig(BaseModel):
         description="Usernames who can trigger kill switch",
     )
     escalation_threshold: int = Field(default=2, ge=1)
-    audit_retention_days: int = Field(default=365, ge=1)
+    # Phase-A3 hard floor: EU AI Act Art. 12 mandates a minimum 6-month
+    # (180-day) audit retention for high-risk systems. Manifests below
+    # the floor are rejected at validation time so a customer cannot
+    # silently configure a non-compliant retention window.
+    audit_retention_days: int = Field(default=365, ge=180)
 
 
 class PIIFilterConfig(BaseModel):

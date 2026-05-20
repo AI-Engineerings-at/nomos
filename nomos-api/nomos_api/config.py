@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     api_version: str = "0.1.0"
     cors_origins: list[str] = ["http://localhost:3040"]
     agents_dir: Path = Path("./data/agents")
+    # Phase-A2: external anchor log path. ARQ cron writes one JSON line per
+    # agent per anchor run. Mount on WORM-capable storage in production
+    # (S3 Object Lock / Azure immutable blob) so the anchor record cannot
+    # be silently rewritten alongside the chain.
+    audit_anchors_path: Path = Path("./data/audit-anchors/anchors.jsonl")
 
     # Secrets — overridden via Vault (auto) or ENV.
     # "vault-pending" means Vault has not yet injected the real value.

@@ -1,18 +1,23 @@
-"""Phase-A2: external anchoring of the audit hash-chain head.
+"""Phase-A2 (+ M1, 0.3.0): external anchoring of the audit hash-chain head.
 
 Every hour, for each agent, read the latest hash-chain entry and append
 a line to the anchors file::
 
     {agent_id, chain_length, head_hash, head_hmac, head_signature,
-     anchored_at}
+     merkle_tree_size, merkle_root_hash, anchored_at}
 
 The anchors file lives on a *separate* volume from the chains. In
 production the operator mounts that volume on WORM-capable storage
 (S3 Object Lock, Azure immutable blob, etc.) so even a full-write
 attacker on the chain volume cannot silently rewrite the anchors.
 
-Also writes an ``audit.chain.anchored`` event into the agent's own
-chain to provide a forward marker that the anchor was taken.
+M1 (0.3.0): the forward-marker ``audit.chain.anchored`` event is NO
+LONGER written back into the chain — see LEARNINGS L040 and audit
+finding C-F3. Writing the marker INTO the chain it just anchored
+meant every anchor described a head_hash that became stale one entry
+later; external verifiers had to chase the marker to explain the
+delta. The anchor file alone is the durable record now; the chain
+stays for genuine agent events.
 """
 
 from __future__ import annotations
@@ -26,8 +31,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from nomos.core.events import EventType
-from nomos.core.hash_chain import CHAIN_FILENAME, HashChain
+from nomos.core.hash_chain import CHAIN_FILENAME
 from nomos.core.merkle import compute_tree_root
 from nomos_api.config import settings
 from nomos_api.models import Agent
@@ -67,6 +71,11 @@ async def anchor_audit_heads(
             agent_dir = Path(agent_dir_raw).resolve()
             chain_file = agent_dir / "audit" / CHAIN_FILENAME
             if not chain_file.exists():
+                logger.warning(
+                    "audit anchor skipped: chain file missing for agent=%s path=%s",
+                    agent_id,
+                    chain_file,
+                )
                 continue
             lines = [ln for ln in chain_file.read_text(encoding="utf-8").strip().split("\n") if ln]
             if not lines:
@@ -88,16 +97,13 @@ async def anchor_audit_heads(
             }
             with anchors_path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
-            # Forward marker in the chain itself — the next anchor run can
-            # be cross-checked against the chain.
-            chain = HashChain(storage_dir=agent_dir / "audit")
-            chain.append(
-                event_type=EventType.AUDIT_CHAIN_ANCHORED.value,
-                agent_id=agent_id,
-                data={"chain_length_before": len(lines), "anchored_at": now_iso},
-            )
             anchored += 1
         except Exception:
-            logger.exception("audit anchor failed for agent %s", agent_id)
+            # M4-style: log enough context to diagnose without re-running.
+            logger.exception(
+                "audit anchor failed for agent=%s agents_dir=%s",
+                agent_id,
+                agent_dir_raw,
+            )
     logger.info("anchored %d agent chains -> %s", anchored, anchors_path)
     return anchored

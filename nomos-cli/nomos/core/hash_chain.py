@@ -10,6 +10,7 @@ exportable for regulators.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import hmac
 import json
@@ -48,15 +49,26 @@ class HashChainKeyMissing(RuntimeError):
     """
 
 
+@functools.lru_cache(maxsize=1)
+def _hmac_key_for(raw: str) -> bytes:
+    """Cached encode of the HMAC key bytes — keyed by raw env value so a
+    test that monkeypatches the env still gets a fresh bytes object."""
+    return raw.encode("utf-8")
+
+
 def _hmac_key() -> bytes:
-    """Resolve the HMAC key. Fail-closed on missing/short key."""
+    """Resolve the HMAC key. Fail-closed on missing/short key.
+
+    M2b (0.3.0): cached at the env-value level so verify_chain on a
+    100k-entry chain doesn't re-encode the key 100k times. Audit C-F4.
+    """
     raw = os.environ.get(_HMAC_ENV_VAR, "")
     if not raw or len(raw.encode("utf-8")) < _HMAC_MIN_KEY_BYTES:
         raise HashChainKeyMissing(
             f"{_HMAC_ENV_VAR} must be set and >= {_HMAC_MIN_KEY_BYTES} bytes "
             "(inject from Vault in production; configure in tests/conftest)."
         )
-    return raw.encode("utf-8")
+    return _hmac_key_for(raw)
 
 
 def _compute_hmac(content_hash: str) -> str:
@@ -84,11 +96,27 @@ class AuditSignatureKeyMissing(RuntimeError):
     """
 
 
+@functools.lru_cache(maxsize=1)
+def _signing_key_for(raw: str) -> Ed25519PrivateKey:
+    """Cached Ed25519 PrivateKey for a given hex seed.
+
+    The expensive part of every signature is NOT the sign itself but
+    rebuilding the PrivateKey from the 32-byte seed (parses to internal
+    libsodium state). On a 100k-entry chain verify pass that's 100k
+    rebuilds. M2b / audit C-F4: cache per-seed.
+
+    Keyed by the raw hex so a test that monkeypatches the env to a
+    different seed still gets a fresh key.
+    """
+    seed = bytes.fromhex(raw)
+    return Ed25519PrivateKey.from_private_bytes(seed)
+
+
 def _signing_key() -> Ed25519PrivateKey:
     """Load the Ed25519 signing key from env (hex-encoded 32-byte seed).
 
-    Production: injected from Vault path `secrets/audit-signing` as
-    `private_key_hex`. Tests: set in conftest. Fail-closed otherwise.
+    Production: injected from Vault path `nomos/secrets/audit` as
+    `audit_signing_key`. Tests: set in conftest. Fail-closed otherwise.
     """
     raw = os.environ.get(_SIGN_ENV_VAR, "").strip().lower()
     if len(raw) != _SIGN_SEED_HEX_LEN:
@@ -97,10 +125,9 @@ def _signing_key() -> Ed25519PrivateKey:
             f"(Ed25519 32-byte seed); inject from Vault in production."
         )
     try:
-        seed = bytes.fromhex(raw)
+        return _signing_key_for(raw)
     except ValueError as exc:
         raise AuditSignatureKeyMissing(f"{_SIGN_ENV_VAR} is not valid hex: {exc}") from exc
-    return Ed25519PrivateKey.from_private_bytes(seed)
 
 
 def _verifying_key() -> Ed25519PublicKey:

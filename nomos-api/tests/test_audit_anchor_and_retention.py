@@ -98,11 +98,12 @@ async def test_anchor_audit_heads_writes_external_anchor(db_engine, tmp_path: Pa
     assert rec["head_signature"] and len(rec["head_signature"]) == 128
     assert "anchored_at" in rec
 
-    # Anchor cron also writes a forward marker entry into the chain itself.
+    # M1 (0.3.0): the anchor cron NO LONGER writes a forward marker
+    # back into the chain. The chain stays at exactly the entries the
+    # caller appended (1 in this fixture); the anchor file alone is
+    # the durable record. See LEARNINGS L040.
     chain_lines = [ln for ln in (audit_dir / CHAIN_FILENAME).read_text(encoding="utf-8").splitlines() if ln]
-    assert len(chain_lines) == 2
-    last = json.loads(chain_lines[-1])
-    assert last["event_type"] == EventType.AUDIT_CHAIN_ANCHORED.value
+    assert len(chain_lines) == 1, "anchor cron must not append to the chain in 0.3.0+"
 
 
 # -----------------------------------------------------------------------
@@ -134,16 +135,29 @@ async def test_audit_integrity_checkpoint_writes_checkpoint(db_engine, tmp_path:
         )
         await session.commit()
 
-    counts = await audit_integrity_checkpoint(None, session_factory=session_factory)
+    checkpoints_path = tmp_path / "anchors" / "checkpoints.jsonl"
+    counts = await audit_integrity_checkpoint(
+        None,
+        session_factory=session_factory,
+        checkpoints_path=checkpoints_path,
+    )
     assert counts == {"checked": 1, "valid": 1, "invalid": 0}
 
-    # The checkpoint itself is the LAST entry; integrity_valid=True.
+    # M1 (0.3.0): the checkpoint is written to a SIBLING file, not the
+    # chain. The chain stays at the original 1 entry.
     chain_lines = [ln for ln in (audit_dir / CHAIN_FILENAME).read_text(encoding="utf-8").splitlines() if ln]
-    last = json.loads(chain_lines[-1])
-    assert last["event_type"] == EventType.AUDIT_RETENTION_CHECKPOINT.value
-    assert last["data"]["integrity_valid"] is True
-    assert last["data"]["errors_count"] == 0
-    assert last["data"]["art12_min_retention_days"] == 180
+    assert len(chain_lines) == 1, "checkpoint cron must not append to the chain in 0.3.0+"
+
+    assert checkpoints_path.exists()
+    ckpt_lines = [ln for ln in checkpoints_path.read_text(encoding="utf-8").splitlines() if ln]
+    assert len(ckpt_lines) == 1
+    rec = json.loads(ckpt_lines[0])
+    assert rec["agent_id"] == agent_id
+    assert rec["integrity_valid"] is True
+    assert rec["entries_checked"] == 1
+    assert rec["errors_count"] == 0
+    assert rec["art12_min_retention_days"] == 180
+    assert "checkpoint_at" in rec
 
 
 @pytest.mark.asyncio
@@ -176,8 +190,17 @@ async def test_audit_integrity_checkpoint_flags_tampered_chain(db_engine, tmp_pa
     obj.pop("hmac", None)
     chain_file.write_text(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n")
 
-    counts = await audit_integrity_checkpoint(None, session_factory=session_factory)
+    checkpoints_path = tmp_path / "anchors" / "checkpoints.jsonl"
+    counts = await audit_integrity_checkpoint(
+        None,
+        session_factory=session_factory,
+        checkpoints_path=checkpoints_path,
+    )
     assert counts["invalid"] == 1, f"tampered chain must be flagged invalid: {counts}"
+    # And the invalid result IS reflected in the checkpoint record.
+    ckpt = json.loads(checkpoints_path.read_text(encoding="utf-8").strip())
+    assert ckpt["integrity_valid"] is False
+    assert ckpt["errors_count"] >= 1
 
 
 # -----------------------------------------------------------------------
@@ -226,7 +249,8 @@ async def test_verify_endpoint_reports_anchor_match(
     assert body["valid"] is True
     assert body["last_anchored_at"], "verify must return last_anchored_at after an anchor run"
     assert body["last_anchored_head_hash"], "verify must return last_anchored_head_hash"
-    # Note: the anchor run also APPENDS an AUDIT_CHAIN_ANCHORED entry to
-    # the chain — so the current head is now AHEAD of the anchored head.
-    # head_matches_anchor MUST be False in that case (correct semantics).
-    assert body["head_matches_anchor"] is False
+    # M1 (0.3.0): the anchor cron NO LONGER appends a marker into the
+    # chain — anchored head and current head are equal at this moment
+    # (no further chain activity since the anchor). head_matches_anchor
+    # MUST be True now (correct quiescent-state semantics).
+    assert body["head_matches_anchor"] is True

@@ -19,21 +19,32 @@ export function createBeforeToolCallHook(
     // 1. Budget check
     const budget = await client.checkBudget(agentId, 0.01);
     if (budget.error) {
-      // API error — log and continue (don't block on transient failures)
-      client.addAuditEntry({
-        agent_id: agentId,
-        event_type: "tool.call_allowed",
-        payload: { tool: event.toolName, budget_error: budget.error },
-      });
-    } else if (!budget.allowed) {
-      const reason = budget.reason || "budget_exceeded";
-      if (budget.status === "unknown_agent") {
-        // Unknown agent — log warning, don't block
-        client.addAuditEntry({
+      // API error — log and continue (don't block on transient failures).
+      // M4 (0.3.0, audit D-#1): wrap audit-entry POSTs in try/catch so a
+      // failed audit write doesn't propagate up and kill the hook itself.
+      // Silent failure is acceptable here ONLY because the audit POST is
+      // best-effort and the gateway logs the catch.
+      try {
+        await client.addAuditEntry({
           agent_id: agentId,
           event_type: "tool.call_allowed",
-          payload: { tool: event.toolName, budget_warning: "unknown_agent" },
+          payload: { tool: event.toolName, budget_error: budget.error },
         });
+      } catch (err) {
+        console.warn(`[nomos-plugin] audit-entry post failed (agent=${agentId}): ${(err as Error).message}`);
+      }
+    } else if (!budget.allowed) {
+      if (budget.status === "unknown_agent") {
+        // Unknown agent — log warning, don't block
+        try {
+          await client.addAuditEntry({
+            agent_id: agentId,
+            event_type: "tool.call_allowed",
+            payload: { tool: event.toolName, budget_warning: "unknown_agent" },
+          });
+        } catch (err) {
+          console.warn(`[nomos-plugin] audit-entry post failed (agent=${agentId}): ${(err as Error).message}`);
+        }
       } else {
         return {
           block: true,
@@ -50,12 +61,16 @@ export function createBeforeToolCallHook(
       };
     }
 
-    // 3. Audit entry (non-blocking)
-    client.addAuditEntry({
-      agent_id: agentId,
-      event_type: "tool.call_allowed",
-      payload: { tool: event.toolName, params_keys: Object.keys(event.params) },
-    });
+    // 3. Audit entry (non-blocking but logged on failure — M4 audit D-#1)
+    try {
+      await client.addAuditEntry({
+        agent_id: agentId,
+        event_type: "tool.call_allowed",
+        payload: { tool: event.toolName, params_keys: Object.keys(event.params) },
+      });
+    } catch (err) {
+      console.warn(`[nomos-plugin] audit-entry post failed (agent=${agentId}): ${(err as Error).message}`);
+    }
 
     return undefined;
   };

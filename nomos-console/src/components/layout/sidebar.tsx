@@ -226,7 +226,7 @@ export function Sidebar() {
       {/* Footer — version info */}
       <div className="p-4 border-t border-[var(--color-border)]">
         <p className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
-          NomOS Console v0.2.1
+          NomOS Console v0.3.0
         </p>
       </div>
     </aside>

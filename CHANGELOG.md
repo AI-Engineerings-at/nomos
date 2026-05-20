@@ -6,6 +6,132 @@ Date format: ISO-8601.
 
 ---
 
+## [0.3.0] — 2026-05-20
+
+> **Maintenance release.** Follows the v0.2.0 5-agent post-release
+> audit + the v0.2.1 security hotfix. Closes the highest-impact
+> Maintenance items: audit-trail forensic anti-patterns, container
+> hardening, performance quick wins, error-handling pass, and the
+> test gaps the QA audit found.
+
+Components bumped: `nomos-api 0.3.0`, `nomos-cli 0.3.0`,
+`nomos-console 0.3.0`.
+
+### M1 — Audit-Trail Anti-Pattern Fix (HIGH, audit C-F3 + C-F16)
+
+The hourly anchor cron and the daily integrity-checkpoint cron used to
+write `AUDIT_CHAIN_ANCHORED` / `AUDIT_RETENTION_CHECKPOINT` events back
+INTO the chain they had just verified. That made every anchor describe a
+`head_hash` that became stale one entry later, and produced reassurance
+("checkpoint reported valid") that was structurally non-falsifiable.
+
+0.3.0 separates the concerns:
+
+- `worker/jobs/audit_anchor.py`: anchor records still go to
+  `anchors.jsonl`; the chain itself is no longer written back to.
+- `worker/jobs/audit_retention.py`: checkpoint outcomes go to a sibling
+  `checkpoints.jsonl` (next to `anchors.jsonl` on the same WORM-ready
+  volume). Configurable via new setting `audit_checkpoints_path`.
+- The chain now stays a quiescent target for external verifiers; anchor
+  and current head are equal at any moment with no chain activity in
+  between (the v0.2.0 contract a regulator would expect).
+
+LEARNINGS.md **L040** documents this anti-pattern.
+
+### M2 — Performance (partial)
+
+- **M2b: hash_chain key caching.** `_hmac_key_for` and `_signing_key_for`
+  are now `functools.lru_cache(maxsize=1)`-decorated. Previously a
+  100k-entry chain replay rebuilt the Ed25519 PrivateKey 100k times —
+  every replay-step parsed the 32-byte seed to internal libsodium state.
+  Audit C-F4. Tests still get isolation by calling `.cache_clear()` in
+  a fixture.
+- **M2d: `expire_approvals` SQL update.** Replaced the per-row Python
+  loop with a single dialect-aware `UPDATE ... WHERE ... <= NOW()`.
+  Audit C-F8.
+- **M2a (cache for /compliance/matrix) and M2c (metrics-middleware
+  batch)** are deferred to 0.4.0 — both require schema-level redesigns
+  that don't fit a maintenance release.
+
+### M3 — Hardening
+
+- **M3a: `vault/init-entrypoint.sh`** writes all secret files with
+  `chmod 600` instead of the previous `chmod 644`. The init-output.json
+  carrying the root token was already 600 in 0.2.1; this finishes the
+  pass over gateway-token, plugin-api-key, and the AppRole file. Audit
+  A-#9/#10.
+- **M3b: `/docs` + `/openapi.json` + `/redoc`** are no longer
+  unconditionally public. New `DEV_MODE_PUBLIC_PATHS` set; in production
+  (`NOMOS_DEV_MODE=false`, the default) these paths now require the
+  usual cookie / api-key auth. Audit A-#15.
+- **M3c: `docker-compose.yml`** every service gets
+  `security_opt: ["no-new-privileges:true"]`; the stateless services
+  (api, worker, console, gateway) additionally `cap_drop: [ALL]`. Caddy
+  keeps only `NET_BIND_SERVICE` (needed for port 80/443). Audit
+  A-#22/#23.
+- **M3d: `bcrypt` upper bound tightened** `>=4.0,<6` → `>=4.2,<5`. The
+  previous bound permitted a known-bad 5.x. Plus production startup
+  now refuses `cors_origins` that contains `localhost` / `127.0.0.1`
+  (defense-in-depth for credentialed cross-origin). Audit A-#17/#19.
+
+### M4 — Error-Handling Pass
+
+Closes the highest-impact items from audit D:
+
+- `services/context_summarizer.py`: never log `exc.response.text` (could
+  contain provider API keys / tenant PII echoed back). Status code +
+  reason only. Plus explicit `TimeoutException` branch with retry.
+  Audit D-#10.
+- `database.py`: explicit `pool_size=20, max_overflow=10,
+  pool_timeout=30, pool_recycle=1800`. The previous SQLAlchemy defaults
+  let one slow query exhaust the pool and block indefinitely. Audit D-#15.
+- `routers/health.py`: every `_check_*` failure now logs the exception
+  before returning the opaque status string — Vault outage vs. config
+  drift is now diagnosable from logs. Audit D-#3.
+- `nomos-plugin/src/hooks/before-tool-call.ts` +
+  `after-tool-call.ts`: audit-entry POSTs wrapped in `try/catch` that
+  logs to the gateway console instead of silently swallowing. A
+  cluster of audit-write failures is now visible. Audit D-#1/#11.
+- Worker jobs (`audit_anchor`, `audit_retention`): exception logging
+  now includes `agent_id` + `agents_dir` so failures are reproducible
+  without re-running the cron. Audit D-#4/#5.
+
+### M5 — Test Coverage
+
+New `nomos-cli/tests/test_merkle_edge_cases.py` with 6 tests closing
+the QA audit gaps:
+
+- **B-F04**: STH signed with key A must NOT verify with key B.
+- **B-F08**: STH on an empty tree (`tree_size == 0`) is well-defined
+  and signable.
+- **B-F11**: Chain written under key A must NOT verify under key B
+  (key-rotation negative scenario; HMAC AND Ed25519 errors both
+  surface).
+- Plus 2 fail-closed regression tests for `verify_chain` when the
+  signing or HMAC env vars are stripped mid-flight (regression
+  guard for LEARNINGS L038).
+
+### Verified
+
+- nomos-cli **245 / 0 failed** (239 baseline + 6 new M5 tests).
+- nomos-api full audit-related suite **79 / 0** (full chunked suite
+  in CI; ad-hoc sweep clean).
+- nomos-plugin **46 / 0** (vitest).
+- ruff check + format + tsc clean.
+
+### Deferred to 0.4.0
+
+- **M2a**: `/compliance/matrix` N+1 fix — requires denormalized
+  `missing_docs` column on `agents` + a write-time invalidation
+  contract from hire/gate. Schema migration.
+- **M2c**: `APIMetricsMiddleware` batch — requires in-memory queue +
+  background-drain job. Architectural touchpoint with the existing
+  ARQ worker.
+- Remaining audit-D findings (15 of 20) — minor logging cleanup.
+- Sigstore Rekor public anchoring (Phase-B2, opt-in).
+
+---
+
 ## [0.2.1] — 2026-05-20
 
 > **Security hotfix.** 5-agent post-release audit (security / QA /

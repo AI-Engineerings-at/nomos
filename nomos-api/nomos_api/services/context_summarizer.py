@@ -70,10 +70,31 @@ class ContextSummarizer:
                 if exc.response.status_code == 429:
                     logger.warning("LLM rate limit reached, retrying (%d/%d)", attempt + 1, self.max_retries)
                     continue
-                logger.error("LLM API error: %s", exc.response.text)
+                # M4 (0.3.0): audit D-#10. Do NOT log exc.response.text —
+                # the body can contain provider API keys or other tenant
+                # PII echoed back in the error envelope. Status code only.
+                logger.error(
+                    "LLM API error status=%d reason=%s attempt=%d/%d",
+                    exc.response.status_code,
+                    exc.response.reason_phrase,
+                    attempt + 1,
+                    self.max_retries,
+                )
                 return None
-            except Exception as exc:
-                logger.error("LLM API call failed: %s", exc)
+            except httpx.TimeoutException as exc:
+                # M4: previously bundled into the generic Exception branch.
+                # Surface explicitly + retry once, then fail.
+                logger.warning(
+                    "LLM API timed out: %s (attempt %d/%d)",
+                    type(exc).__name__,
+                    attempt + 1,
+                    self.max_retries,
+                )
+                continue
+            except Exception:
+                # M4: log type + traceback, NOT exc's repr (some httpx
+                # exceptions stringify the response body).
+                logger.exception("LLM API call failed (attempt %d/%d)", attempt + 1, self.max_retries)
                 return None
 
         return None

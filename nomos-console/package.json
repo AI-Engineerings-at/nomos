@@ -16,7 +16,7 @@
     "@fontsource/geist-sans": "^5.1.1",
     "@fontsource/montserrat": "^5.2.5",
     "@pixi/react": "^8.0.2",
-    "next": "^15.3.1",
+    "next": "^16.2.6",
     "pixelarticons": "^2.0.2",
     "pixi.js": "^8.17.1",
     "playwright": "^1.58.2",

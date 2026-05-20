@@ -43,6 +43,10 @@ class EventType(str, Enum):
     AUDIT_CHAIN_CREATED = "audit.chain.created"
     AUDIT_CHAIN_VERIFIED = "audit.chain.verified"
     AUDIT_EXPORTED = "audit.exported"
+    # Phase-A2: anchored chain head written to an external/WORM-ready volume.
+    AUDIT_CHAIN_ANCHORED = "audit.chain.anchored"
+    # Phase-A3: periodic Article 12 retention/integrity checkpoint.
+    AUDIT_RETENTION_CHECKPOINT = "audit.retention.checkpoint"
 
     # Task dispatch
     TASK_CREATED = "task.created"

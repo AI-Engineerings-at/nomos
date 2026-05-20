@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -151,11 +152,42 @@ async def verify_agent_audit(
     if not agent_dir.is_relative_to(safe_base):
         raise HTTPException(status_code=400, detail="Invalid agent directory")
     result = verify_chain(agent_dir / "audit")
+
+    # Phase-A5: locate the most recent external anchor for this agent so the
+    # caller can confirm the live chain head matches the anchored head.
+    last_anchored_at: str | None = None
+    last_anchored_head_hash: str | None = None
+    head_matches_anchor: bool | None = None
+    try:
+        anchors_path = settings.audit_anchors_path
+        if anchors_path.exists():
+            for raw_line in reversed(anchors_path.read_text(encoding="utf-8").splitlines()):
+                if not raw_line.strip():
+                    continue
+                rec = json.loads(raw_line)
+                if rec.get("agent_id") == agent_id:
+                    last_anchored_at = rec.get("anchored_at")
+                    last_anchored_head_hash = rec.get("head_hash")
+                    break
+        if last_anchored_head_hash is not None:
+            chain_file = agent_dir / "audit" / "chain.jsonl"
+            if chain_file.exists():
+                lines = [ln for ln in chain_file.read_text(encoding="utf-8").splitlines() if ln]
+                if lines:
+                    current_head = json.loads(lines[-1]).get("hash")
+                    head_matches_anchor = current_head == last_anchored_head_hash
+    except Exception:
+        # Anchor info is advisory; never block verify on a read error.
+        pass
+
     return AuditVerifyResponse(
         agent_id=agent_id,
         valid=result.valid,
         entries_checked=result.entries_checked,
         errors=result.errors,
+        last_anchored_at=last_anchored_at,
+        last_anchored_head_hash=last_anchored_head_hash,
+        head_matches_anchor=head_matches_anchor,
     )
 
 

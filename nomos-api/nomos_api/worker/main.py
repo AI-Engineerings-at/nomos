@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from nomos_api.config import settings
 from nomos_api.worker.jobs.alerts import process_alerts
 from nomos_api.worker.jobs.approvals import expire_approvals
+from nomos_api.worker.jobs.audit_anchor import anchor_audit_heads
+from nomos_api.worker.jobs.audit_retention import audit_integrity_checkpoint
 from nomos_api.worker.jobs.heartbeat import detect_stale_agents
 from nomos_api.worker.jobs.incidents import check_incident_deadlines
 from nomos_api.worker.jobs.retention import retention_cleanup
@@ -69,6 +71,8 @@ try:
             check_incident_deadlines,
             expire_approvals,
             process_alerts,
+            anchor_audit_heads,
+            audit_integrity_checkpoint,
         ]
 
         cron_jobs = [
@@ -80,9 +84,13 @@ try:
             cron(check_incident_deadlines, minute=0),  # type: ignore[arg-type]
             cron(expire_approvals, minute={0, 10, 20, 30, 40, 50}),  # type: ignore[arg-type]
             cron(process_alerts, minute=set(range(60))),  # type: ignore[arg-type]
+            # Phase-A2: anchor every chain head externally once per hour.
+            cron(anchor_audit_heads, minute=15),  # type: ignore[arg-type]
+            # Phase-A3: daily Article 12 integrity checkpoint at 04:00.
+            cron(audit_integrity_checkpoint, hour=4, minute=0),  # type: ignore[arg-type]
         ]
 
-        max_jobs = 5
+        max_jobs = 7
         job_timeout = 300
 
 except ImportError:

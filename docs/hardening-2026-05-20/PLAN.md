@@ -138,16 +138,27 @@ single-host deployment target.
   audit-export for a regulator, where the anchors live, what WORM-
   capable backing store to use in production.
 
-### Phase B — community-grade transparency log (next major cycle)
+### Phase B — community-grade transparency log
 
-**B1. Embedded Trillian-compatible Merkle log.**
-- Replace JSONL append with a Trillian-compatible Merkle log structure.
-- Compatible with `rekor-monitor` for third-party monitoring.
+**B1. Embedded Merkle transparency log (RFC 6962). ✓ SHIPPED.**
+- `nomos.core.merkle`: RFC 6962 leaf/internal hashing, MTH, inclusion
+  proofs, signed tree heads (STH) signed by the existing Ed25519 key.
+- New API endpoints (owner-or-service-or-admin AuthZ):
+  - `GET /api/agents/{id}/audit/sth` — STH (origin, tree_size,
+    root_hash, timestamp, signature). Sigstore-Rekor-style checkpoint.
+  - `GET /api/agents/{id}/audit/proof/{sequence}` — inclusion proof
+    for any single chain entry (audit_path).
+- Anchor cron records now also carry `merkle_tree_size` + `merkle_root_hash`.
+- A regulator with only the Ed25519 public key + an STH + an inclusion
+  proof can confirm any single audit event was committed in the
+  transparency log at a known historical root — no DB / chain access
+  required.
 
-**B2. Public Rekor anchoring (optional, customer choice).**
+**B2. Public Rekor anchoring (optional, customer choice).** Open.
 - For customers who want public verifiability, allow opting into
   publishing anchored roots to the Sigstore Rekor public instance.
-- Disabled by default (data-protection trade-off).
+- Disabled by default (data-protection trade-off — would expose chain
+  roots externally).
 
 ### Phase C — out of scope for nomos product
 

@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from nomos.core.events import EventType
 from nomos.core.hash_chain import CHAIN_FILENAME, HashChain
+from nomos.core.merkle import compute_tree_root
 from nomos_api.config import settings
 from nomos_api.models import Agent
 
@@ -71,12 +72,18 @@ async def anchor_audit_heads(
             if not lines:
                 continue
             last = json.loads(lines[-1])
+            # Phase-B1: also anchor the Merkle root of the tree at the
+            # time of capture, so external verifiers can later validate
+            # an inclusion proof against a known-good historical root.
+            tree_size, root_bytes = compute_tree_root(agent_dir / "audit")
             record = {
                 "agent_id": agent_id,
                 "chain_length": len(lines),
                 "head_hash": last.get("hash"),
                 "head_hmac": last.get("hmac"),
                 "head_signature": last.get("signature"),
+                "merkle_tree_size": tree_size,
+                "merkle_root_hash": root_bytes.hex(),
                 "anchored_at": now_iso,
             }
             with anchors_path.open("a", encoding="utf-8") as f:

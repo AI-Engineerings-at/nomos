@@ -84,6 +84,32 @@ class AuditResponse(BaseModel):
     total: int
 
 
+class SignedTreeHeadResponse(BaseModel):
+    """Phase-B1: Sigstore/Rekor-style signed checkpoint note.
+
+    The signature covers ``origin\\ntree_size\\nroot_hash\\ntimestamp``.
+    Verifiers with only the Ed25519 public key can validate the STH
+    without access to the chain itself.
+    """
+
+    agent_id: str
+    origin: str
+    tree_size: int
+    root_hash: str
+    timestamp: str
+    signature: str
+
+
+class InclusionProofResponse(BaseModel):
+    """Phase-B1: RFC 6962 inclusion proof for a single chain entry."""
+
+    agent_id: str
+    leaf_index: int
+    tree_size: int
+    root_hash: str
+    audit_path: list[str]
+
+
 class AuditVerifyResponse(BaseModel):
     agent_id: str
     valid: bool

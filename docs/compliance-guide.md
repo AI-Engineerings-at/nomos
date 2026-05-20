@@ -204,6 +204,22 @@ and the deployment's Ed25519 public key can independently verify:
 The HMAC key remains operator-controlled and need not be shared with
 external auditors.
 
+### M1 (0.3.0): Anchor + Checkpoint sibling-file separation
+
+Anchor and integrity-checkpoint events used to be written **into** the
+chain they had just verified. The chain therefore never described a
+quiescent state — every anchor's `head_hash` became stale one entry
+later (the forward marker). 0.3.0 separates the concerns:
+
+- Anchor records: `anchors.jsonl` (Phase-A2 contract, unchanged).
+- Checkpoint outcomes: NEW `checkpoints.jsonl` (sibling file on the
+  same WORM-ready volume; `settings.audit_checkpoints_path`).
+- Agent-event chain: stays for genuine agent events only.
+
+A regulator now sees a chain whose current head matches the anchored
+head when no chain activity has happened between anchor and read.
+See LEARNINGS.md L040 for the design rationale.
+
 ### Phase-B1: Embedded Merkle transparency log (Sigstore-Rekor-style)
 
 In addition to the linear hash chain, nomos exposes an RFC 6962

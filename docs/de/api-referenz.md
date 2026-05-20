@@ -1,6 +1,6 @@
 # NomOS API-Referenz
 
-> Stand: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
+> Stand: 2026-05-20 (0.3.0, Audit-Trail v2 Phase-A + B1; sibling-Files für Anker/Checkpoint).
 >
 > **Diese deutsche Übersicht ist gekürzt.** Vollständige Referenz inkl.
 > aller 19 Router (Auth, Users, Tasks, Approvals, Costs, Budget, PII,
@@ -26,7 +26,7 @@ Service-Status und Version pruefen.
 |------|-----|-------------|
 | `status` | string | Service-Status (`"healthy"` wenn PostgreSQL erreichbar, `"degraded"` wenn Gateway offline) |
 | `service` | string | Service-Name (`"NomOS Fleet API"`) |
-| `version` | string | API-Version (`"0.2.0"`) |
+| `version` | string | API-Version (`"0.3.0"`) |
 | `vault` | string | Vault-Status (`"ready"` / `"sealed"`) |
 | `components` | object | Healthcheck-Map: `vault` / `postgres` / `valkey` / `gateway` |
 
@@ -40,7 +40,7 @@ curl http://localhost:8060/health
 {
   "status": "healthy",
   "service": "NomOS Fleet API",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "vault": "ready",
   "components": {
     "vault": "ok",

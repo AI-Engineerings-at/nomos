@@ -139,3 +139,24 @@ HMAC + Ed25519-Signatur verhindern Tampering pro Eintrag — **aber NICHT Prefix
 
 ### L041 — Post-Release-Audit mit mehreren Agents findet was Pre-Release-Tests übersehen
 5-Agent-Audit-Pass (Security / QA / Architecture / Error-Handling / Ops) fand **102 Findings** nach einem als "v0.2.0 fertig" deklarierten Release: 17 Critical/Blocker, 32 High. Davon 7 Critical AuthZ-Lücken die in 17 Sessions Pre-Release-Tests durchrutschten. **Mach es SO**: vor JEDEM Tag-Push einen Multi-Agent-Audit-Pass laufen lassen (mind. nomos-security + nomos-qa + Explore-Error-Handling). 5-15 min Investment, spart Hotfix-Release. Tag dann mit ehrlichem Confidence-Level: "v0.2.0 — released; v0.2.0 + Audit-Pass = trustworthy".
+
+### L042 — Stale Code/Doc-References sind Silent-Failures für Operationen
+Beim Version-Bump 0.2.0→0.2.1 (und ähnlich 0.2.1→0.3.0) wurden nur `pyproject.toml` + `package.json` geaendert, aber 7 Stellen mit `5 cron jobs` / `17 Routers` / `324+ Tests` / `api_version="0.1.0"` / `'NomOS Console v0.1.0'` blieben. Operatoren folgen alter Doku, Capacity-Planning basiert auf falscher Zahl. **Mach es SO**: vor jedem Release `grep -rn "<jeder bisherige Claim>"` durchsuchen — config.py + cli.py + docs/*.md + UI-Strings. Mittelfristig: zentrale Single-Source-of-Truth für Router-Anzahl, Test-Anzahl, Cron-Anzahl (z.B. `nomos/__about__.py`-Pattern oder `scripts/stats.py`).
+
+### L043 — Router-AuthZ-Coverage gehört in CI, nicht in Audit-PRs
+7 von 19 Routern waren ohne AuthZ-Guards, weil PR #5 (Audit-Härtung) nur "die wichtigsten" gehärtet hatte. Ein Sweep ueber alle `router = APIRouter` + `POST/PATCH/DELETE`-Methoden haette das gefunden. **Mach es SO**: CI-Script `scripts/audit-router-coverage.py` — alle Files in `routers/`, jede Route mit method in {POST, PATCH, DELETE, PUT}, FAIL wenn weder `Depends(require_admin)` noch `Depends(require_agent_actor)` noch `authorize_agent_action(...)`-Call im Body. Vor Tag-Push laufen. Siehe `nomos-api/scripts/audit-router-coverage.py` (v0.3.0+).
+
+### L044 — `allow_missing=True` ist ein Contract-Flag, nicht Debug-Default
+Beim `authorize_agent_action(allow_missing=True)` fuer Budget-Endpoints muss klar sein: "Service-Principal-Plugin-Feature wegen fail-closed-Vertrag" NICHT "Fehlerfall tolerieren". Drei Sessions spaeter waere ein Sub-Agent fast falsch abgebogen. **Mach es SO**: jedes `allow_missing=True`-Call mit Kommentar dokumentieren der das Contract erklaert. Plus expliziter Negativ-Test `test_..._unknown_agent_returns_restrictive_default` der das Verhalten festschreibt.
+
+### L045 — User-controlled `n` in Public-API → Memory + Recursion bound first
+`merkle._mth + _path` mit `leaves[start:end]` Slicing verursachte auf einem 1M-Eintrag Tree O(n log n) Speicher. Rewrite auf `(start, end)` Range-Indizes senkte auf O(log n). **Mach es SO**: jeder Algorithmus der User-controlled n verarbeitet → Memory-Komplexitaet skizzieren VOR Implementierung. Bei Rekursion: depth = ceil(log2(n))? OK. Bei Slicing: index-based statt list-based. Test mit grossem n hinzufuegen (das war B-F12 das gefehlt hat).
+
+### L046 — Audit-Anker/Checkpoints in Sibling-Files, nie in den geprueften Graph
+`audit_anchor.py` schrieb `AUDIT_CHAIN_ANCHORED` IN die Chain, die es gerade verankert hatte. Folge: jeder Anker beschrieb einen `head_hash` der sofort stale wurde (der Marker hat den Head verschoben). Identisches Anti-Pattern bei `audit_integrity_checkpoint`. Externe Verifier sahen "Anker X, aktueller head Y" und mussten den Marker selbst finden. **Mach es SO**: Metadaten (Anker, Checkpoints, Digests) gehen in **sibling JSONL-Files** (`anchors.jsonl`, `checkpoints.jsonl`), nicht in den Haupt-Graph. Der Haupt-Graph bleibt Event-Chain fuer das Domain-Modell. Forward-Referenzen ("Checkpoint X verankert Chain bis Head Y") gehoeren in Metadata, NIE als Chain-Eintrag. Allgemeines Prinzip: ein Verifier darf nie Schreibrechte auf das haben, was er verifiziert.
+
+### L047 — bash Heredoc + backticks brechen — PR-Body als file
+Beim Erstellen von `gh pr create` mit `--body "$(cat <<EOF ... EOF)"` und backticks im body (z.B. `\`docker compose\``) → bash interpretiert die backticks als command-substitution und das ganze Heredoc bricht. **Mach es SO**: PR-Bodies ueber `--body-file <(cat <<'EOF' ... EOF)` schreiben mit single-quoted EOF (no interpolation), oder body in /tmp/pr-body.md schreiben und mit `--body-file` lesen. Saubere Trennung Inhalt vs Shell.
+
+### L048 — Monitor + run_in_background output-files brauchen explizites stderr-merge
+Background-bash mit `run_in_background: true` produziert oft leere `output_file`s wenn pytest auf Windows-asyncpg-DNS-Fehler stoesst und stderr ungemergt bleibt. Read auf das Output-File zeigt "shorter than offset 1". **Mach es SO**: bei pytest-Background-Runs auf Windows: `2>&1` am Ende, plus explicit `--tb=line -q` damit Output kompakt bleibt. Oder Monitor mit `tail -f ... | grep -E "passed|failed"` als Live-Stream.

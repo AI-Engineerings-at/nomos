@@ -1,6 +1,6 @@
 # NomOS API Reference
 
-> Last reconciled against router source: 2026-05-19 (Batch F).
+> Last reconciled against router source: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
 
 Base URL: `http://localhost:8060`
 
@@ -84,7 +84,9 @@ ownership-gated:
 | `GET` | `/api/audit` | JWT/Key | List audit entries (filterable by agent, event type, date range) |
 | `GET` | `/api/agents/{id}/audit` | JWT/Key | Get the full audit trail for a specific agent |
 | `GET` | `/api/agents/{id}/audit/export` | JWT/Key | Export agent audit trail (downloadable format) |
-| `GET` | `/api/audit/verify/{id}` | JWT/Key | Cryptographically verify audit chain integrity for an agent |
+| `GET` | `/api/audit/verify/{id}` | JWT/Key | Cryptographically verify audit chain integrity for an agent (HMAC + Ed25519). Response now includes `last_anchored_at`, `last_anchored_head_hash`, `anchor_match` (Phase-A5). |
+| `GET` | `/api/agents/{id}/audit/sth` | Agent actor | **Signed Tree Head** — RFC 6962 transparency-log checkpoint signed by the Ed25519 audit key. Returns `{origin, tree_size, root_hash, timestamp, signature}`. Phase-B1 (`schemas.SignedTreeHeadResponse`). |
+| `GET` | `/api/agents/{id}/audit/proof/{sequence}` | Agent actor | **Inclusion proof** for the chain entry at `sequence`. Returns `{leaf_index, tree_size, root_hash, audit_path[]}`. Verifiable with `nomos.core.merkle.verify_inclusion_proof` and the Ed25519 public key alone. 404 if sequence out of range. Phase-B1 (`schemas.InclusionProofResponse`). |
 | `POST` | `/api/audit/entry` | JWT/Key | Manually append an entry to the audit trail |
 
 ---
@@ -241,6 +243,8 @@ The audit trail uses these canonical event types:
 | `governance.escalation` | Escalation was triggered |
 | `audit.chain.created` | Audit chain was initialized |
 | `audit.chain.verified` | Audit chain was verified |
+| `audit.chain.anchored` | Audit chain head was anchored to the external anchors file (Phase-A2) |
+| `audit.retention.checkpoint` | Daily integrity checkpoint run (Phase-A3) — chain re-verified, retention enforced if entries exceeded `governance.audit_retention_days` |
 | `audit.exported` | Audit trail was exported |
 
 ---

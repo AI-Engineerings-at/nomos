@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in NomOS is broken or behaves unexpectedly.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. Please give us enough to reproduce. If the
+        bug is security-relevant, DO NOT use this form — see
+        [SECURITY.md](../SECURITY.md) and email security@ai-engineering.at.
+
+  - type: input
+    id: version
+    attributes:
+      label: NomOS version
+      description: From `curl http://localhost:8060/health` (the `version` field) or `CHANGELOG.md`.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - nomos-api
+        - nomos-cli
+        - nomos-console
+        - nomos-plugin
+        - docs
+        - docker / compose / CI
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you observe?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. `docker compose up -d`
+        2. POST /api/agents …
+        3. Observe 500
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      description: |
+        `docker compose logs nomos-api | tail -100` is usually enough.
+        Redact any secrets before pasting.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Ubuntu 24.04 / Docker 27 / x86_64"

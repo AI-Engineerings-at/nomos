@@ -99,12 +99,21 @@ if [ ! -f "${INITIALIZED_MARKER}" ]; then
   JWT_SECRET=$(openssl rand -base64 48)
   PLUGIN_API_KEY="npk-$(openssl rand -hex 24)"
   GATEWAY_TOKEN="gw-$(openssl rand -hex 24)"
+  # Audit-trail v2 (0.2.0): HMAC anchor + Ed25519 signing seed.
+  # 32-byte hex = 64 hex chars. Fail-closed if absent.
+  HASHCHAIN_HMAC_KEY=$(openssl rand -hex 32)
+  AUDIT_SIGNING_KEY=$(openssl rand -hex 32)
 
   echo "==> Storing system secrets in Vault..."
   vault kv put nomos/secrets/system \
     jwt_secret="${JWT_SECRET}" \
     plugin_api_key="${PLUGIN_API_KEY}" \
     gateway_token="${GATEWAY_TOKEN}"
+
+  echo "==> Storing audit-trail keys in Vault..."
+  vault kv put nomos/secrets/audit \
+    hashchain_hmac_key="${HASHCHAIN_HMAC_KEY}" \
+    audit_signing_key="${AUDIT_SIGNING_KEY}"
 
   echo "==> Storing database credentials in Vault..."
   vault kv put nomos/secrets/database \
@@ -126,6 +135,20 @@ else
       password="${NOMOS_DB_PASSWORD:-changeme}"
   else
     echo "==> System secrets verified in Vault."
+  fi
+
+  # Audit-trail keys: write only if MISSING from Vault. Never rotate
+  # silently — rotating breaks verification of all previously-signed
+  # entries (see operations-runbook.md "Audit-key rotation").
+  if ! vault kv get nomos/secrets/audit > /dev/null 2>&1; then
+    echo "WARNING: Audit keys missing from Vault. Generating fresh keys..."
+    HASHCHAIN_HMAC_KEY=$(openssl rand -hex 32)
+    AUDIT_SIGNING_KEY=$(openssl rand -hex 32)
+    vault kv put nomos/secrets/audit \
+      hashchain_hmac_key="${HASHCHAIN_HMAC_KEY}" \
+      audit_signing_key="${AUDIT_SIGNING_KEY}"
+  else
+    echo "==> Audit-trail keys verified in Vault."
   fi
 fi
 

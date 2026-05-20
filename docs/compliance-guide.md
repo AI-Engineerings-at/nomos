@@ -40,7 +40,7 @@ NomOS enforces a subset of EU AI Act and DSGVO (GDPR) requirements through softw
 
 | Status | **Covered** |
 |--------|-------------|
-| What NomOS does | SHA-256 hash chain audit trail. Every agent lifecycle event is recorded in a tamper-evident JSONL chain. `nomos audit --verify` and the API endpoint `GET /api/audit/verify/{id}` perform cryptographic chain verification. The generated Art. 12 logging policy document describes what is logged and how. |
+| What NomOS does | Tamper-evident hash chain with three cryptographic layers (SHA-256 entry hash + HMAC-SHA256 anchor + Ed25519 per-entry signature) plus an embedded RFC 6962 Merkle transparency log (Signed Tree Head + inclusion proofs). Hourly external anchoring (`anchor_audit_heads`) + daily integrity checkpoint (`audit_integrity_checkpoint`). Every lifecycle event lands in a JSONL chain on a WORM-ready volume. `nomos audit --verify`, `GET /api/audit/verify/{id}`, `GET /api/agents/{id}/audit/sth`, and `GET /api/agents/{id}/audit/proof/{n}` cover operator-, owner-, and regulator-facing verification paths. The generated Art. 12 logging policy document describes what is logged and how. |
 | What is logged | Agent creation, deployment, compliance checks, governance hook activations, kill switch events, escalations. |
 
 ### Art. 13 — Transparency
@@ -165,7 +165,7 @@ mapped against the three Article 12 logging purposes:
 |---|---|
 | **(a) Identify situations causing risk or substantial modification** | `compliance.check.failed`, `governance.kill_switch`, `governance.escalation`, `governance.hook.blocked`, `incident.detected`, `incident.escalated`, `tool.call_blocked`, `agent.stale` |
 | **(b) Facilitate post-market monitoring** | `agent.deployed`, `agent.retired`, `incident.reported`, `incident.resolved`, `task.failed`, `budget.warning` |
-| **(c) Monitor the operation of the high-risk AI system** | `agent.created`, `agent.stopped`, `agent.ended`, `compliance.check.passed`, `compliance.doc.signed`, `governance.hook.triggered`, `tool.call_allowed`, `tool.completed`, `task.created`, `task.assigned`, `task.completed`, `audit.chain.created`, `audit.chain.verified`, `audit.exported` |
+| **(c) Monitor the operation of the high-risk AI system** | `agent.created`, `agent.stopped`, `agent.ended`, `compliance.check.passed`, `compliance.doc.signed`, `governance.hook.triggered`, `tool.call_allowed`, `tool.completed`, `task.created`, `task.assigned`, `task.completed`, `audit.chain.created`, `audit.chain.verified`, `audit.chain.anchored` (Phase-A2), `audit.retention.checkpoint` (Phase-A3), `audit.exported` |
 
 ### Cryptographic integrity (state-of-the-art per 2026)
 

@@ -1,5 +1,13 @@
 # NomOS API-Referenz
 
+> Stand: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
+>
+> **Diese deutsche Übersicht ist gekürzt.** Vollständige Referenz inkl.
+> aller 19 Router (Auth, Users, Tasks, Approvals, Costs, Budget, PII,
+> Incidents, Workspace, DSGVO, Proxy, Settings, Monitoring, System)
+> sowie der neuen Audit-Trail-v2-Endpoints (STH + Inclusion-Proof):
+> [api-reference.md](../api-reference.md) (EN, autoritativ).
+
 Basis-URL: `http://localhost:8060`
 
 Alle Endpoints liefern JSON. Die API ist mit FastAPI gebaut und bietet automatische OpenAPI-Dokumentation unter `/docs` (Swagger UI) und `/redoc` (ReDoc).
@@ -16,9 +24,11 @@ Service-Status und Version pruefen.
 
 | Feld | Typ | Beschreibung |
 |------|-----|-------------|
-| `status` | string | Service-Status (`"ok"`) |
+| `status` | string | Service-Status (`"healthy"` wenn PostgreSQL erreichbar, `"degraded"` wenn Gateway offline) |
 | `service` | string | Service-Name (`"NomOS Fleet API"`) |
-| `version` | string | API-Version (`"0.1.0"`) |
+| `version` | string | API-Version (`"0.2.0"`) |
+| `vault` | string | Vault-Status (`"ready"` / `"sealed"`) |
+| `components` | object | Healthcheck-Map: `vault` / `postgres` / `valkey` / `gateway` |
 
 **Beispiel:**
 
@@ -28,9 +38,16 @@ curl http://localhost:8060/health
 
 ```json
 {
-  "status": "ok",
+  "status": "healthy",
   "service": "NomOS Fleet API",
-  "version": "0.1.0"
+  "version": "0.2.0",
+  "vault": "ready",
+  "components": {
+    "vault": "ok",
+    "postgres": "ok",
+    "valkey": "ok",
+    "gateway": "ok"
+  }
 }
 ```
 
@@ -328,9 +345,45 @@ curl http://localhost:8060/api/agents/mani-ruf/audit
 }
 ```
 
+### GET /api/agents/{agent_id}/audit/sth (0.2.0, Phase-B1)
+
+**Signed Tree Head** des RFC-6962-Merkle-Logs für einen Agent. Liefert
+einen Checkpoint signiert mit dem Ed25519-Audit-Signing-Key. Verifizierbar
+mit `nomos.core.merkle.verify_signed_tree_head` und dem Public-Key allein.
+
+**Antwort:** `200 OK` — `SignedTreeHeadResponse`
+
+| Feld | Typ | Beschreibung |
+|---|---|---|
+| `agent_id` | string | Agent-ID |
+| `origin` | string | Log-Origin (`"nomos-audit/sth"`) |
+| `tree_size` | integer | Anzahl Blätter im Baum |
+| `root_hash` | string | RFC-6962 Merkle-Wurzel (hex) |
+| `timestamp` | string | ISO 8601 UTC |
+| `signature` | string | Ed25519-Signatur (hex, 128 Zeichen) |
+
+### GET /api/agents/{agent_id}/audit/proof/{sequence} (0.2.0, Phase-B1)
+
+**Inclusion-Proof** für einen einzelnen Chain-Eintrag. Liefert den Audit-
+Path, mit dem ein Prüfer den Merkle-Root rekonstruieren und gegen den
+STH-Root prüfen kann. `404` wenn `sequence` ausserhalb des Baums liegt.
+
+**Antwort:** `200 OK` — `InclusionProofResponse`
+
+| Feld | Typ | Beschreibung |
+|---|---|---|
+| `agent_id` | string | Agent-ID |
+| `leaf_index` | integer | Index des Blatts (= Sequenz) |
+| `tree_size` | integer | Anzahl Blätter im Baum |
+| `root_hash` | string | RFC-6962 Merkle-Wurzel (hex) |
+| `audit_path` | string[] | Hex-codierte Geschwister-Hashes vom Blatt zur Wurzel |
+
+Verifikations-Snippet siehe `docs/operations-runbook.md` Abschnitt
+"Phase-B1: Signed Tree Head + inclusion-proof for a single event".
+
 ### GET /api/audit/verify/{agent_id}
 
-Audit-Chain fuer einen Agent kryptographisch verifizieren. Liest die JSONL-Chain-Datei von der Festplatte, berechnet jeden Hash neu und verifiziert die Chain-Integritaet.
+Audit-Chain fuer einen Agent kryptographisch verifizieren. Liest die JSONL-Chain-Datei von der Festplatte, berechnet jeden Hash neu und verifiziert die Chain-Integritaet. Seit 0.2.0 enthält die Antwort zusätzlich `last_anchored_at`, `last_anchored_head_hash` und `anchor_match` (Phase-A5).
 
 **Pfad-Parameter:**
 
@@ -385,6 +438,8 @@ Der Audit Trail verwendet diese kanonischen Event-Typen:
 | `governance.escalation` | Eskalation ausgeloest |
 | `audit.chain.created` | Audit-Chain initialisiert |
 | `audit.chain.verified` | Audit-Chain verifiziert |
+| `audit.chain.anchored` | Chain-Spitze nach `/data/audit-anchors/anchors.jsonl` geankert (Phase-A2, stündlich) |
+| `audit.retention.checkpoint` | Täglicher Integritäts-Checkpoint mit Retention-Enforcement (Phase-A3) |
 | `audit.exported` | Audit Trail exportiert |
 
 ---

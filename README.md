@@ -9,10 +9,11 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Version-0.2.0-blueviolet?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/EU_AI_Act-Compliant-blue?style=for-the-badge" alt="EU AI Act">
   <img src="https://img.shields.io/badge/DSGVO-Enforced-blue?style=for-the-badge" alt="DSGVO">
   <img src="https://img.shields.io/badge/License-Fair_Core-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Tests-324+-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-693+-brightgreen?style=for-the-badge" alt="Tests">
 </p>
 
 <p align="center">
@@ -51,7 +52,7 @@ flow.
 
 ## What is NomOS?
 
-NomOS is a **Compliance Control Plane** that wraps [OpenClaw](https://openclaw.ai) and [NemoClaw](https://github.com/NVIDIA/NemoClaw) headless. The customer opens a browser, sees NomOS, and nothing else.
+NomOS is a **Compliance Control Plane** that wraps [OpenClaw](https://openclaw.ai) headless (NemoClaw integration is currently a manifest field only — see [PLAN.md](docs/hardening-2026-05-20/PLAN.md)). The customer opens a browser, sees NomOS, and nothing else.
 
 ```
                         +------------------+
@@ -87,7 +88,7 @@ NomOS is a **Compliance Control Plane** that wraps [OpenClaw](https://openclaw.a
 
 ### Compliance Engine
 - **Compliance Gate** — Generates 5 required EU AI Act documents (DPIA, Art. 30, Art. 50, Art. 14, Art. 12). Agents are blocked from deployment until all documents are signed.
-- **Hash Chain Audit** — SHA-256 tamper-evident audit trail. Every action is cryptographically chained and verifiable.
+- **Audit Trail v2** — Tamper-evident audit chain with **HMAC-SHA256 + Ed25519 per-entry signatures + RFC 6962 Merkle transparency log**. Signed Tree Head (STH) + inclusion-proof endpoints let any regulator verify a single event with only the public key — no DB or shared secret needed. Hourly external anchoring + daily integrity checkpoint. Retention floor 180 days per EU AI Act Art. 12. See [CHANGELOG](CHANGELOG.md) 0.2.0.
 - **PII Filter** — Real-time detection and redaction of personal data in agent communications (DSGVO Art. 6).
 - **Budget Control** — Per-agent cost limits with automatic pause on threshold breach (Art. 14 risk management).
 
@@ -109,11 +110,13 @@ NomOS is a **Compliance Control Plane** that wraps [OpenClaw](https://openclaw.a
   agent-actor principal.
 - **Hardened HTTP** — `SecurityHeadersMiddleware` (nosniff, X-Frame
   DENY, HSTS on HTTPS), `SameSite=Strict` session cookies, redacted
-  structured logging, HMAC-able audit hash chain
-  (`NOMOS_HASHCHAIN_HMAC_KEY`).
+  structured logging. Audit hash chain combines HMAC
+  (`NOMOS_HASHCHAIN_HMAC_KEY`, fail-closed) and Ed25519 signatures
+  (`NOMOS_AUDIT_SIGNING_KEY`, fail-closed).
 - **Rate Limiting** — Valkey-backed distributed rate limiter.
-- **ARQ worker** — 5 cron jobs (retention, stale-agent detection,
-  incident deadlines, approval expiry, alert processing).
+- **ARQ worker** — 7 cron jobs (retention, stale-agent detection,
+  incident deadlines, approval expiry, alert processing, **audit
+  anchor head** hourly, **audit integrity checkpoint** daily).
 - **Monitoring & Alerting** — admin-only metrics/alerts/alert-rules
   under `/api/monitoring`.
 - **11 OpenClaw Hooks** — Every agent action passes through compliance,
@@ -183,7 +186,7 @@ Base URL: `http://localhost:8060`
 | Agents | `/api/agents/*` | CRUD, hire, pause, resume, terminate |
 | Fleet | `/api/fleet/*` | Fleet overview, status aggregation |
 | Compliance | `/api/compliance/*` | Gate checks, document generation |
-| Audit | `/api/audit/*` | Hash chain entries, verification |
+| Audit | `/api/audit/*`, `/api/agents/{id}/audit/sth`, `/api/agents/{id}/audit/proof/{n}` | Hash chain entries, verification, **Signed Tree Head**, **inclusion proofs** (RFC 6962) |
 | Users | `/api/users/*` | RBAC user management |
 | Tasks | `/api/tasks/*` | Task dispatch and tracking |
 | Approvals | `/api/approvals/*` | Human-in-the-loop approval workflow |
@@ -214,11 +217,13 @@ Fair Core License (FCL) — full functionality at every tier. No feature gating.
 | Document | Description |
 |----------|-------------|
 | [Quickstart](docs/quickstart.md) | Get running in 5 minutes |
-| [API Reference](docs/api-reference.md) | Complete REST API (47+ endpoints) |
-| [CLI Reference](docs/cli-reference.md) | All 5 commands with examples |
+| [API Reference](docs/api-reference.md) | Complete REST API (49+ endpoints, incl. STH + inclusion-proof) |
+| [CLI Reference](docs/cli-reference.md) | All commands with examples |
 | [Architecture](docs/architecture.md) | System design, data flow, security |
-| [Operations Runbook](docs/operations-runbook.md) | Bring-up, healthchecks, secrets, backup, troubleshooting |
-| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage |
+| [Operations Runbook](docs/operations-runbook.md) | Bring-up, healthchecks, secrets, backup, audit-key rotation, regulator export, troubleshooting |
+| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage, Audit-Trail v2 Phase-B1 |
+| [Hardening Plan 2026-05-20](docs/hardening-2026-05-20/PLAN.md) | Audit-Trail v2 roadmap (A1-A6 + B1 shipped) |
+| [CHANGELOG](CHANGELOG.md) | Release history per component |
 
 **Deutsch:**
 

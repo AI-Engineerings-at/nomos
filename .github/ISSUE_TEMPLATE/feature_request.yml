@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose a change to NomOS.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Smallest-useful changes win. Please describe the problem before
+        the solution — we may have a different idea about the right fix.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Who is the user? What are they trying to do that's hard today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Concrete sketch. Pseudo-code / API shape / UI mock welcome.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What did you try / think about before this?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - nomos-api
+        - nomos-cli
+        - nomos-console
+        - nomos-plugin
+        - docs
+        - docker / CI
+        - cross-cutting
+
+  - type: textarea
+    id: compliance
+    attributes:
+      label: Compliance impact
+      description: Does this touch the audit chain, retention, signing keys, gate, or Art. 12 events? If yes, describe.

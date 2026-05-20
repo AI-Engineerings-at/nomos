@@ -324,8 +324,7 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
             errors.append(f"Entry {i}: missing Ed25519 signature — non-repudiation gap")
         elif not _verify_signature(stored_hash, str(stored_sig)):
             errors.append(
-                f"Entry {i}: Ed25519 signature mismatch — entry forged or wrong key "
-                f"(stored={str(stored_sig)[:16]}...)"
+                f"Entry {i}: Ed25519 signature mismatch — entry forged or wrong key (stored={str(stored_sig)[:16]}...)"
             )
 
         if raw["previous_hash"] != previous_hash:

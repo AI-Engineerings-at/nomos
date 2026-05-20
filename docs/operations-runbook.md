@@ -1,7 +1,7 @@
 # NomOS Operations Runbook
 
 > Last reconciled against `docker-compose.yml` and router source:
-> 2026-05-19 (enterprise-hardening Batch F). All service names, ports,
+> 2026-05-20 (0.2.0 Audit-Trail v2 Phase-A + B1). All service names, ports,
 > healthchecks and volumes below are taken from `docker-compose.yml`.
 
 This runbook covers bring-up, verification, secrets, backup and
@@ -123,6 +123,67 @@ each retention window.
    `python -c "from nomos.core.hash_chain import _signing_key; print(_signing_key().public_key().public_bytes_raw().hex())"`
 3. They verify independently with any Ed25519-capable tool; no shared
    secret is exchanged.
+
+### Phase-B1: Signed Tree Head + inclusion-proof for a single event
+
+For a regulator who needs to prove a **single** audit event was
+committed without obtaining the whole chain (data-minimisation under
+GDPR Art. 5(1)(c)), use the transparency-log endpoints introduced in
+0.2.0 (`docs/hardening-2026-05-20/PLAN.md` Phase-B1).
+
+1. **Pull the Signed Tree Head** (regulator runs):
+
+   ```bash
+   curl -H "X-NomOS-API-Key: $KEY" \
+        https://YOUR_HOST/api/agents/AGENT_ID/audit/sth | tee sth.json
+   ```
+
+   Returns `{origin, tree_size, root_hash, timestamp, signature}`.
+
+2. **Pull the inclusion proof** for the entry of interest (sequence N):
+
+   ```bash
+   curl -H "X-NomOS-API-Key: $KEY" \
+        https://YOUR_HOST/api/agents/AGENT_ID/audit/proof/N | tee proof.json
+   ```
+
+   Returns `{leaf_index, tree_size, root_hash, audit_path[]}`.
+
+3. **Verify locally**, no DB / no shared secret. Hand the regulator
+   only `sth.json`, `proof.json`, the leaf JSON line from the chain
+   export, and your Ed25519 public key. They run:
+
+   ```python
+   from nomos.core.merkle import (
+       verify_signed_tree_head, verify_inclusion_proof,
+   )
+   import json
+   sth = json.load(open("sth.json"))
+   proof = json.load(open("proof.json"))
+   assert verify_signed_tree_head(sth), "STH signature invalid"
+   leaf_hex = "..."  # "hash" field of the leaf line from chain export
+   ok = verify_inclusion_proof(
+       leaf_data=leaf_hex.encode("utf-8"),
+       leaf_index=proof["leaf_index"],
+       tree_size=proof["tree_size"],
+       audit_path_hex=proof["audit_path"],
+       root_hash_hex=proof["root_hash"],
+   )
+   assert ok, "leaf not in tree at the claimed position"
+   ```
+
+   Two `assert` lines = full third-party audit. The regulator never
+   sees other events.
+
+4. **Historical proofs** verify against the `merkle_tree_size`
+   + `merkle_root_hash` recorded in
+   `/data/audit-anchors/anchors.jsonl` at anchor-cron time (Phase-A2).
+   Pull the matching anchor record (same `agent_id`, anchored before
+   the regulatory question), then verify the proof against that
+   historical root rather than the current one. This neutralises the
+   "what if the operator re-signed yesterday's chain?" attack —
+   yesterday's root is on a separate WORM volume with its own
+   timestamp.
 
 Bootstrap/unseal flow:
 

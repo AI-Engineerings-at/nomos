@@ -1,0 +1,28 @@
+# NomOS code-owners.
+#
+# GitHub will request review from the listed owner on every PR that
+# touches the matching path. Lines are evaluated top-to-bottom; the
+# LAST matching pattern wins, so put the catch-all first.
+
+# Default owner — everything not otherwise specified.
+*                                @AI-Engineering-at/maintainers
+
+# Compliance + audit-trail surfaces (Art. 12 critical path).
+/nomos-cli/nomos/core/hash_chain.py           @AI-Engineering-at/maintainers
+/nomos-cli/nomos/core/merkle.py               @AI-Engineering-at/maintainers
+/nomos-cli/nomos/core/events.py               @AI-Engineering-at/maintainers
+/nomos-cli/nomos/core/compliance_engine.py    @AI-Engineering-at/maintainers
+/nomos-cli/nomos/core/gate.py                 @AI-Engineering-at/maintainers
+/nomos-api/nomos_api/routers/audit.py         @AI-Engineering-at/maintainers
+/nomos-api/nomos_api/worker/jobs/             @AI-Engineering-at/maintainers
+/docs/compliance-guide.md                     @AI-Engineering-at/maintainers
+/docs/hardening-2026-05-20/                   @AI-Engineering-at/maintainers
+
+# CI / security tooling.
+/.github/                                     @AI-Engineering-at/maintainers
+
+# Licence + governance.
+/LICENSE                                      @AI-Engineering-at/maintainers
+/SECURITY.md                                  @AI-Engineering-at/maintainers
+/CODE_OF_CONDUCT.md                           @AI-Engineering-at/maintainers
+/RELEASING.md                                 @AI-Engineering-at/maintainers

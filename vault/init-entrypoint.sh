@@ -39,7 +39,7 @@ INITIALIZED=$(vault status -format=json | jq -r '.initialized')
 if [ "${INITIALIZED}" = "false" ]; then
   echo "==> Initializing Vault (1 key share, 1 threshold)..."
   vault operator init -key-shares=1 -key-threshold=1 -format=json > "${INIT_FILE}"
-  chmod 644 "${INIT_FILE}"
+  chmod 600 "${INIT_FILE}"
   echo "==> Vault initialized. Keys stored in ${INIT_FILE}"
 fi
 
@@ -160,10 +160,10 @@ GATEWAY_TOKEN=$(vault kv get -format=json nomos/secrets/system | jq -r '.data.da
 PLUGIN_API_KEY=$(vault kv get -format=json nomos/secrets/system | jq -r '.data.data.plugin_api_key')
 
 echo "${GATEWAY_TOKEN}" > "${INIT_DIR}/gateway-token"
-chmod 644 "${INIT_DIR}/gateway-token"
+chmod 600 "${INIT_DIR}/gateway-token"
 
 echo "${PLUGIN_API_KEY}" > "${INIT_DIR}/plugin-api-key"
-chmod 644 "${INIT_DIR}/plugin-api-key"
+chmod 600 "${INIT_DIR}/plugin-api-key"
 
 echo "==> Secret files written to ${INIT_DIR}/"
 
@@ -175,11 +175,11 @@ cat > "${APPROLE_FILE}" <<EOF
 VAULT_ROLE_ID=${ROLE_ID}
 VAULT_SECRET_ID=${SECRET_ID}
 EOF
-chmod 644 "${APPROLE_FILE}"
+chmod 600 "${APPROLE_FILE}"
 
 # ─── Phase 9: Write initialized marker ──────────────────────
 touch "${INITIALIZED_MARKER}"
-chmod 644 "${INITIALIZED_MARKER}"
+chmod 600 "${INITIALIZED_MARKER}"
 
 echo "==> AppRole credentials written to ${APPROLE_FILE}"
 echo "==> Vault bootstrap complete. Exiting."

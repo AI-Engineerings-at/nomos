@@ -137,7 +137,12 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 
-# Public routes that don't need authentication
+# Public routes that don't need authentication.
+# M3b (0.3.0): /docs + /openapi.json removed from the unconditional
+# public list. In production (NOMOS_DEV_MODE=false, the default) those
+# paths are now AuthMiddleware-gated — only authenticated users (any
+# role) can read the API surface. In dev mode they stay public for the
+# usual exploration UX. See audit finding A-#15.
 PUBLIC_PATHS = {
     "/health",
     "/api/health",
@@ -146,8 +151,15 @@ PUBLIC_PATHS = {
     "/api/users/bootstrap",
     "/api/system/status",
     "/api/system/unseal-key",
+}
+
+# Dev-mode-only public paths. AuthMiddleware admits these without auth
+# only when ``settings.dev_mode`` is True; in production they require
+# the usual cookie/api-key handshake.
+DEV_MODE_PUBLIC_PATHS = {
     "/docs",
     "/openapi.json",
+    "/redoc",
 }
 
 PUBLIC_PREFIXES = ("/api/auth/2fa",)
@@ -159,6 +171,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         path = request.url.path
         if request.method == "OPTIONS" or path in PUBLIC_PATHS or path.startswith(PUBLIC_PREFIXES):
+            return await call_next(request)
+        # M3b: /docs + /openapi.json + /redoc only in dev mode.
+        if settings.dev_mode and path in DEV_MODE_PUBLIC_PATHS:
             return await call_next(request)
 
         # Service-to-service auth (Plugin → API)

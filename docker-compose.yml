@@ -28,6 +28,9 @@ services:
       vault-init:
         condition: service_completed_successfully
     restart: unless-stopped
+    # M3c (0.3.0): defense-in-depth container hardening.
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:18789/healthz"]
       interval: 10s
@@ -55,6 +58,8 @@ services:
       - ./vault/policies:/vault/policies:ro
       - ./vault/init.sh:/vault/init.sh:ro
     command: server
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "sh", "-c", "wget -qO- http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=200&uninitcode=200 || exit 1"]
       interval: 10s
@@ -80,6 +85,8 @@ services:
       vault:
         condition: service_healthy
     restart: "no"
+    security_opt:
+      - no-new-privileges:true
 
   # ─── NomOS Control Plane ───────────────────────────────
 
@@ -124,6 +131,12 @@ services:
       vault-init:
         condition: service_completed_successfully
     restart: unless-stopped
+    # M3c (0.3.0): hardened. cap_drop ALL since the API never needs
+    # extra capabilities; nomos user already non-root via Dockerfile.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
       interval: 10s
@@ -162,6 +175,10 @@ services:
       vault-init:
         condition: service_completed_successfully
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "python", "-c", "import arq; print('ok')"]
       interval: 30s
@@ -182,6 +199,10 @@ services:
       nomos-api:
         condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:3000"]
       interval: 10s
@@ -204,6 +225,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   valkey:
@@ -221,6 +244,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   # ─── Reverse Proxy (TLS) ──────────────────────────────
@@ -242,6 +267,14 @@ services:
       nomos-console:
         condition: service_healthy
     restart: unless-stopped
+    # M3c: Caddy needs NET_BIND_SERVICE for ports 80/443 — keep only
+    # that capability, drop everything else.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
       interval: 10s

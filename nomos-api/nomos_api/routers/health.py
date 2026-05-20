@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 
 from fastapi import APIRouter
@@ -9,6 +10,8 @@ from sqlalchemy import text
 
 from nomos_api.config import settings
 from nomos_api.schemas import HealthComponentStatus, HealthResponse
+
+logger = logging.getLogger("nomos.health")
 
 router = APIRouter(tags=["health"])
 
@@ -28,6 +31,10 @@ def _get_vault_status() -> str:
             return "unavailable"
         return client.health_status()
     except Exception:
+        # M4 (0.3.0, audit D-#3): previously returned opaque "unavailable"
+        # for both "Vault unreachable" and "Vault config missing". Log
+        # the exception type so operators can diagnose from logs.
+        logger.exception("Vault health check failed")
         return "unavailable"
 
 
@@ -40,6 +47,7 @@ async def _check_postgres() -> str:
             await conn.execute(text("SELECT 1"))
         return "healthy"
     except Exception:
+        logger.exception("Postgres health check failed")
         return "unavailable"
 
 
@@ -53,6 +61,7 @@ async def _check_valkey() -> str:
         await client.aclose()
         return "healthy"
     except Exception:
+        logger.exception("Valkey health check failed")
         return "unavailable"
 
 
@@ -65,6 +74,7 @@ async def _check_gateway() -> str:
             resp = await client.get(f"{settings.gateway_url}/healthz")
         return "online" if resp.status_code == 200 else "offline"
     except Exception:
+        logger.exception("Gateway health check failed url=%s", settings.gateway_url)
         return "offline"
 
 

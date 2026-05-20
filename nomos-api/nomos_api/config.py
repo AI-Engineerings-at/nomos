@@ -44,7 +44,12 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_title: str = "NomOS Fleet API"
-    api_version: str = "0.2.1"
+    api_version: str = "0.3.0"
+    # M3d (0.3.0): cors_origins with localhost is fine in dev but
+    # dangerous in prod (combined with allow_credentials=True any
+    # cookies are sent on cross-origin requests from localhost). The
+    # validate_settings() check refuses startup when prod runs with
+    # localhost origins. See audit A-#19.
     cors_origins: list[str] = ["http://localhost:3040"]
     agents_dir: Path = Path("./data/agents")
     # Phase-A2: external anchor log path. ARQ cron writes one JSON line per
@@ -52,6 +57,13 @@ class Settings(BaseSettings):
     # (S3 Object Lock / Azure immutable blob) so the anchor record cannot
     # be silently rewritten alongside the chain.
     audit_anchors_path: Path = Path("./data/audit-anchors/anchors.jsonl")
+    # M1 (0.3.0): integrity-checkpoint events used to be written INTO the
+    # audit chain (audit.retention.checkpoint), making the checker mutate
+    # the very chain it was verifying — see LEARNINGS L040. From 0.3.0
+    # checkpoint outcomes are written to a sibling JSONL on the same
+    # anchors volume so the chain stays for agent events only and remains
+    # a quiescent target for external verifiers.
+    audit_checkpoints_path: Path = Path("./data/audit-anchors/checkpoints.jsonl")
 
     # Secrets — overridden via Vault (auto) or ENV.
     # "vault-pending" means Vault has not yet injected the real value.
@@ -173,6 +185,18 @@ def validate_settings(s: Settings) -> None:
 
     # Additional validation for production readiness
     if not s.dev_mode:
+        # M3d (0.3.0): in production, cors_origins with localhost would
+        # accept credentialed cross-origin requests from any service on
+        # localhost — defense-in-depth refusal. Audit A-#19.
+        localhost_origins = [o for o in s.cors_origins if "localhost" in o.lower() or "127.0.0.1" in o]
+        if localhost_origins:
+            logger.critical(
+                "FATAL: cors_origins includes localhost entries in production: %s. "
+                "Either set NOMOS_DEV_MODE=true, or restrict NOMOS_CORS_ORIGINS to "
+                "your real frontend origin(s).",
+                localhost_origins,
+            )
+            sys.exit(1)
         logger.info("Production mode: All secret validations passed")
         if s.vault_addr:
             logger.info("Vault integration enabled at %s", s.vault_addr)

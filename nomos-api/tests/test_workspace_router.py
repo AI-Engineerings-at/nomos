@@ -38,12 +38,9 @@ async def client(db_engine, tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_workspace_get_unknown_agent(client):
+    """L035 / A-C4: unknown agent -> 404 (no longer leaks existence)."""
     resp = await client.get("/api/workspace/unknown-agent")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["agent_id"] == "unknown-agent"
-    assert data["mounted_collections"] == []
-    assert data["is_active"] is False
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -97,24 +94,23 @@ async def test_workspace_unmount_not_found(client):
 
 
 @pytest.mark.asyncio
-async def test_dsgvo_forget_no_data(client):
+async def test_dsgvo_forget_rejects_non_admin(client):
+    """L035 / A-C1: DSGVO endpoints are admin-only as of 0.2.1.
+    The empty-data happy-path is exercised in test_dsgvo_db.py with
+    admin_client; this test guards the AuthZ boundary on the same
+    file that previously asserted the (insecure) 200."""
     resp = await client.post(
         "/api/dsgvo/forget",
         json={"email": "nobody@example.com"},
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["deleted_messages"] == 0
-    assert data["audit_preserved"] is True
+    assert resp.status_code in (401, 403)
 
 
 @pytest.mark.asyncio
-async def test_dsgvo_export_no_data(client):
+async def test_dsgvo_export_rejects_non_admin(client):
+    """L035 / A-C1: same as forget — admin-only since 0.2.1."""
     resp = await client.post(
         "/api/dsgvo/export",
         json={"email": "nobody@example.com"},
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["total"] == 0
-    assert data["messages"] == []
+    assert resp.status_code in (401, 403)

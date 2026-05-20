@@ -61,7 +61,7 @@ def _print_result(result: dict[str, Any], *, json_flag: bool, success_msg: str) 
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="nomos")
+@click.version_option(version="0.2.1", prog_name="nomos")
 def main() -> None:
     """NomOS — The agentic framework that enforces EU AI Act compliance."""
     # Re-read NOMOS_LOG_LEVEL at invocation so the env is honored per run

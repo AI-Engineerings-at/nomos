@@ -8,8 +8,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import require_admin
 from nomos_api.database import get_db
-from nomos_api.models import Agent
+from nomos_api.models import Agent, User
 from nomos_api.schemas import (
     DSGVOExportRequest,
     DSGVOExportResponse,
@@ -29,8 +30,15 @@ router = APIRouter(prefix="/api", tags=["dsgvo"])
 async def dsgvo_forget(
     request: DSGVOForgetRequest,
     db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
 ) -> DSGVOForgetResponse:
-    """Art. 17 DSGVO — delete all messages containing the email address."""
+    """Art. 17 DSGVO — delete all messages containing the email address.
+
+    Admin-only: a substring-driven deletion across all tenants must never
+    be reachable by a non-admin authenticated user (L035 audit finding A-C1).
+    The requester's email is included in the audit event so the chain
+    records WHO triggered the deletion, not only which agent it affected.
+    """
     result = await forget(db, request.email)
 
     # Write audit trail if messages were deleted and an agent with this email exists
@@ -48,6 +56,7 @@ async def dsgvo_forget(
                     data={
                         "search_term": request.email,
                         "deleted_messages": result["deleted_messages"],
+                        "requester_email": admin.email,
                     },
                 )
             except Exception:
@@ -70,8 +79,13 @@ async def dsgvo_forget(
 async def dsgvo_export(
     request: DSGVOExportRequest,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> DSGVOExportResponse:
-    """Art. 15 DSGVO — export all data for an email address."""
+    """Art. 15 DSGVO — export all data for an email address.
+
+    Admin-only: substring-driven cross-tenant data exfiltration must never
+    be reachable by a non-admin authenticated user (L035 audit finding A-C1).
+    """
     result = await export_data(db, request.email)
     return DSGVOExportResponse(
         email=result["email"],

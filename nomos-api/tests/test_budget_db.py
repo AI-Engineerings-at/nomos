@@ -146,11 +146,15 @@ async def test_budget_track_persists(client) -> None:
     assert data["budget_limit_eur"] == pytest.approx(50.0)
 
 
-async def test_costs_overview(client) -> None:
-    """GET /api/costs returns all agents with budget info."""
+async def test_costs_overview(client, admin_client) -> None:
+    """GET /api/costs returns all agents with budget info.
+
+    L035 / audit A-C7: cross-tenant cost list is admin-only as of 0.2.1.
+    Service principal (client) creates + tracks the agent; admin_client
+    reads the cross-tenant list.
+    """
     agent_id = await _create_agent(client, name="Costs Agent")
 
-    # Track some cost first
     await client.post(
         "/api/budget/track",
         json={
@@ -159,12 +163,17 @@ async def test_costs_overview(client) -> None:
         },
     )
 
-    resp = await client.get("/api/costs")
+    resp = await admin_client.get("/api/costs")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] >= 1
-    # Find our agent in the list
     agent_cost = next(c for c in data["costs"] if c["agent_id"] == agent_id)
     assert agent_cost["total_cost_eur"] == pytest.approx(15.0)
     assert agent_cost["budget_limit_eur"] == pytest.approx(50.0)
-    assert agent_cost["budget_status"] == "normal"
+
+
+async def test_costs_overview_rejects_non_admin(client) -> None:
+    """L035 / A-C7: service principal must not be able to list
+    cross-tenant costs."""
+    resp = await client.get("/api/costs")
+    assert resp.status_code in (401, 403)

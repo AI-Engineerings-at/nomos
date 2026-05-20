@@ -41,7 +41,11 @@ async def test_create_approval(client: AsyncClient) -> None:
     assert body["action"] == "external_api_call"
 
 
-async def test_approve(client: AsyncClient) -> None:
+async def test_approve(client: AsyncClient, admin_client: AsyncClient) -> None:
+    """Approve flow: create + approve. L035 / audit A-C3:
+    - approve/reject now require admin (require_admin)
+    - resolved_by is set from the authenticated admin, body field is ignored
+    """
     agent_id = await _create_agent(client, "ApproveBot", "appbot@test.local")
     r = await client.post(
         "/api/approvals",
@@ -53,18 +57,31 @@ async def test_approve(client: AsyncClient) -> None:
     )
     approval_id = r.json()["id"]
 
-    r2 = await client.post(
+    # Body's resolved_by intentionally set to a SPOOFED value — the
+    # router must ignore it and use the authenticated admin email.
+    r2 = await admin_client.post(
         f"/api/approvals/{approval_id}/approve",
-        json={"resolved_by": "admin@nomos.local"},
+        json={"resolved_by": "spoofed@attacker.local"},
     )
     assert r2.status_code == 200
     body = r2.json()
     assert body["status"] == "approved"
-    assert body["resolved_by"] == "admin@nomos.local"
+    assert body["resolved_by"] == "admin@test.com"  # from admin_client fixture
     assert body["resolved_at"] is not None
 
 
-async def test_reject(client: AsyncClient) -> None:
+async def test_approve_rejects_non_admin(client: AsyncClient) -> None:
+    """L035 / A-C3: service principal (X-NomOS-API-Key) must NOT be able
+    to resolve approvals — that is admin-only."""
+    r = await client.post(
+        "/api/approvals/99999/approve",
+        json={"resolved_by": "x@y"},
+    )
+    assert r.status_code in (401, 403)
+
+
+async def test_reject(client: AsyncClient, admin_client: AsyncClient) -> None:
+    """Reject flow. Same admin-only + resolved_by-from-auth invariants."""
     agent_id = await _create_agent(client, "RejectBot", "rejbot@test.local")
     r = await client.post(
         "/api/approvals",
@@ -76,12 +93,14 @@ async def test_reject(client: AsyncClient) -> None:
     )
     approval_id = r.json()["id"]
 
-    r2 = await client.post(
+    r2 = await admin_client.post(
         f"/api/approvals/{approval_id}/reject",
-        json={"resolved_by": "admin@nomos.local"},
+        json={"resolved_by": "spoofed@attacker.local"},
     )
     assert r2.status_code == 200
-    assert r2.json()["status"] == "denied"
+    body = r2.json()
+    assert body["status"] == "denied"
+    assert body["resolved_by"] == "admin@test.com"
 
 
 async def test_list_pending(client: AsyncClient) -> None:
@@ -103,10 +122,10 @@ async def test_list_pending(client: AsyncClient) -> None:
         assert item["status"] == "pending"
 
 
-async def test_approve_unknown_returns_404(client: AsyncClient) -> None:
-    r = await client.post(
+async def test_approve_unknown_returns_404(admin_client: AsyncClient) -> None:
+    r = await admin_client.post(
         "/api/approvals/99999/approve",
-        json={"resolved_by": "admin@nomos.local"},
+        json={"resolved_by": "ignored@anywhere.local"},
     )
     assert r.status_code == 404
 

@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import authorize_agent_action, require_agent_actor
 from nomos_api.config import settings
 from nomos_api.database import get_db
-from nomos_api.models import AuditLog
+from nomos_api.models import Agent, AuditLog
 from nomos_api.schemas import ComplianceMatrixEntry, ComplianceMatrixResponse, ComplianceResponse
 from nomos_api.services.fleet_service import get_agent, list_agents
 from nomos.core.compliance_engine import check_compliance
@@ -51,8 +52,14 @@ async def check_agent_compliance(
 async def run_compliance_gate(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
+    _agent: Agent = Depends(require_agent_actor),
 ) -> ComplianceResponse:
-    """Generate compliance documents for an agent and re-check compliance."""
+    """Generate compliance documents for an agent and re-check compliance.
+
+    Caller must own the target agent or be admin (L035 audit A-C6 — was
+    unguarded, allowed flipping compliance_status of any agent and writing
+    unauthorized audit-chain entries).
+    """
     agent = await get_agent(db, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
@@ -161,7 +168,72 @@ class ComplianceGateRequest(BaseModel):
 @router.post("/compliance/gate", response_model=ComplianceResponse)
 async def compliance_gate_alias(
     request: ComplianceGateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> ComplianceResponse:
-    """Alias for plugin compatibility: POST /api/compliance/gate {agent_id}."""
-    return await run_compliance_gate(request.agent_id, db)
+    """Alias for plugin compatibility: POST /api/compliance/gate {agent_id}.
+
+    Same AuthZ as the path-param variant — caller must own the target
+    agent or be admin / service principal (L035 audit A-C6 + A-#8).
+    """
+    agent = await authorize_agent_action(
+        db=db, request=http_request, agent_id=request.agent_id, action="compliance_gate"
+    )
+    # authorize_agent_action returns the agent — re-run the gate logic
+    # inline rather than re-calling the path handler (which would re-resolve
+    # the agent and run require_agent_actor again on a synthetic request).
+    return await _run_gate_for_loaded_agent(agent, db)
+
+
+async def _run_gate_for_loaded_agent(
+    agent: Agent,
+    db: AsyncSession,
+) -> ComplianceResponse:
+    """Shared body of /agents/{id}/gate + /compliance/gate. Caller has
+    already authorized + loaded the agent."""
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
+        raise HTTPException(status_code=400, detail="Invalid agent directory")
+
+    manifest = load_manifest(agent_dir / "manifest.yaml")
+
+    from nomos.core.gate import generate_compliance_docs
+
+    generate_compliance_docs(manifest, agent_dir / "compliance")
+    result = check_compliance(manifest, agent_dir / "compliance")
+
+    chain = HashChain(storage_dir=agent_dir / "audit")
+    event_type = (
+        EventType.COMPLIANCE_CHECK_PASSED if result.status.value == "passed" else EventType.COMPLIANCE_CHECK_FAILED
+    )
+    chain.append(
+        event_type=event_type,
+        agent_id=agent.id,
+        data={
+            "status": result.status.value,
+            "documents_generated": len(manifest.compliance.documents_required),
+            "missing": result.missing_documents,
+        },
+    )
+    new_entry = chain.entries[-1]
+    audit_log = AuditLog(
+        agent_id=new_entry.agent_id,
+        sequence=new_entry.sequence,
+        event_type=new_entry.event_type,
+        data=new_entry.data,
+        chain_hash=new_entry.hash,
+        timestamp=new_entry.timestamp,
+    )
+    db.add(audit_log)
+    agent.compliance_status = result.status.value
+    await db.commit()
+    await db.refresh(agent)
+
+    return ComplianceResponse(
+        agent_id=agent.id,
+        status=result.status.value,
+        missing_documents=result.missing_documents,
+        errors=result.errors,
+        warnings=result.warnings,
+    )

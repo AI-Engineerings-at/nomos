@@ -1,11 +1,11 @@
 # NomOS — EU AI Act Compliance Engine
 
-> 324+ Tests fuer EU AI Act Konformitaet. Validiert Agents, Models und Systeme gegen regulatorische Anforderungen.
+> 693+ Tests (454 API + 239 CLI) fuer EU AI Act Konformitaet. Validiert Agents, Models und Systeme gegen regulatorische Anforderungen.
 
 ## Projekt-Info
 - **Typ:** Compliance Engine
 - **Fokus:** EU AI Act Validierung
-- **Tests:** 324+ Compliance-Checks
+- **Tests:** 693+ Compliance-Checks (454 API + 239 CLI)
 - **Sprache:** Code + Commits auf Englisch, Kommunikation auf Deutsch
 
 ## Zeroth-Stack Rolle

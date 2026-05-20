@@ -15,7 +15,7 @@ Erfordert Python 3.11+.
 ## Globale Optionen
 
 ```
-nomos --version    Version anzeigen (0.1.0) und beenden
+nomos --version    Version anzeigen (0.2.1) und beenden
 nomos --help       Hilfe anzeigen und beenden
 ```
 

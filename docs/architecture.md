@@ -184,7 +184,7 @@ BSD-3 licensed Redis replacement. Used for session caching, rate limiting, and e
 
 Background job processor. Runs `python -m arq
 nomos_api.worker.main.WorkerSettings` (`docker-compose.yml:127-131`),
-sharing the API codebase but with no HTTP port. Five cron jobs are
+sharing the API codebase but with no HTTP port. Seven cron jobs are
 registered in `nomos-api/nomos_api/worker/main.py:62-83`:
 
 | Job | Schedule | Purpose |

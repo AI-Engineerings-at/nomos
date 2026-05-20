@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import authorize_agent_action, require_agent_actor
 from nomos_api.database import get_db
+from nomos_api.models import Agent
 from nomos_api.schemas import (
     WorkspaceInfoResponse,
     WorkspaceMountRequest,
@@ -20,7 +22,10 @@ router = APIRouter(prefix="/api", tags=["workspace"])
 async def get_workspace_info(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
+    _agent: Agent = Depends(require_agent_actor),
 ) -> WorkspaceInfoResponse:
+    """Workspace info for an agent. Caller must own the agent or be admin
+    (L035 audit A-C4 — was unguarded)."""
     """Return workspace info and mounted collections for an agent."""
     exists = await workspace_svc.agent_exists(db, agent_id)
     collections = await workspace_svc.get_mounted_collections(db, agent_id)
@@ -35,9 +40,13 @@ async def get_workspace_info(
 @router.post("/workspace/mount", response_model=WorkspaceMountResponse)
 async def mount_collection(
     request: WorkspaceMountRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceMountResponse:
-    """Mount a collection to an agent's workspace."""
+    """Mount a collection to an agent's workspace. Caller must own the
+    target agent or be admin — otherwise RAG isolation between tenants
+    can be broken (L035 audit A-C4)."""
+    await authorize_agent_action(db=db, request=http_request, agent_id=request.agent_id, action="workspace_mount")
     result = await workspace_svc.mount_collection(db, request.agent_id, request.collection_name)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Agent {request.agent_id!r} not found")
@@ -51,9 +60,12 @@ async def mount_collection(
 @router.post("/workspace/unmount", response_model=WorkspaceMountResponse)
 async def unmount_collection(
     request: WorkspaceMountRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceMountResponse:
-    """Unmount a collection from an agent's workspace."""
+    """Unmount a collection from an agent's workspace. Caller must own
+    the target agent or be admin (L035 audit A-C4)."""
+    await authorize_agent_action(db=db, request=http_request, agent_id=request.agent_id, action="workspace_unmount")
     result = await workspace_svc.unmount_collection(db, request.agent_id, request.collection_name)
     if not result:
         raise HTTPException(

@@ -148,3 +148,58 @@ To be explicit about the boundaries:
 5. **Autonomous risk classification** — NomOS enforces the risk class you assign but does not assess whether it is correct.
 6. **Runtime PII filtering** — PII filter configuration is in the manifest, but actual filtering requires the Honcho memory backend. The local backend does not filter PII.
 7. **Conformity assessment** — NomOS does not perform or replace the conformity assessment required for high-risk AI systems under Art. 43 EU AI Act.
+
+---
+
+## EU AI Act Article 12 — Record-Keeping Event Mapping
+
+Effective 2026-08-02 (Annex III), Article 12 requires high-risk AI systems
+to **automatically log events over the system's lifetime**, with a minimum
+**six-month retention**. NomOS satisfies this with a HMAC-anchored,
+Ed25519-signed, append-only hash chain (`nomos.core.hash_chain`).
+
+The event-type catalog in `nomos.core.events.EventType` is exhaustively
+mapped against the three Article 12 logging purposes:
+
+| Art. 12 purpose | NomOS event types written to the chain |
+|---|---|
+| **(a) Identify situations causing risk or substantial modification** | `compliance.check.failed`, `governance.kill_switch`, `governance.escalation`, `governance.hook.blocked`, `incident.detected`, `incident.escalated`, `tool.call_blocked`, `agent.stale` |
+| **(b) Facilitate post-market monitoring** | `agent.deployed`, `agent.retired`, `incident.reported`, `incident.resolved`, `task.failed`, `budget.warning` |
+| **(c) Monitor the operation of the high-risk AI system** | `agent.created`, `agent.stopped`, `agent.ended`, `compliance.check.passed`, `compliance.doc.signed`, `governance.hook.triggered`, `tool.call_allowed`, `tool.completed`, `task.created`, `task.assigned`, `task.completed`, `audit.chain.created`, `audit.chain.verified`, `audit.exported` |
+
+### Cryptographic integrity (state-of-the-art per 2026)
+
+Every entry carries:
+- **SHA-256 content hash** — entry binds its sequence + timestamp +
+  event_type + agent_id + payload + previous_hash. Any byte-level
+  change invalidates the recomputed hash.
+- **HMAC-SHA256 anchor** — keyed by `NOMOS_HASHCHAIN_HMAC_KEY` (Vault-
+  injected, ≥32 bytes). Detects tampering by anyone without the key.
+  Fail-closed: missing key or missing `hmac` field on an entry is
+  rejected by `verify_chain`.
+- **Ed25519 signature** (Phase-A1) — keyed by `NOMOS_AUDIT_SIGNING_KEY`
+  (Vault-injected, 32-byte seed). Non-repudiation: a verifier needs
+  only the matching public key, no shared secret. Closes the
+  retroactive-forgery risk that exists if only the HMAC key leaks.
+  Fail-closed: missing key, missing `signature` field, or forged
+  signature is rejected.
+
+### Retention (Article 12 minimum 6 months)
+
+Per-agent retention is configured via the manifest field
+`manifest.governance.audit_retention_days`. The product enforces a
+**hard floor of 180 days** (six months — Art. 12 statutory minimum);
+shorter values are rejected at manifest validation. `[SUMMARY]` rows
+are always retained beyond the window so the condensed history
+survives prune operations.
+
+### Verification by a regulator (no shared-secret needed)
+
+A regulator with only the chain export (`GET /api/agents/{id}/audit/export`)
+and the deployment's Ed25519 public key can independently verify:
+1. SHA-256 chain consistency,
+2. Each entry's Ed25519 signature against the public key,
+3. The continuity of `previous_hash` references back to the genesis hash.
+
+The HMAC key remains operator-controlled and need not be shared with
+external auditors.

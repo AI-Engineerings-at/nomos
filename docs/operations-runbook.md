@@ -86,8 +86,43 @@ code or compose) are:
 | `NOMOS_PLUGIN_API_KEY` | Plugin / service-to-service auth |
 | `NOMOS_GATEWAY_TOKEN` | Gateway ↔ API bidirectional auth |
 | `NOMOS_DB_PASSWORD` | PostgreSQL (compose guards with `:?`) |
-| `NOMOS_HASHCHAIN_HMAC_KEY` | Audit hash-chain HMAC (`hash_chain.py:30-43`) |
+| `NOMOS_HASHCHAIN_HMAC_KEY` | Audit hash-chain HMAC (≥32 bytes, fail-closed). Vault path: `secrets/audit/hmac_key`. |
+| `NOMOS_AUDIT_SIGNING_KEY` | Audit hash-chain Ed25519 signing seed (exactly 64 hex chars = 32 bytes, fail-closed). Vault path: `secrets/audit-signing/private_key_hex`. The public key is derivable from this private seed and is what regulators / external auditors need to verify the chain. |
 | One LLM provider key | `NVIDIA_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` |
+
+### Audit-key rotation procedure
+
+The HMAC key and the Ed25519 signing key may be rotated. Important: an
+entry's HMAC and signature are bound to the key in force at write time;
+**rotating a key does NOT invalidate older entries**, but the verifier
+must have access to the prior public key to verify the older signatures
+(keep an archive of retired public keys in your evidence vault).
+
+1. Generate a new 32-byte secret in Vault:
+   - HMAC: `vault kv put secret/nomos/audit/hmac_key value=$(openssl rand -hex 32)`
+   - Ed25519 seed: `vault kv put secret/nomos/audit-signing/private_key_hex value=$(openssl rand -hex 32)`
+2. Export the **OLD public key** for verifier archival (before swap):
+   `python -c "from nomos.core.hash_chain import _signing_key; print(_signing_key().public_key().public_bytes_raw().hex())"`
+   Store in your evidence vault tagged with the date.
+3. Restart `nomos-api` and `nomos-worker` so they pick up the new env.
+4. New entries from this point sign with the new key. Old entries
+   continue to verify with the **archived old public key** — keep that
+   archive for at least the Art. 12 minimum retention (6 months) plus a
+   buffer.
+
+### Regulator-facing audit export
+
+A regulator with only the chain export does NOT need access to your
+HMAC key. They need only the **Ed25519 public key** corresponding to
+each retention window.
+
+1. Export the chain:
+   `GET /api/agents/{id}/audit/export` (admin or owning user JWT cookie)
+2. Provide the regulator with the current public key (and any archived
+   public keys for older entries):
+   `python -c "from nomos.core.hash_chain import _signing_key; print(_signing_key().public_key().public_bytes_raw().hex())"`
+3. They verify independently with any Ed25519-capable tool; no shared
+   secret is exchanged.
 
 Bootstrap/unseal flow:
 

@@ -79,7 +79,7 @@ jobs:
           uv run python -m coverage report --skip-covered \
             | tail -20 >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-cli
@@ -159,7 +159,7 @@ jobs:
           uv run python -m coverage report --skip-covered \
             | tail -20 >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-api
@@ -190,7 +190,7 @@ jobs:
             && node -e "const c=require('./coverage/coverage-summary.json').total; console.log('lines',c.lines.pct,'branches',c.branches.pct,'funcs',c.functions.pct)" \
             >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-plugin
@@ -220,7 +220,7 @@ jobs:
             && node -e "const c=require('./coverage/coverage-summary.json').total; console.log('lines',c.lines.pct,'branches',c.branches.pct,'funcs',c.functions.pct)" \
             >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-console
@@ -299,7 +299,7 @@ jobs:
           (cd nomos-console && cyclonedx-npm --output-file ../sbom-console.json) || true
 
       - name: Upload SBOMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sbom-cyclonedx

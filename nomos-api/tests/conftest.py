@@ -16,6 +16,11 @@ os.environ.setdefault(
     "NOMOS_HASHCHAIN_HMAC_KEY",
     "TEST-ONLY-HMAC-key-do-not-use-in-production-32bytes+++",
 )
+# Phase-A1: Ed25519 audit-signing key (test-only). Production injects from Vault.
+os.environ.setdefault(
+    "NOMOS_AUDIT_SIGNING_KEY",
+    "deadbeefcafebabe0123456789abcdef0123456789abcdef0123456789abcdef",
+)
 # Tests run against a REAL Valkey (rule 02: no mocks for infra services).
 # Locally: `docker compose up -d valkey`. In CI: a `valkey` service container.
 # Default config points at the docker hostname `valkey`; override to localhost

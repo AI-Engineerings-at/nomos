@@ -24,6 +24,9 @@ dependencies = [
     "valkey>=6.0,<7",
     "alembic>=1.13,<2",
     "arq>=0.26,<1",
+    # Phase-A1: Ed25519 audit-trail signatures used via shared
+    # nomos.core.hash_chain (cryptography.hazmat.primitives.asymmetric.ed25519).
+    "cryptography>=42.0,<46",
 ]
 
 [project.optional-dependencies]

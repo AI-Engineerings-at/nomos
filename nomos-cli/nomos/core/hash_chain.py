@@ -18,6 +18,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
+
 
 CHAIN_FILENAME = "chain.jsonl"
 GENESIS_HASH = "0" * 64
@@ -58,6 +64,76 @@ def _compute_hmac(content_hash: str) -> str:
     return hmac.new(_hmac_key(), content_hash.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+# Phase-A1 (Aug 2026 EU AI Act Art. 12 prep): Ed25519 per-entry signatures.
+# HMAC alone is forgeable retroactively if the symmetric key leaks. An
+# Ed25519 signature over each entry's hash gives NON-REPUDIATION — anyone
+# with only the PUBLIC key can verify, no shared secret. Combined with the
+# HMAC, an attacker would need BOTH the HMAC key AND the Ed25519 private
+# key (kept separately in Vault) to forge a self-consistent chain.
+_SIGN_ENV_VAR = "NOMOS_AUDIT_SIGNING_KEY"  # hex-encoded 32-byte Ed25519 seed
+_SIGN_SEED_BYTES = 32  # Ed25519 requires exactly 32-byte seed
+_SIGN_SEED_HEX_LEN = _SIGN_SEED_BYTES * 2  # 64 hex chars
+
+
+class AuditSignatureKeyMissing(RuntimeError):
+    """Raised when NOMOS_AUDIT_SIGNING_KEY is unset or malformed.
+
+    Fail-closed alongside the HMAC key: an unsigned audit chain offers no
+    non-repudiation and would not satisfy EU AI Act Art. 12 record-
+    keeping requirements for high-risk systems.
+    """
+
+
+def _signing_key() -> Ed25519PrivateKey:
+    """Load the Ed25519 signing key from env (hex-encoded 32-byte seed).
+
+    Production: injected from Vault path `secrets/audit-signing` as
+    `private_key_hex`. Tests: set in conftest. Fail-closed otherwise.
+    """
+    raw = os.environ.get(_SIGN_ENV_VAR, "").strip().lower()
+    if len(raw) != _SIGN_SEED_HEX_LEN:
+        raise AuditSignatureKeyMissing(
+            f"{_SIGN_ENV_VAR} must be exactly {_SIGN_SEED_HEX_LEN} hex chars "
+            f"(Ed25519 32-byte seed); inject from Vault in production."
+        )
+    try:
+        seed = bytes.fromhex(raw)
+    except ValueError as exc:
+        raise AuditSignatureKeyMissing(f"{_SIGN_ENV_VAR} is not valid hex: {exc}") from exc
+    return Ed25519PrivateKey.from_private_bytes(seed)
+
+
+def _verifying_key() -> Ed25519PublicKey:
+    """The verifier-side public key.
+
+    Derived from the same env var so signing and verifying are
+    co-located in the typical Docker single-host deployment. A
+    deployment that wants verifier-only nodes (no signing privilege)
+    can in the future read a separate `NOMOS_AUDIT_VERIFY_KEY` env
+    holding only the public-key hex.
+    """
+    return _signing_key().public_key()
+
+
+def _compute_signature(content_hash: str) -> str:
+    """Sign an entry's hash with the Ed25519 private key (hex output)."""
+    sig = _signing_key().sign(content_hash.encode("utf-8"))
+    return sig.hex()
+
+
+def _verify_signature(content_hash: str, signature_hex: str) -> bool:
+    """Verify an Ed25519 signature over an entry's hash."""
+    try:
+        sig = bytes.fromhex(signature_hex)
+    except ValueError:
+        return False
+    try:
+        _verifying_key().verify(sig, content_hash.encode("utf-8"))
+        return True
+    except InvalidSignature:
+        return False
+
+
 @dataclass(frozen=True)
 class HashChainEntry:
     """A single entry in the audit hash chain."""
@@ -70,6 +146,7 @@ class HashChainEntry:
     previous_hash: str
     hash: str = field(init=False)
     hmac: str = field(init=False)
+    signature: str = field(init=False)
 
     def __post_init__(self) -> None:
         canonical = json.dumps(
@@ -88,6 +165,10 @@ class HashChainEntry:
         computed = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         object.__setattr__(self, "hash", computed)
         object.__setattr__(self, "hmac", _compute_hmac(computed))
+        # Phase-A1: per-entry Ed25519 signature for non-repudiation. Anyone
+        # with the corresponding public key can verify the entry, without
+        # access to the shared HMAC secret.
+        object.__setattr__(self, "signature", _compute_signature(computed))
 
     def to_dict(self) -> dict:
         return {
@@ -99,6 +180,7 @@ class HashChainEntry:
             "previous_hash": self.previous_hash,
             "hash": self.hash,
             "hmac": self.hmac,
+            "signature": self.signature,
         }
 
 
@@ -232,6 +314,19 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
                 errors.append(
                     f"Entry {i}: HMAC mismatch — entry tampered or wrong key (stored={str(stored_hmac)[:16]}...)"
                 )
+
+        # Phase-A1: Ed25519 signature is also MANDATORY. Provides non-
+        # repudiation that the HMAC alone cannot — verification needs only
+        # the public key, so a verifier with no signing privilege can still
+        # prove the chain is genuine. Missing signature == bypass attempt.
+        stored_sig = raw.get("signature")
+        if stored_sig is None:
+            errors.append(f"Entry {i}: missing Ed25519 signature — non-repudiation gap")
+        elif not _verify_signature(stored_hash, str(stored_sig)):
+            errors.append(
+                f"Entry {i}: Ed25519 signature mismatch — entry forged or wrong key "
+                f"(stored={str(stored_sig)[:16]}...)"
+            )
 
         if raw["previous_hash"] != previous_hash:
             errors.append(

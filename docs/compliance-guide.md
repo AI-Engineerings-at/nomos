@@ -203,3 +203,22 @@ and the deployment's Ed25519 public key can independently verify:
 
 The HMAC key remains operator-controlled and need not be shared with
 external auditors.
+
+### Phase-B1: Embedded Merkle transparency log (Sigstore-Rekor-style)
+
+In addition to the linear hash chain, nomos exposes an RFC 6962
+Merkle-tree view of every agent's audit chain. Endpoints:
+
+- `GET /api/agents/{agent_id}/audit/sth` — Signed Tree Head (origin,
+  tree_size, root_hash, timestamp, Ed25519 signature). Verifies with
+  the same public key used for per-entry signatures.
+- `GET /api/agents/{agent_id}/audit/proof/{sequence}` — RFC 6962
+  inclusion proof for any chain entry (leaf_index, tree_size,
+  root_hash, audit_path). A verifier reconstructs the root from leaf +
+  audit_path and compares to root_hash with
+  `nomos.core.merkle.verify_inclusion_proof`.
+
+The hourly anchor cron (`worker/jobs/audit_anchor.py`) now also writes
+`merkle_tree_size` + `merkle_root_hash` into each anchor record, so
+historical inclusion proofs can be verified against an externally-
+anchored, time-stamped root without re-fetching the chain.

@@ -20,10 +20,14 @@ from nomos_api.schemas import (
     AuditEntryResponse,
     AuditResponse,
     AuditVerifyResponse,
+    InclusionProofResponse,
+    SignedTreeHeadResponse,
 )
 from nomos_api.services.fleet_service import get_agent
 from nomos.core.events import validate_event_type
 from nomos.core.hash_chain import HashChain, verify_chain
+from nomos.core.merkle import inclusion_proof as merkle_inclusion_proof
+from nomos.core.merkle import signed_tree_head as merkle_signed_tree_head
 
 router = APIRouter(prefix="/api", tags=["audit"])
 
@@ -189,6 +193,60 @@ async def verify_agent_audit(
         last_anchored_head_hash=last_anchored_head_hash,
         head_matches_anchor=head_matches_anchor,
     )
+
+
+@router.get("/agents/{agent_id}/audit/sth", response_model=SignedTreeHeadResponse)
+async def get_agent_signed_tree_head(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+    _agent=Depends(require_agent_actor),
+) -> SignedTreeHeadResponse:
+    """Phase-B1: signed checkpoint over the current chain head.
+
+    Sigstore-Rekor-style: returns a signed note covering
+    ``origin\\ntree_size\\nroot_hash\\ntimestamp``. A third party with
+    only the Ed25519 public key can verify the STH and use it as a
+    proof anchor — no DB or chain access required.
+    """
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
+        raise HTTPException(status_code=400, detail="Invalid agent directory")
+    sth = merkle_signed_tree_head(agent_dir / "audit", origin=f"nomos-audit/{agent_id}")
+    return SignedTreeHeadResponse(agent_id=agent_id, **sth)
+
+
+@router.get(
+    "/agents/{agent_id}/audit/proof/{sequence}",
+    response_model=InclusionProofResponse,
+)
+async def get_agent_inclusion_proof(
+    agent_id: str,
+    sequence: int,
+    db: AsyncSession = Depends(get_db),
+    _agent=Depends(require_agent_actor),
+) -> InclusionProofResponse:
+    """Phase-B1: RFC 6962 inclusion proof for a single chain entry.
+
+    A verifier confirms the entry was committed in the tree of the
+    given size by recomputing the root from the leaf + the audit path
+    using ``nomos.core.merkle.verify_inclusion_proof``.
+    """
+    agent = await get_agent(db, agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+    agent_dir = Path(agent.agents_dir).resolve()
+    safe_base = settings.agents_dir.resolve()
+    if not agent_dir.is_relative_to(safe_base):
+        raise HTTPException(status_code=400, detail="Invalid agent directory")
+    try:
+        proof = merkle_inclusion_proof(agent_dir / "audit", leaf_index=sequence)
+    except IndexError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+    return InclusionProofResponse(agent_id=agent_id, **proof)
 
 
 @router.post("/audit/entry", response_model=AuditEntryCreateResponse, status_code=201)

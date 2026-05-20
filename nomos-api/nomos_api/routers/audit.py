@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -28,6 +29,8 @@ from nomos.core.events import validate_event_type
 from nomos.core.hash_chain import HashChain, verify_chain
 from nomos.core.merkle import inclusion_proof as merkle_inclusion_proof
 from nomos.core.merkle import signed_tree_head as merkle_signed_tree_head
+
+logger = logging.getLogger("nomos.routers.audit")
 
 router = APIRouter(prefix="/api", tags=["audit"])
 
@@ -182,7 +185,10 @@ async def verify_agent_audit(
                     head_matches_anchor = current_head == last_anchored_head_hash
     except Exception:
         # Anchor info is advisory; never block verify on a read error.
-        pass
+        # v0.4.0 (Q / audit D-#6): log at WARNING so a corrupted
+        # anchors.jsonl is at least visible in ops logs even though
+        # the verify endpoint still succeeds.
+        logger.warning("anchor enrichment skipped for %s", agent_id, exc_info=True)
 
     return AuditVerifyResponse(
         agent_id=agent_id,

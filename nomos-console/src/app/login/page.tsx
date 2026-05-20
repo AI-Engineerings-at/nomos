@@ -137,7 +137,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p className="mt-6 text-center text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
-            NomOS Console v0.3.0
+            NomOS Console v0.4.0
           </p>
         </div>
       </main>

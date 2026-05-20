@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.auth.rbac import check_agent_access, require_agent_actor
@@ -25,11 +25,33 @@ from nomos.core.events import EventType
 router = APIRouter(prefix="/api", tags=["agents"])
 
 
+# router-coverage-skip: inline principal+email check below (v0.4.0 L043) — admin/service may register any agent; user only their own email.
 @router.post("/agents", response_model=AgentResponse, status_code=201)
 async def create_new_agent(
     request: AgentCreateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> AgentResponse:
+    """Hire a new agent. v0.4.0 (L043): explicit owner check — a user
+    principal may only register an agent whose ``email`` matches their
+    own; service principal (Plugin) may register any agent; admin may
+    register any agent. Previously this route was unguarded — any
+    authenticated principal could create an agent in any tenant's name
+    (FCL limit enforces global count, not per-tenant)."""
+    principal = getattr(http_request.state, "user", None)
+    if not principal:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role = principal.get("role")
+    if role not in ("admin", "service"):
+        # Regular user: agent.email must match the principal's email.
+        if principal.get("email", "").lower() != request.email.lower():
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Not authorized to register an agent for a different email. Use your own email or contact an admin."
+                ),
+            )
+
     # FCL Check — max 3 agents free
     from sqlalchemy import select, func
 

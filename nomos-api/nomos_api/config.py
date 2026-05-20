@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_title: str = "NomOS Fleet API"
-    api_version: str = "0.3.0"
+    api_version: str = "0.4.0"
     # M3d (0.3.0): cors_origins with localhost is fine in dev but
     # dangerous in prod (combined with allow_credentials=True any
     # cookies are sent on cross-origin requests from localhost). The

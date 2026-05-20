@@ -10,6 +10,7 @@ from nomos_api.services.pii import filter_text
 router = APIRouter(prefix="/api", tags=["pii"])
 
 
+# router-coverage-skip: pattern-match utility, no agent/user state read/written. AuthMiddleware ensures the caller is authenticated.
 @router.post("/pii/filter", response_model=PIIFilterResponse)
 async def filter_pii(request: PIIFilterRequest) -> PIIFilterResponse:
     """Scan text for PII and return redacted version."""

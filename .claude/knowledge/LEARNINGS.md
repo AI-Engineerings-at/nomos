@@ -160,3 +160,25 @@ Beim Erstellen von `gh pr create` mit `--body "$(cat <<EOF ... EOF)"` und backti
 
 ### L048 — Monitor + run_in_background output-files brauchen explizites stderr-merge
 Background-bash mit `run_in_background: true` produziert oft leere `output_file`s wenn pytest auf Windows-asyncpg-DNS-Fehler stoesst und stderr ungemergt bleibt. Read auf das Output-File zeigt "shorter than offset 1". **Mach es SO**: bei pytest-Background-Runs auf Windows: `2>&1` am Ende, plus explicit `--tb=line -q` damit Output kompakt bleibt. Oder Monitor mit `tail -f ... | grep -E "passed|failed"` als Live-Stream.
+
+### L049 — Migration vor commit testen — sqlite vs Postgres-Default-Verhalten
+M2a (matrix-Cache mit `missing_docs JSON column`) brauchte `server_default=sa.text("'[]'")`. Auf SQLite (test conftest mit `Base.metadata.create_all`) ignoriert das Default-Verhalten; auf Postgres ist es das einzig richtige. **Mach es SO**: bei jeder neuen JSON/Array-Column im ORM model `default=list` setzen (Python-Level) UND `server_default` in der Alembic-Migration. Beides — eines fuer create_all-Tests, eines fuer prod-Postgres. Vergessen wird einer von beiden im Stress.
+
+### L050 — In-process Background-Task Lifespan-Cancellation hat ein Drain-Anti-Pattern
+P2 (`metrics_drain_loop`) braucht final-flush bei Lifespan-Shutdown. Wenn man die CancelledError im `while True` Loop nicht expliziet catched + final drain + re-raise macht, geht der pending Buffer beim deploy/restart verloren. **Mach es SO**: jeder lifespan-task der state akkumuliert muss:
+1. inner try/except mit `await asyncio.sleep(...)` 
+2. outer try mit `except asyncio.CancelledError:` → final flush, then `raise` (re-propagate)
+Plus: `asyncio.create_task(...)` im lifespan, dann im `finally:` `.cancel()` + `await task`.
+
+### L051 — Test-Fixture-Pollution durch globalen Settings-Default
+M3d (cors_origins refuse-localhost-in-prod) brach den bestehenden `test_safe_values_pass_validation` test weil er die Settings-defaults verwendete inklusive `["http://localhost:3040"]`. Test-Update war Pflicht — aber das ist genau die Sorte Drift die in CI nicht visible ist (Test-Fixture defaults != production-defaults). **Mach es SO**: bei jeder neuen production-only Validierung explizit pruefen welche Tests die default-Settings nutzen, und sie explizit ueberschreiben.
+
+### L052 — Router-Coverage-Script: lokale Aliase erkennen + skip-marker Pattern
+`scripts/audit-router-coverage.py` musste mehrfach iteriert werden um false-positives zu vermeiden:
+1. `_require_admin` (lokale Datei-private Dependency) wird auch akzeptiert
+2. `check_agent_access` (sync helper im body) zaehlt auch
+3. `# router-coverage-skip: <reason>` als opt-out fuer legitime PUBLIC oder middleware-only Routes
+Drei Iterationen bis zum sauberen Pass. **Mach es SO**: AST-basierte CI-Checks brauchen Test-Suite gegen Real-Code BEVOR sie in CI als gating laufen — sonst blocken sie das erste mal jeden PR. Hard-fail-mode erst nach mindestens einem clean run auf main.
+
+### L053 — Deferred-Tasks brauchen konkrete v-Targets, nicht "kommt später"
+v0.4.0 deferred 3 Items zu v0.5.0 (O3 chat_service, O4 manifest-migrations, O5 plugin-contract-check). Wenn ich nur "deferred" schreibe ohne konkretes Target, vergesse ich's drei Sessions spaeter. **Mach es SO**: jede deferred-Entscheidung bekommt (a) explicit v-Target im Task-Subject und (b) eine Zeile im CHANGELOG "Deferred to vX.Y.Z" section. So bleibt es im Backlog sichtbar.

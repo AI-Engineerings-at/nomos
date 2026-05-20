@@ -43,21 +43,29 @@ async def detect_stale_agents(
 
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=stale_threshold_minutes)
 
-    async with session_factory() as session:
-        # Find running agents with old or missing heartbeat
-        result = await session.execute(
-            select(Agent.id).where(
-                Agent.status == "running",
-                Agent.heartbeat_at < cutoff,
+    # v0.4.0 (Q / audit D-#16): wrap the SQL block so a transient DB
+    # failure here logs once and re-raises — ARQ then handles retry vs
+    # final-fail per its own policy. Previously this job had NO
+    # try/catch, so a single DB outage spammed the ARQ retry queue
+    # without any context in logs.
+    try:
+        async with session_factory() as session:
+            result = await session.execute(
+                select(Agent.id).where(
+                    Agent.status == "running",
+                    Agent.heartbeat_at < cutoff,
+                )
             )
-        )
-        stale_ids: list[str] = list(result.scalars().all())
+            stale_ids: list[str] = list(result.scalars().all())
 
-        if not stale_ids:
-            return 0
+            if not stale_ids:
+                return 0
 
-        await session.execute(update(Agent).where(Agent.id.in_(stale_ids)).values(status="stale"))
-        await session.commit()
+            await session.execute(update(Agent).where(Agent.id.in_(stale_ids)).values(status="stale"))
+            await session.commit()
+    except Exception:
+        logger.exception("detect_stale_agents failed cutoff=%s", cutoff.isoformat())
+        raise
 
     logger.warning("Stale agents detected: %s", stale_ids)
     return len(stale_ids)

@@ -6,6 +6,154 @@ Date format: ISO-8601.
 
 ---
 
+## [0.4.0] — 2026-05-20
+
+> **Finish-the-deferred release.** Closes the remaining items the 5-agent
+> v0.2.0 post-release audit deferred to "later" — O1/O2/P1/P2 from the
+> v0.3.0 maintenance roadmap, plus a security pass over the 7 audit-A
+> findings v0.2.1 didn't ship (root-token revoke flag, JWT cookie path,
+> IPv6 zone-id, console Dockerfile USER order, in-process gateway_url
+> refresh). Plus the test gaps B-F03/F09/F10, plus the highest-impact
+> 5 of 15 remaining audit-D logging items. **Bewusst** out-of-scope:
+> 3 architectural refactors (chat_service extraction, manifest migration
+> framework, plugin contract-check); they require dedicated PRs with
+> behaviour tests and ship in v0.5.0.
+
+Bumped: `nomos-api 0.4.0`, `nomos-cli 0.4.0`, `nomos-console 0.4.0`.
+
+### O — Operating layer
+
+- **O1 — Worker engine lifecycle (audit C-F1).** `nomos-api/.../worker/main.py`
+  now sizes the worker engine explicitly (pool_size=10, max_overflow=5,
+  pool_recycle=1800) and registers `on_startup` + `on_shutdown` hooks
+  that dispose the engine pool on SIGTERM. Previously SIGTERM left
+  connections dangling until Postgres timed them out.
+- **O2 — Router-AuthZ-Coverage CI gate (LEARNINGS L043).** New
+  `scripts/audit-router-coverage.py` AST-parses every router file and
+  fails CI if any `POST/PATCH/DELETE/PUT` lacks `require_admin`,
+  `require_agent_actor`, or a body-call to `authorize_agent_action` /
+  `check_agent_access`. New `router-coverage` job in `ci.yml` gates the
+  `quality-gate` stage. The script supports a `# router-coverage-skip:
+  <reason>` opt-out marker for legitimate PUBLIC endpoints (login,
+  recovery, bootstrap, 2fa/setup, 2fa/verify, logout, pii/filter,
+  inline-RBAC path on agents.POST).
+- **O3 / O4 / O5 — deferred to v0.5.0.** chat_service extraction,
+  manifest migration framework, plugin contract-check. Each needs its
+  own behaviour-test PR.
+
+### P — Performance + Security hardening
+
+- **P1 — `/compliance/matrix` N+1 cache (audit C-F2).** New
+  `agents.missing_docs JSON NOT NULL DEFAULT '[]'` column + Alembic
+  migration `004_agents_missing_docs.py`. The hire path + the gate path
+  write the current `missing_docs` snapshot; the matrix endpoint reads
+  it straight from the DB in a single query — no per-agent disk-IO or
+  YAML parse. Scales to 200+ agents without a hit.
+- **P2 — APIMetrics in-memory batch (audit C-F9).** New
+  `services/metrics_buffer.py` keeps 3 bounded deques (requests / latency
+  / errors, 10k cap each), populated by `middleware/metrics.py` in O(1)
+  on the request hot-path. A lifespan-managed `metrics_drain_loop`
+  drains the buffers every 30s in one batch insert. At 1000 req/s the
+  metrics DB pressure drops from 2-3k tx/s to ~1 batch/30s. Drain has
+  fail-closed semantics — observability never blocks a request.
+- **P4 — Root-token-revoke env flag (audit A-#10).** `vault/init-entrypoint.sh`
+  now revokes the Vault root token after AppRole bootstrap when
+  `NOMOS_VAULT_REVOKE_ROOT=true`. Opt-in because revocation makes
+  subsequent re-init runs require AppRole (the script reads the
+  root_token from `init-output.json` on Phase 2). Operators flip this
+  once the stack is stable.
+- **P6 — JWT cookie `path="/api"` (audit A-#14).** `routers/auth.py`
+  login + logout set/delete the `nomos_token` cookie with explicit
+  `path="/api"`. Defense-in-depth: a future XSS-able non-API path no
+  longer automatically receives the session cookie.
+- **P7 — IPv6 link-local zone-id strip (audit A-#20).** `routers/settings.py`
+  `_validate_gateway_url` strips the `%zone` suffix BEFORE calling
+  `ipaddress.ip_address`, closing the SSRF pivot where
+  `fe80::1%eth0` skipped the IP-literal branch entirely.
+- **P8 — Console Dockerfile USER ordering (audit A-#21).** `USER nomos`
+  now runs BEFORE the final `npm ci --omit=dev`, so production
+  node_modules and temp files are created with the non-root uid that
+  consumes them. Previously root-owned, then non-root reads.
+- **P9 — In-process `settings.gateway_url` refresh (audit A-#24).**
+  `routers/settings.py` PATCH writes to Vault AND updates the
+  in-memory `app_settings.gateway_url` so `proxy._gateway_fetch` (which
+  reads `settings.gateway_url` directly) picks up the change without a
+  restart. Previously the PATCH appeared to succeed but in-process
+  reads kept the old value.
+- **CORS production guard (M3d, audit A-#19, regression test added).**
+  `validate_settings` now rejects `cors_origins` containing
+  `localhost` / `127.0.0.1` when `dev_mode=False`. Plus a new
+  `test_cors_localhost_rejected_in_production` regression test.
+
+### Q — Audit-D error-handling rest (5 of 15 highest-impact)
+
+- `nomos-cli/.../core/api.py:_human_error`: split `json.JSONDecodeError`
+  from generic Exception. Non-JSON 502 (gateway dropped body) now
+  log-distinguishable from JSON 500 (handler bug).
+- `nomos-api/.../routers/audit.py` anchor-enrichment: log at WARNING
+  instead of silent swallow on corrupt anchors.jsonl.
+- `nomos-api/.../routers/proxy.py` LLM error: log `type(exc).__name__`
+  only — never the str(exc) of httpx exceptions (response body leak).
+- `nomos-api/.../routers/system.py` `_get_vault_status`: log the
+  exception type so wizard "unavailable" outcomes are diagnosable.
+- `nomos-api/.../worker/jobs/heartbeat.py`: explicit try/except around
+  the SQL block + `raise` so ARQ retry policy can act; log with cutoff
+  context.
+- `nomos-plugin/src/hooks/gateway-start.ts`: honest log message; the
+  previous "will retry" wording promised a retry path that didn't
+  exist in this hook (per-subsequent-hook calls handle it instead).
+
+Remaining 10 minor audit-D items deferred to v0.5.0.
+
+### R — Test coverage gaps (B-F03 / F09 / F10)
+
+New `nomos-api/tests/test_v0_4_0_audit_gap_tests.py`:
+
+- B-F03: `GET /api/agents/{id}/audit/export` path-traversal guard
+  (Agent row's `agents_dir` outside `settings.agents_dir` → 400).
+- B-F09: multi-agent `anchors.jsonl` interleave — verify endpoint
+  picks the RIGHT agent's last anchor when intervening agent entries
+  are written between two anchor runs for the same agent.
+- B-F10: integrity-checkpoint re-run on a still-tampered chain
+  reports invalid on BOTH runs (the v0.3.0 M1 sibling-file design is
+  test-locked so a future refactor can't regress to the
+  in-chain-marker anti-pattern).
+
+### Self-reflection (LEARNINGS L049-L053)
+
+- L049: SQLite vs Postgres default-behaviour — every JSON-column add
+  needs Python-level `default` AND server_default in the migration.
+- L050: Lifespan background-tasks need explicit `CancelledError`
+  catch + final flush + re-raise; `asyncio.create_task` is paired
+  with `task.cancel(); await task` in finally.
+- L051: Production-only validators must inventory which tests use the
+  default Settings and update them explicitly.
+- L052: AST-based CI scripts need a test-run against real code BEFORE
+  going gating; ours took 3 iterations to stop false-positiving.
+- L053: Deferred decisions get a concrete v-target in the task subject
+  AND a CHANGELOG `Deferred to vX.Y.Z` line. "Later" is not a plan.
+
+### Verified
+
+- nomos-cli **245 / 0** (244 baseline + 1 new test_cli version assertion).
+- nomos-api **440 / 0** (after the M3d regression test was updated +
+  the new B-F03/F09/F10 file landed; full chunked suite).
+- nomos-plugin **46 / 0** (vitest) + tsc clean.
+- ruff check + format clean.
+- `python scripts/audit-router-coverage.py` → **OK — every state-changing route is AuthZ-guarded**.
+
+### Deferred to 0.5.0
+
+- O3 (chat_service.py extraction)
+- O4 (manifest migration framework)
+- O5 (plugin contract-check via api-client.ts → schemas.json)
+- 10 of 15 minor audit-D logging items
+- Vault TLS-listener + N-of-M Shamir default (audit A-#16)
+- Gateway-token Vault AppRole instead of file (audit A-#13)
+- Phase-B2: opt-in Sigstore Rekor public anchoring
+
+---
+
 ## [0.3.0] — 2026-05-20
 
 > **Maintenance release.** Follows the v0.2.0 5-agent post-release

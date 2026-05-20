@@ -106,8 +106,9 @@ async def run_compliance_gate(
     )
     db.add(audit_log)
 
-    # Update compliance status in DB
+    # Update compliance status + missing_docs cache in DB (v0.4.0 P1)
     agent.compliance_status = result.status.value
+    agent.missing_docs = list(result.missing_documents)
     await db.commit()
     await db.refresh(agent)
 
@@ -126,38 +127,24 @@ async def get_compliance_matrix(
 ) -> ComplianceMatrixResponse:
     """Return compliance status for all agents in the fleet.
 
-    Provides a matrix view showing each agent's compliance status,
-    missing documents, and risk class. Used by the Console dashboard.
+    v0.4.0 (P1 / audit C-F2): reads agents straight from the DB. The
+    ``missing_docs`` JSON column is denormalised — written by the
+    hire path and the gate path — so this endpoint never touches disk
+    and the request runs in a single SQL query, regardless of the
+    fleet size. Closes the per-agent YAML-parse N+1 the v0.2.0 audit
+    flagged.
     """
     agents = await list_agents(db)
-    safe_base = settings.agents_dir.resolve()
-    matrix: list[ComplianceMatrixEntry] = []
-
-    for agent in agents:
-        agent_dir = Path(agent.agents_dir).resolve()
-        missing_docs: list[str] = []
-
-        if agent_dir.is_relative_to(safe_base):
-            manifest_path = agent_dir / "manifest.yaml"
-            compliance_dir = agent_dir / "compliance"
-            if manifest_path.exists():
-                try:
-                    manifest = load_manifest(manifest_path)
-                    result = check_compliance(manifest, compliance_dir)
-                    missing_docs = result.missing_documents
-                except Exception as exc:
-                    logger.warning("Compliance check failed for %s: %s", agent.id, exc)
-
-        matrix.append(
-            ComplianceMatrixEntry(
-                agent_id=agent.id,
-                agent_name=agent.name,
-                status=agent.compliance_status,
-                missing_docs=missing_docs,
-                risk_class=agent.risk_class,
-            )
+    matrix = [
+        ComplianceMatrixEntry(
+            agent_id=agent.id,
+            agent_name=agent.name,
+            status=agent.compliance_status,
+            missing_docs=list(agent.missing_docs or []),
+            risk_class=agent.risk_class,
         )
-
+        for agent in agents
+    ]
     return ComplianceMatrixResponse(matrix=matrix, total=len(matrix))
 
 
@@ -227,6 +214,7 @@ async def _run_gate_for_loaded_agent(
     )
     db.add(audit_log)
     agent.compliance_status = result.status.value
+    agent.missing_docs = list(result.missing_documents)  # v0.4.0 P1
     await db.commit()
     await db.refresh(agent)
 

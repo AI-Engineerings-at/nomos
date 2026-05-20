@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nomos_api.auth.rbac import require_admin
@@ -52,8 +52,15 @@ async def list_approvals_endpoint(
 @router.post("/approvals", response_model=ApprovalResponse, status_code=201)
 async def create_approval_endpoint(
     request: ApprovalRequestCreate,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> ApprovalResponse:
+    """Create a pending approval. v0.4.0 (L043): caller must own the
+    target agent or be admin / service-principal (Plugin). Previously
+    unguarded — any tenant could queue approvals for any agent."""
+    from nomos_api.auth.rbac import authorize_agent_action
+
+    await authorize_agent_action(db=db, request=http_request, agent_id=request.agent_id, action="create_approval")
     approval = await create_approval(
         db,
         agent_id=request.agent_id,

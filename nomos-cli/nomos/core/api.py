@@ -6,11 +6,14 @@ configurable timeouts, and human-readable error handling.
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import Any
 
 import httpx
+
+_LOGGER = logging.getLogger("nomos.core.api")
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -49,17 +52,39 @@ def _err(message: str, status_code: int | None = None) -> dict[str, Any]:
 
 
 def _human_error(response: httpx.Response) -> str:
-    """Extract a human-readable error from an HTTP response."""
-    # Try to get detail from JSON body first
+    """Extract a human-readable error from an HTTP response.
+
+    v0.4.0 (Q / audit D-#2): the previous bare ``except Exception: pass``
+    silently swallowed both "body isn't JSON" and "JSON has wrong shape".
+    Both fall back to the status message — but we LOG which path was
+    taken so an operator can distinguish a non-JSON 502 (gateway dropped
+    the body) from a JSON 500 with no ``detail`` field (handler bug).
+    """
+    import json as _json
+
     try:
         body = response.json()
+    except _json.JSONDecodeError:
+        # Server returned non-JSON (e.g. an HTML 502 from a proxy). Log
+        # at debug because this is a normal failure mode in dev.
+        _LOGGER.debug(
+            "non-JSON response body status=%d url=%s",
+            response.status_code,
+            response.request.url if response.request else "?",
+        )
+        return _STATUS_MESSAGES.get(response.status_code, f"HTTP {response.status_code}")
+    except Exception:  # truly unexpected
+        _LOGGER.warning(
+            "unexpected error parsing response body status=%d",
+            response.status_code,
+            exc_info=True,
+        )
+        return _STATUS_MESSAGES.get(response.status_code, f"HTTP {response.status_code}")
+
+    if isinstance(body, dict):
         detail = body.get("detail", "")
         if detail:
             return str(detail)
-    except Exception:
-        pass
-
-    # Fall back to generic status message
     return _STATUS_MESSAGES.get(response.status_code, f"HTTP {response.status_code}")
 
 

@@ -1,5 +1,5 @@
 # Digest-pinned 2026-05-19 for reproducible builds (still python:3.12-slim, no version change)
-FROM python:3.12-slim@sha256:401f6e1a67dad31a1bd78e9ad22d0ee0a3b52154e6bd30e90be696bb6a3d7461
+FROM python:3.14-slim@sha256:a24bfbc0bd39cfa24de47147ada92b65916ad693e6ab5034636ef21f5663ef13
 
 WORKDIR /app
 

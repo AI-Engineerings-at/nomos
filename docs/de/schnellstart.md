@@ -16,7 +16,7 @@ cd nomos
 cp .env.example .env
 ```
 
-`.env` im Editor öffnen und die vier **Pflicht-Secrets** setzen — Docker verweigert den Start mit den Platzhalter-Werten:
+`.env` im Editor öffnen und die sechs **Pflicht-Secrets** setzen — Docker verweigert den Start mit den Platzhalter-Werten:
 
 | Variable | Beschreibung | Beispiel |
 |---|---|---|
@@ -24,14 +24,18 @@ cp .env.example .env
 | `NOMOS_PLUGIN_API_KEY` | Auth-Key für OpenClaw-Gateway-Kommunikation | `openssl rand -hex 24` |
 | `NOMOS_GATEWAY_TOKEN` | Bidirektionaler Gateway ↔ API Auth-Token | `openssl rand -hex 24` |
 | `NOMOS_DB_PASSWORD` | PostgreSQL-Passwort | beliebiges starkes Passwort |
+| `NOMOS_HASHCHAIN_HMAC_KEY` | HMAC-Anker des Audit-Trails (≥32 Bytes, fail-closed) | `openssl rand -hex 32` |
+| `NOMOS_AUDIT_SIGNING_KEY` | Ed25519-Signatur-Seed des Audit-Trails (32 Byte hex, fail-closed) | `openssl rand -hex 32` |
 
-Alle vier auf einmal generieren:
+Alle sechs auf einmal generieren:
 
 ```bash
 echo "NOMOS_JWT_SECRET=$(openssl rand -hex 32)"
 echo "NOMOS_PLUGIN_API_KEY=$(openssl rand -hex 24)"
 echo "NOMOS_GATEWAY_TOKEN=$(openssl rand -hex 24)"
 echo "NOMOS_DB_PASSWORD=$(openssl rand -hex 16)"
+echo "NOMOS_HASHCHAIN_HMAC_KEY=$(openssl rand -hex 32)"
+echo "NOMOS_AUDIT_SIGNING_KEY=$(openssl rand -hex 32)"
 ```
 
 Die Ausgabe in die `.env`-Datei eintragen.
@@ -66,7 +70,7 @@ Alle Services sollten `healthy` oder `running` anzeigen:
 | `nomos-worker` | — | Hintergrund-Job-Prozessor |
 | `openclaw-gateway` | 3050 | Headless Plugin Framework |
 | `postgres` | — | PostgreSQL 16 + pgvector (intern) |
-| `valkey` | 6380 | Cache und Rate-Limiting (intern) |
+| `valkey` | — | Cache und Rate-Limiting (compose-intern, kein Host-Port) |
 | `vault` | 8200 | HashiCorp Vault Secret Management |
 
 API-Health prüfen:
@@ -75,10 +79,21 @@ API-Health prüfen:
 curl http://localhost:8060/health
 ```
 
-Erwartete Antwort:
+Erwartete Antwort (Status `healthy` nur wenn PostgreSQL erreichbar; `degraded` wenn Gateway offline):
 
 ```json
-{"status": "ok", "service": "NomOS API"}
+{
+  "status": "healthy",
+  "service": "NomOS Fleet API",
+  "version": "0.2.0",
+  "vault": "ready",
+  "components": {
+    "vault": "ok",
+    "postgres": "ok",
+    "valkey": "ok",
+    "gateway": "ok"
+  }
+}
 ```
 
 ## 3. Erster Login
@@ -88,18 +103,20 @@ Erwartete Antwort:
 Beim ersten Start zeigt die Konsole einen **Bootstrap**-Dialog. Admin-Account anlegen:
 
 ```bash
-curl -X POST http://localhost:8060/api/auth/bootstrap \
+curl -X POST http://localhost:8060/api/users/bootstrap \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "admin",
     "email": "admin@example.com",
-    "password": "jetzt-aendern"
+    "password": "jetzt-aendern",
+    "role": "admin"
   }'
 ```
 
+Die Antwort enthält eine einmalige **Recovery-Phrase** — sicher offline aufbewahren (`routers/users.py:66`).
+
 Oder das Bootstrap-Formular im Browser ausfüllen. Danach mit den Zugangsdaten einloggen.
 
-> **Hinweis:** Der Bootstrap-Endpoint ist nur verfügbar, solange noch kein Benutzer existiert. Er deaktiviert sich nach dem ersten Aufruf selbst.
+> **Hinweis:** Der Bootstrap-Endpoint (`/api/users/bootstrap`) ist nur verfügbar, solange noch kein Benutzer existiert. Er liefert 403 sobald ein Admin existiert.
 
 ## 4. LLM-Provider konfigurieren
 
@@ -173,9 +190,34 @@ docker compose logs vault --tail 30
 
 ---
 
+## Audit-Trail v2 (ab 0.2.0)
+
+Nach dem ersten Start läuft im Worker stündlich `anchor_audit_heads`
+(Phase-A2): die per-Agent Chain-Spitzen werden samt HMAC, Ed25519-
+Signatur und Merkle-Wurzel nach `/data/audit-anchors/anchors.jsonl`
+geschrieben. Täglich um 04:00 läuft `audit_integrity_checkpoint`
+(Phase-A3) und schreibt eine `audit.retention.checkpoint`-Zeile in
+die Chain.
+
+Ein Prüfer kann jedes einzelne Audit-Event mit **ausschliesslich dem
+Ed25519 Public Key** verifizieren — ohne DB-Zugriff:
+
+```bash
+# Signed Tree Head + Inclusion-Proof für Sequenz N abrufen
+curl -H "X-NomOS-API-Key: $KEY" \
+  http://localhost:8060/api/agents/AGENT_ID/audit/sth
+curl -H "X-NomOS-API-Key: $KEY" \
+  http://localhost:8060/api/agents/AGENT_ID/audit/proof/N
+```
+
+Verifikations-Snippet siehe `docs/operations-runbook.md` Abschnitt
+"Phase-B1: Signed Tree Head + inclusion-proof for a single event".
+
 ## Nächste Schritte
 
-- [API-Referenz](api-referenz.md) — alle REST-Endpoints
+- [API-Referenz](api-referenz.md) — REST-Endpoints (Kurzform; vollständig: [api-reference.md](../api-reference.md))
 - [Compliance-Leitfaden](compliance-leitfaden.md) — EU AI Act Abdeckung im Detail
 - [Architektur](architektur.md) — System-Design und Datenfluss
 - [CLI-Referenz](cli-referenz.md) — Kommandozeilen-Interface für Automatisierung
+- [Operations-Runbook](../operations-runbook.md) (EN) — Bring-up, Audit-Key-Rotation, Regulator-Export
+- [CHANGELOG](../../CHANGELOG.md) — Release-Historie 0.2.0

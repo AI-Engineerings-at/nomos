@@ -1,0 +1,152 @@
+# Dependabot: weekly automated dependency-update PRs.
+#
+# Groups keep production and dev/test deps in separate PRs so a
+# breaking change in a dev tool doesn't block runtime updates.
+# Limit is 5 open PRs per ecosystem to avoid review storms.
+
+version: 2
+
+updates:
+  # ---------------- Python ----------------
+  - package-ecosystem: pip
+    directory: /nomos-api
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    groups:
+      production-deps:
+        applies-to: version-updates
+        update-types: [minor, patch]
+        exclude-patterns: ["pytest*", "ruff*"]
+      dev-deps:
+        applies-to: version-updates
+        patterns: ["pytest*", "ruff*", "aiosqlite*", "httpx*"]
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  - package-ecosystem: pip
+    directory: /nomos-cli
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:15"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    groups:
+      production-deps:
+        applies-to: version-updates
+        update-types: [minor, patch]
+        exclude-patterns: ["pytest*"]
+      dev-deps:
+        applies-to: version-updates
+        patterns: ["pytest*"]
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  # ---------------- Node ----------------
+  - package-ecosystem: npm
+    directory: /nomos-console
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "javascript"]
+    groups:
+      production-deps:
+        applies-to: version-updates
+        dependency-type: production
+        update-types: [minor, patch]
+      dev-deps:
+        applies-to: version-updates
+        dependency-type: development
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /nomos-plugin
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:15"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "javascript"]
+    groups:
+      production-deps:
+        applies-to: version-updates
+        dependency-type: production
+        update-types: [minor, patch]
+      dev-deps:
+        applies-to: version-updates
+        dependency-type: development
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+
+  # ---------------- GitHub Actions ----------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "06:00"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+
+  # ---------------- Docker base images ----------------
+  - package-ecosystem: docker
+    directory: /nomos-api
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:00"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore(docker)"
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /nomos-console
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:15"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore(docker)"
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /nomos-plugin
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:30"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore(docker)"
+      include: scope

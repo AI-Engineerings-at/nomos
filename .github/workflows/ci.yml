@@ -1,4 +1,4 @@
-name: CI â€” NomOS Quality Gate
+name: CI - NomOS Quality Gate
 
 on:
   push:
@@ -6,15 +6,18 @@ on:
   pull_request:
     branches: [main]
 
-# Cancel in-progress runs for the same branch
+# Cancel in-progress runs for the same branch.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ---------------------------------------------------------------
   # Stage 1: Lint (fast, catches obvious issues)
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ---------------------------------------------------------------
 
   lint-python:
     name: Lint Python (ruff)
@@ -43,9 +46,9 @@ jobs:
         working-directory: nomos-console
         run: npm ci && npx tsc --noEmit
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ---------------------------------------------------------------
   # Stage 2: Unit Tests (per package)
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ---------------------------------------------------------------
 
   test-cli:
     name: Test CLI (${{ matrix.python-version }})
@@ -62,14 +65,27 @@ jobs:
       - uses: astral-sh/setup-uv@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv sync
-      - run: uv run pytest -v --tb=short --junitxml=../test-results/cli.xml
+      - run: uv sync --extra dev
+      - name: Run pytest with coverage
+        run: |
+          uv run python -m pytest -v --tb=short \
+            --cov=nomos --cov-report=term-missing \
+            --cov-report=xml:../coverage-cli.xml \
+            --junitxml=../test-results/cli.xml
+      - name: Coverage to step summary
+        if: always()
+        run: |
+          echo "### nomos-cli coverage" >> $GITHUB_STEP_SUMMARY
+          uv run python -m coverage report --skip-covered \
+            | tail -20 >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-cli
-          path: test-results/
+          path: |
+            test-results/
+            coverage-cli.xml
           retention-days: 7
 
   test-api:
@@ -82,8 +98,6 @@ jobs:
     defaults:
       run:
         working-directory: nomos-api
-    # Real services (rule 02: no mocks for infra). The suite needs a live
-    # Valkey (rate limiter) and Postgres (metrics middleware / DB paths).
     services:
       valkey:
         image: valkey/valkey:8-alpine
@@ -110,13 +124,12 @@ jobs:
     env:
       NOMOS_VALKEY_URL: valkey://localhost:6379
       NOMOS_DATABASE_URL: postgresql+asyncpg://nomos:nomos@localhost:5432/nomos
-      # Hash chain HMAC anchoring fails closed without a key (>=32 bytes).
-      # CI must inject a clearly-non-production key so any code path that
-      # touches hash_chain can run; production injects via Vault.
+      # Audit-chain HMAC anchor (fail-closed without >=32 bytes).
+      # CI-only sentinel; production injects via Vault.
       NOMOS_HASHCHAIN_HMAC_KEY: ci-only-hmac-test-key-not-for-production-32+
-      # Phase-A1: Ed25519 audit-signing key (test-only seed, 32 bytes hex).
+      # Phase-A1: Ed25519 audit-signing seed (test-only, 32 bytes hex).
       NOMOS_AUDIT_SIGNING_KEY: deadbeefcafebabe0123456789abcdef0123456789abcdef0123456789abcdef
-      # Both auth secrets are hard-gated by K3 (>=32 chars, not a sentinel).
+      # Auth secrets are hard-gated by K3 (>=32 chars, no sentinel).
       NOMOS_JWT_SECRET: ci-only-jwt-test-secret-not-for-prod-32+chars
       NOMOS_PLUGIN_API_KEY: ci-only-plugin-test-api-key-not-for-prod-32+
       NOMOS_DB_PASSWORD: nomos
@@ -127,20 +140,32 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
-      # Apply Alembic migrations against the postgres service container BEFORE
-      # pytest. Tests build via Base.metadata.create_all (SQLite in-memory),
-      # which cannot catch model<->migration drift (the agent_memory
-      # importance_score drift class). Running migrations on real Postgres in
-      # CI fails-fast on any future drift before any test runs.
+      # Apply Alembic migrations against the postgres service container
+      # BEFORE pytest. Tests build via Base.metadata.create_all (SQLite),
+      # which cannot catch model<->migration drift. Running migrations on
+      # real Postgres in CI fails-fast on any drift before any test runs.
       - name: Apply Alembic migrations on real Postgres
         run: uv run alembic upgrade head
-      - run: PYTHONPATH="../nomos-cli" uv run pytest -v --tb=short --junitxml=../test-results/api.xml
+      - name: Run pytest with coverage
+        run: |
+          PYTHONPATH="../nomos-cli" uv run python -m pytest -v --tb=short \
+            --cov=nomos_api --cov-report=term-missing \
+            --cov-report=xml:../coverage-api.xml \
+            --junitxml=../test-results/api.xml
+      - name: Coverage to step summary
+        if: always()
+        run: |
+          echo "### nomos-api coverage" >> $GITHUB_STEP_SUMMARY
+          uv run python -m coverage report --skip-covered \
+            | tail -20 >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-api
-          path: test-results/
+          path: |
+            test-results/
+            coverage-api.xml
           retention-days: 7
 
   test-plugin:
@@ -156,7 +181,14 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
-      - run: npx vitest run --reporter=junit --outputFile=../test-results/plugin.xml
+      - run: npx vitest run --coverage --reporter=junit --outputFile=../test-results/plugin.xml
+      - name: Coverage to step summary
+        if: always()
+        run: |
+          echo "### nomos-plugin coverage" >> $GITHUB_STEP_SUMMARY
+          [ -f coverage/coverage-summary.json ] \
+            && node -e "const c=require('./coverage/coverage-summary.json').total; console.log('lines',c.lines.pct,'branches',c.branches.pct,'funcs',c.functions.pct)" \
+            >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -179,7 +211,14 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
-      - run: npx vitest run --reporter=junit --outputFile=../test-results/console.xml
+      - run: npx vitest run --coverage --reporter=junit --outputFile=../test-results/console.xml
+      - name: Coverage to step summary
+        if: always()
+        run: |
+          echo "### nomos-console coverage" >> $GITHUB_STEP_SUMMARY
+          [ -f coverage/coverage-summary.json ] \
+            && node -e "const c=require('./coverage/coverage-summary.json').total; console.log('lines',c.lines.pct,'branches',c.branches.pct,'funcs',c.functions.pct)" \
+            >> $GITHUB_STEP_SUMMARY || true
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -199,15 +238,77 @@ jobs:
           python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - run: pip install pydantic pydantic-settings
       - run: python scripts/export-schemas.py > schemas.json
       - run: npm install ts-morph typescript
       - run: npx tsx scripts/check-contracts.ts
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # Stage 3: Quality Gate (blocks merge)
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ---------------------------------------------------------------
+  # Stage 3: Security audit (dependency CVEs + SBOM)
+  # ---------------------------------------------------------------
+
+  security-audit:
+    name: Security audit (pip-audit / npm audit / SBOM)
+    runs-on: ubuntu-latest
+    needs: [lint-python, lint-typescript]
+    # Dependabot opens its own bumps; skip the audit re-run to avoid
+    # PR storms. Trigger manually on dependabot PRs by adding the
+    # 'security-audit' label.
+    if: github.actor != 'dependabot[bot]' || contains(github.event.pull_request.labels.*.name, 'security-audit')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: pip-audit (api)
+        working-directory: nomos-api
+        run: |
+          pip install pip-audit
+          pip-audit --strict || echo "::warning::pip-audit findings in nomos-api"
+
+      - name: pip-audit (cli)
+        working-directory: nomos-cli
+        run: pip-audit --strict || echo "::warning::pip-audit findings in nomos-cli"
+
+      - name: npm audit (plugin, runtime only)
+        working-directory: nomos-plugin
+        run: |
+          npm ci
+          npm audit --omit=dev || echo "::warning::npm audit findings in nomos-plugin"
+
+      - name: npm audit (console, full)
+        working-directory: nomos-console
+        run: |
+          npm ci
+          npm audit || echo "::warning::npm audit findings in nomos-console"
+
+      - name: SBOM (Python, CycloneDX)
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py environment --output-format json --output-file sbom-python.json || true
+
+      - name: SBOM (npm, CycloneDX)
+        run: |
+          npm install -g @cyclonedx/cyclonedx-npm
+          (cd nomos-plugin && cyclonedx-npm --output-file ../sbom-plugin.json) || true
+          (cd nomos-console && cyclonedx-npm --output-file ../sbom-console.json) || true
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom-cyclonedx
+          path: sbom-*.json
+          retention-days: 90
+
+  # ---------------------------------------------------------------
+  # Stage 4: Quality Gate (blocks merge)
+  # ---------------------------------------------------------------
 
   quality-gate:
     name: Quality Gate
@@ -216,16 +317,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for S9 violations
+      - name: S9 — no TODOs / placeholders / skeleton code
         run: |
-          echo "=== S9 Check: No TODOs, placeholders, or skeleton code ==="
+          echo "=== S9 Check ==="
           VIOLATIONS=""
-          # Check Python code
           if grep -rn "TODO\|FIXME\|HACK\|coming soon\|placeholder\|pass\s*#" \
             nomos-cli/nomos/ nomos-api/nomos_api/ 2>/dev/null | grep -v "__pycache__" | grep -v ".pyc"; then
             VIOLATIONS="Python S9 violations found"
           fi
-          # Check TypeScript code
           if grep -rn "TODO\|FIXME\|HACK\|coming soon\|placeholder" \
             nomos-plugin/src/ nomos-console/src/ 2>/dev/null; then
             VIOLATIONS="$VIOLATIONS TypeScript S9 violations found"
@@ -236,9 +335,9 @@ jobs:
           fi
           echo "S9 Check passed"
 
-      - name: Check for internal IPs (R12)
+      - name: R12 — no internal IPs in product code
         run: |
-          echo "=== R12 Check: No internal IPs in product code ==="
+          echo "=== R12 Check ==="
           if grep -rn "10\.40\.10\." \
             nomos-cli/nomos/ nomos-api/nomos_api/ nomos-plugin/src/ \
             nomos-console/src/ 2>/dev/null | grep -v "__pycache__"; then
@@ -247,9 +346,9 @@ jobs:
           fi
           echo "R12 Check passed"
 
-      - name: Check for hardcoded secrets
+      - name: Secret-scan — no credentials in code
         run: |
-          echo "=== Secret Check: No credentials in code ==="
+          echo "=== Secret Check ==="
           if grep -rn "sk-proj-\|ghp_\|AKIA\|xox[bpors]-\|BEGIN.*PRIVATE KEY" \
             nomos-cli/ nomos-api/ nomos-plugin/ nomos-console/ \
             2>/dev/null | grep -v "__pycache__" | grep -v node_modules | grep -v ".pyc"; then
@@ -258,27 +357,91 @@ jobs:
           fi
           echo "Secret Check passed"
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # Stage 4: Docker Build (integration)
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # ---------------------------------------------------------------
+  # Stage 5: Docker Build + Trivy filesystem & image scan
+  # ---------------------------------------------------------------
 
   docker-build:
-    name: Docker Build
+    name: Docker Build + Trivy
     runs-on: ubuntu-latest
     needs: quality-gate
+    permissions:
+      contents: read
+      security-events: write   # SARIF upload to the Security tab
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      - run: docker compose build
 
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # Stage 5: Summary
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      # Trivy filesystem scan: catches CVEs in the source tree
+      # (npm + pip lockfiles) before they ever land in an image.
+      - name: Trivy fs scan (HIGH+CRITICAL, SARIF)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+          ignore-unfixed: true
+        continue-on-error: true
+
+      - name: Upload Trivy fs SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+      # Docker build with GHA cache.
+      # cache-from is read-only on PRs; only main pushes write cache.
+      - name: Build images (with GHA cache)
+        env:
+          BUILDX_CACHE_FROM: type=gha,scope=${{ github.ref_name }}
+          BUILDX_CACHE_TO: ${{ github.event_name == 'push' && format('type=gha,mode=max,scope={0}', github.ref_name) || '' }}
+        run: |
+          DOCKER_BUILDKIT=1 docker compose build \
+            --build-arg BUILDKIT_INLINE_CACHE=1
+
+      # Trivy image scan: CRITICAL is a blocker; HIGH is SARIF-only.
+      - name: Trivy image scan (CRITICAL blocks, HIGH SARIF-only)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: nomos-nomos-api:latest
+          format: sarif
+          output: trivy-image.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+          ignore-unfixed: true
+        continue-on-error: true
+
+      - name: Upload Trivy image SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      # Final blocking gate: separate, predictable Trivy run that
+      # ONLY fails on CRITICAL (no SARIF, no noise).
+      - name: Trivy CRITICAL gate (blocking)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: nomos-nomos-api:latest
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+  # ---------------------------------------------------------------
+  # Stage 6: Summary
+  # ---------------------------------------------------------------
 
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint-python, lint-typescript, test-cli, test-api, test-plugin, test-console, contract-check, quality-gate, docker-build]
+    needs: [lint-python, lint-typescript, test-cli, test-api, test-plugin, test-console, contract-check, security-audit, quality-gate, docker-build]
     if: always()
     steps:
       - name: Summary
@@ -287,12 +450,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Lint | ${{ needs.lint-python.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| TS Lint | ${{ needs.lint-typescript.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CLI Tests | ${{ needs.test-cli.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Tests | ${{ needs.test-api.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Plugin Tests | ${{ needs.test-plugin.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Console Tests | ${{ needs.test-console.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Contract Check | ${{ needs.contract-check.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Quality Gate | ${{ needs.quality-gate.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build | ${{ needs.docker-build.result == 'success' && 'âœ…' || 'âŒ' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Lint | ${{ needs.lint-python.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| TS Lint | ${{ needs.lint-typescript.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CLI Tests | ${{ needs.test-cli.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.test-api.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Plugin Tests | ${{ needs.test-plugin.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Console Tests | ${{ needs.test-console.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Contract Check | ${{ needs.contract-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Audit | ${{ needs.security-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality Gate | ${{ needs.quality-gate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build + Trivy | ${{ needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      # Only fire for SemVer vX.Y.Z tags. Pre-releases (vX.Y.Z-rc1)
+      # need a separate workflow if/when we add them.
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write   # write the GitHub Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so we can diff prior tag
+
+      - name: Determine tag version
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME}"   # e.g. v0.2.0
+          VER="${TAG#v}"             # e.g. 0.2.0
+          echo "tag=$TAG"   >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          # awk: print everything from "## [VERSION]" until the next
+          # top-level "## [" heading. No shell interpolation of the
+          # heading text into the awk program — the version is passed
+          # safely via -v.
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::warning::CHANGELOG.md missing — releasing with empty notes"
+            echo "" > release-notes.md
+          else
+            awk -v ver="$VERSION" '
+              $0 ~ "^## \\[" ver "\\]" {p=1; print; next}
+              p && /^## \[/ {p=0}
+              p
+            ' CHANGELOG.md > release-notes.md
+            if [ ! -s release-notes.md ]; then
+              echo "::warning::No CHANGELOG section for $VERSION — releasing with empty notes"
+              echo "" > release-notes.md
+            fi
+          fi
+          echo "----- release-notes.md -----"
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.ver.outputs.tag }}" \
+            --title "NomOS ${{ steps.ver.outputs.version }}" \
+            --notes-file release-notes.md \
+            --verify-tag

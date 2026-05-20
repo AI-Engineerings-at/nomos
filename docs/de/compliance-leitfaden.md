@@ -1,5 +1,9 @@
 # NomOS Compliance-Leitfaden
 
+> Stand: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1). Vollständig
+> identisch zu [compliance-guide.md](../compliance-guide.md) (EN). Bei
+> Drift ist die englische Fassung autoritativ.
+
 ## Uebersicht
 
 NomOS setzt eine Teilmenge der Anforderungen des EU AI Act und der DSGVO durch Software-Kontrollen um. Dieses Dokument ist ehrlich darueber, was NomOS abdeckt, was teilweise abgedeckt ist und was nicht abgedeckt ist.
@@ -40,7 +44,7 @@ NomOS setzt eine Teilmenge der Anforderungen des EU AI Act und der DSGVO durch S
 
 | Status | **Abgedeckt** |
 |--------|--------------|
-| Was NomOS tut | SHA-256 Hash-Chain Audit Trail. Jedes Agent-Lifecycle-Event wird in einer manipulationssicheren JSONL-Chain aufgezeichnet. `nomos audit --verify` und der API-Endpoint `GET /api/audit/verify/{id}` fuehren kryptographische Chain-Verifikation durch. Das generierte Art. 12 Logging-Policy-Dokument beschreibt was protokolliert wird und wie. |
+| Was NomOS tut | Manipulationssichere Hash-Chain mit drei kryptographischen Ebenen (SHA-256 Eintragshash + HMAC-SHA256 Anker + Ed25519 Per-Entry-Signatur) plus eingebettetes RFC 6962 Merkle-Transparency-Log (Signed Tree Head + Inclusion-Proofs). Stündliche externe Anker (`anchor_audit_heads`) + täglicher Integritäts-Checkpoint (`audit_integrity_checkpoint`). Jedes Lifecycle-Event landet in einer JSONL-Chain auf WORM-fähigem Volume. Operator-/Owner-/Prüfer-Verifikation über `nomos audit --verify`, `GET /api/audit/verify/{id}`, `GET /api/agents/{id}/audit/sth` und `GET /api/agents/{id}/audit/proof/{n}`. Das generierte Art. 12 Logging-Policy-Dokument beschreibt was protokolliert wird und wie. |
 | Was protokolliert wird | Agent-Erstellung, Deployment, Compliance-Checks, Governance-Hook-Aktivierungen, Kill-Switch-Events, Eskalationen. |
 
 ### Art. 13 — Transparenz
@@ -148,3 +152,52 @@ Um die Grenzen klar zu benennen:
 5. **Autonome Risikoklassifizierung** — NomOS erzwingt die zugewiesene Risikoklasse, bewertet aber nicht ob sie korrekt ist.
 6. **Laufzeit-PII-Filterung** — PII-Filter-Konfiguration ist im Manifest, aber tatsaechliche Filterung erfordert das Honcho Memory Backend. Das lokale Backend filtert kein PII.
 7. **Konformitaetsbewertung** — NomOS fuehrt keine Konformitaetsbewertung durch und ersetzt diese nicht, wie sie fuer Hochrisiko-KI-Systeme unter Art. 43 EU AI Act erforderlich ist.
+
+---
+
+## EU AI Act Artikel 12 — Event-Mapping (ab 0.2.0)
+
+Wirksam ab 2026-08-02 (Anhang III) verlangt Artikel 12 von Hochrisiko-
+KI-Systemen die **automatische Protokollierung von Ereignissen über
+die Systemlaufzeit** mit einer **mindestens sechsmonatigen Aufbewahrung**.
+NomOS erfüllt dies mit einer HMAC-verankerten, Ed25519-signierten,
+Append-only Hash-Chain (`nomos.core.hash_chain`).
+
+Der Event-Typ-Katalog in `nomos.core.events.EventType` ist gegen die
+drei Art.-12-Protokollierungszwecke vollständig gemappt:
+
+| Art. 12 Zweck | NomOS Event-Typen in der Chain |
+|---|---|
+| **(a) Risikosituationen / wesentliche Änderungen erkennen** | `compliance.check.failed`, `governance.kill_switch`, `governance.escalation`, `governance.hook.blocked`, `incident.detected`, `incident.escalated`, `tool.call_blocked`, `agent.stale` |
+| **(b) Post-Market-Monitoring erleichtern** | `agent.deployed`, `agent.retired`, `incident.reported`, `incident.resolved`, `task.failed`, `budget.warning` |
+| **(c) Betrieb des Hochrisiko-KI-Systems überwachen** | `agent.created`, `agent.stopped`, `agent.ended`, `compliance.check.passed`, `compliance.doc.signed`, `governance.hook.triggered`, `tool.call_allowed`, `tool.completed`, `task.created`, `task.assigned`, `task.completed`, `audit.chain.created`, `audit.chain.verified`, `audit.chain.anchored` (Phase-A2), `audit.retention.checkpoint` (Phase-A3), `audit.exported` |
+
+### Kryptographische Integrität (State-of-the-Art 2026)
+
+Jeder Eintrag trägt:
+- **SHA-256 Eintragshash** — bindet Sequenz + Zeitstempel + Event-Typ + Agent-ID + Nutzdaten + `previous_hash`. Jede Byte-Änderung invalidiert den neuberechneten Hash.
+- **HMAC-SHA256 Anker** keyed by `NOMOS_HASHCHAIN_HMAC_KEY` (Vault-injiziert, ≥32 Byte). Erkennt Manipulation durch jeden ohne Schlüssel. Fail-closed: fehlender Schlüssel oder fehlendes `hmac`-Feld wird von `verify_chain` abgelehnt.
+- **Ed25519 Signatur** (Phase-A1) keyed by `NOMOS_AUDIT_SIGNING_KEY` (Vault-injiziert, 32-Byte Seed). Non-Repudiation: Prüfer braucht nur den passenden Public-Key, kein geteiltes Geheimnis. Schliesst das Retroactive-Forgery-Risiko bei HMAC-Key-Leak. Fail-closed: fehlender Schlüssel, fehlende `signature`, gefälschte Signatur → abgelehnt.
+
+### Aufbewahrung (Artikel 12 Mindestens 6 Monate)
+
+Per-Agent-Retention wird via Manifest-Feld `manifest.governance.audit_retention_days` konfiguriert. Das Produkt erzwingt einen **harten Floor von 180 Tagen** (sechs Monate — Art. 12 gesetzliches Minimum); kürzere Werte werden bei der Manifest-Validierung abgelehnt. `[SUMMARY]`-Zeilen werden immer über das Fenster hinaus aufbewahrt, sodass die kondensierte Historie Prune-Operationen überlebt.
+
+### Verifikation durch einen Prüfer (kein geteiltes Geheimnis nötig)
+
+Ein Prüfer mit nur dem Chain-Export (`GET /api/agents/{id}/audit/export`) und dem Ed25519 Public-Key des Deployments kann unabhängig verifizieren:
+1. SHA-256 Chain-Konsistenz,
+2. Ed25519-Signatur jedes Eintrags gegen den Public-Key,
+3. Kontinuität der `previous_hash`-Referenzen zurück zum Genesis-Hash.
+
+Der HMAC-Schlüssel bleibt unter Operator-Kontrolle und muss externen Auditoren nicht ausgehändigt werden.
+
+### Phase-B1: Eingebettetes Merkle-Transparency-Log (Sigstore-Rekor-Style)
+
+Zusätzlich zur linearen Hash-Chain stellt NomOS eine RFC 6962
+Merkle-Baum-Sicht jeder Agent-Audit-Chain bereit. Endpoints:
+
+- `GET /api/agents/{agent_id}/audit/sth` — Signed Tree Head (origin, tree_size, root_hash, timestamp, Ed25519-Signatur). Verifiziert mit demselben Public-Key wie die Per-Entry-Signaturen.
+- `GET /api/agents/{agent_id}/audit/proof/{sequence}` — RFC 6962 Inclusion-Proof für einen Chain-Eintrag (leaf_index, tree_size, root_hash, audit_path). Ein Prüfer rekonstruiert die Wurzel aus Blatt + audit_path und vergleicht mit root_hash via `nomos.core.merkle.verify_inclusion_proof`.
+
+Der stündliche Anker-Cron (`worker/jobs/audit_anchor.py`) schreibt zusätzlich `merkle_tree_size` + `merkle_root_hash` in jeden Anker-Datensatz, damit historische Inclusion-Proofs gegen eine extern verankerte, zeitgestempelte Wurzel verifiziert werden können — ohne die Chain neu abzurufen.

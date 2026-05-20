@@ -1,6 +1,6 @@
 # NomOS Architecture
 
-> Last reconciled against source: 2026-05-19 (enterprise-hardening Batch F).
+> Last reconciled against source: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
 > Citations point to the verifying file/line in this repository.
 
 ## Component Overview
@@ -131,7 +131,8 @@ The core library and command-line tool. Contains all business logic.
 | `core/gate.py` | Generate 5 compliance documents from manifest data |
 | `core/compliance_engine.py` | Blocking compliance check (PASSED / WARNING / BLOCKED) |
 | `core/hash_chain.py` | SHA-256 append-only hash chain (JSONL storage), verification |
-| `core/events.py` | Canonical event type definitions (14 event types) |
+| `core/events.py` | Canonical event type definitions (16 event types) |
+| `core/merkle.py` | RFC 6962 Merkle transparency log: `compute_tree_root`, `signed_tree_head`, `inclusion_proof`, pure-function `verify_inclusion_proof` (Phase-B1) |
 | `logging_config.py` | Structured JSON diagnostics logger; `NOMOS_LOG_LEVEL`-driven, writes to stderr (stdout reserved for `rich` UX) |
 | `cli.py` | Click CLI: `hire`, `verify`, `fleet`, `gate`, `audit`, plus API-backed `pause`, `resume`, `retire`, `forget`, `assign`, `costs`, `incidents`, `workspace mount/unmount` |
 
@@ -193,6 +194,8 @@ registered in `nomos-api/nomos_api/worker/main.py:62-83`:
 | `check_incident_deadlines` | hourly | Art. 33/34 reporting deadlines |
 | `expire_approvals` | every 10 min | Time out stale approval requests |
 | `process_alerts` | every minute | Evaluate alert rules, raise alerts |
+| `anchor_audit_heads` | hourly | **Phase-A2**: append `{head_hash, head_hmac, head_signature, merkle_tree_size, merkle_root_hash}` per agent to `/data/audit-anchors/anchors.jsonl` (WORM-ready volume) |
+| `audit_integrity_checkpoint` | daily 04:00 | **Phase-A3**: re-verify every chain, enforce `governance.audit_retention_days` (floor 180d), write `audit.retention.checkpoint` row |
 
 ### Monitoring & Alerting
 
@@ -419,12 +422,16 @@ token-like blobs, Bearer tokens and the values of known secret keys, so
 Vault/LLM-provider exception bodies cannot leak credentials into the
 log stream.
 
-### Audit hash-chain HMAC
+### Audit Trail v2 — HMAC + Ed25519 + RFC 6962 Merkle log
 
-The on-disk hash chain supports an HMAC key, env-injectable via
-`NOMOS_HASHCHAIN_HMAC_KEY` (`nomos-cli/nomos/core/hash_chain.py:30-43`),
-inject from Vault in production. This makes the chain tamper-evident
-against an attacker who can also recompute plain SHA-256 hashes.
+The on-disk hash chain is defended in three layers (`nomos-cli/nomos/core/hash_chain.py`, `nomos-cli/nomos/core/merkle.py`):
+
+1. **HMAC-SHA256** keyed by `NOMOS_HASHCHAIN_HMAC_KEY` (≥32 bytes, fail-closed). Tamper-evident against an attacker who can recompute plain SHA-256.
+2. **Ed25519 per-entry signature** keyed by `NOMOS_AUDIT_SIGNING_KEY` (32-byte hex seed, fail-closed). Non-repudiable: a regulator verifies with the **public key only** — no shared secret leaves the deployment.
+3. **External anchoring** (`worker/jobs/audit_anchor.py`, hourly cron `anchor_audit_heads`): writes the per-agent chain head plus the Merkle tree size and root hash to a separate volume (`/data/audit-anchors/anchors.jsonl`), recommended on WORM-capable storage (S3 Object Lock / Azure immutable blob). Retroactive forgery of the chain — even with both keys — is detectable as a mismatch against an anchor.
+4. **RFC 6962 Merkle transparency log** (Phase-B1): every chain is exposed as a Merkle tree at `GET /api/agents/{id}/audit/sth` (Signed Tree Head signed by the same Ed25519 key) and `GET /api/agents/{id}/audit/proof/{sequence}` (inclusion proof). A regulator with only the Ed25519 public key, an STH, and an inclusion proof can confirm a single audit event was committed at a known historical root — without ever touching the database or the full chain. Pure-function verifier: `nomos.core.merkle.verify_inclusion_proof`.
+
+Retention floor: `manifest.governance.audit_retention_days >= 180` (EU AI Act Art. 12 ≥6 months), enforced at the manifest-validator level and by the daily `audit_integrity_checkpoint` cron.
 
 ### Non-root Docker Container
 
@@ -488,7 +495,7 @@ No secret may appear as a default value in `config.py` or `docker-compose.yml`.
 | `NOMOS_API_HOST` | `0.0.0.0` | API bind address |
 | `NOMOS_API_PORT` | `8000` | API internal port (mapped to 8060 via Docker) |
 | `NOMOS_API_TITLE` | `NomOS Fleet API` | API title |
-| `NOMOS_API_VERSION` | `0.1.0` | API version |
+| `NOMOS_API_VERSION` | `0.2.0` | API version |
 | `NOMOS_CORS_ORIGINS` | `["http://localhost:3040"]` | Allowed CORS origins |
 | `NOMOS_AGENTS_DIR` | `/data/agents` | Agent file storage directory (compose) |
 | `NOMOS_VALKEY_URL` | `valkey://valkey:6379` | Valkey URL for rate limiting + ARQ (`docker-compose.yml:97,136`) |

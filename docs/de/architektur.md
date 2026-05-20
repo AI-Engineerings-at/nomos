@@ -1,5 +1,12 @@
 # NomOS Architektur
 
+> Stand: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
+>
+> Diese DE-Architektur fokussiert sich auf Kern-Komponenten und das
+> Sicherheitsmodell. Vollständige Router-, Worker-, Monitoring- und
+> Context-Pipeline-Beschreibung mit Zeilenreferenzen siehe
+> [architecture.md](../architecture.md) (EN, autoritativ).
+
 ## Komponentenuebersicht
 
 ```
@@ -51,8 +58,9 @@ Die Kernbibliothek und das Kommandozeilen-Tool. Enthaelt die gesamte Geschaeftsl
 | `core/gate.py` | 5 Compliance-Dokumente aus Manifest-Daten generieren |
 | `core/compliance_engine.py` | Blockierende Compliance-Pruefung (PASSED / WARNING / BLOCKED) |
 | `core/hash_chain.py` | SHA-256 Append-Only Hash-Chain (JSONL Speicher), Verifikation |
-| `core/events.py` | Kanonische Event-Typ-Definitionen (14 Event-Typen) |
-| `cli.py` | Click CLI mit 5 Befehlen: hire, gate, verify, fleet, audit |
+| `core/events.py` | Kanonische Event-Typ-Definitionen (16 Event-Typen, ab 0.2.0 inkl. `audit.chain.anchored` + `audit.retention.checkpoint`) |
+| `core/merkle.py` | RFC 6962 Merkle-Transparency-Log: `compute_tree_root`, `signed_tree_head`, `inclusion_proof`, reiner `verify_inclusion_proof` (Phase-B1, ab 0.2.0) |
+| `cli.py` | Click CLI: hire, gate, verify, fleet, audit + API-Befehle pause, resume, retire, forget, assign, costs, incidents, workspace |
 
 Testabdeckung: 84 Tests.
 
@@ -269,7 +277,19 @@ PII-Filterung erfordert das Honcho Memory Backend. Mit dem lokalen Backend ist d
 
 Jeder Agent hat eine `manifest.sha256`-Datei die den SHA-256 Hash der kanonischen JSON-Darstellung des Manifests enthaelt. `nomos verify` prueft diesen Hash um Manipulationen zu erkennen.
 
-### Audit-Chain-Integritaet
+### Audit-Trail v2 — HMAC + Ed25519 + RFC 6962 Merkle-Log (ab 0.2.0)
+
+Die On-Disk Hash-Chain ist in drei Ebenen verteidigt
+(`nomos-cli/nomos/core/hash_chain.py`, `nomos-cli/nomos/core/merkle.py`):
+
+1. **HMAC-SHA256** keyed by `NOMOS_HASHCHAIN_HMAC_KEY` (≥32 Bytes, fail-closed). Erkennt Manipulation durch jeden ohne diesen Schlüssel.
+2. **Ed25519 per-Entry Signatur** keyed by `NOMOS_AUDIT_SIGNING_KEY` (32-Byte hex Seed, fail-closed). Non-repudiation: ein Prüfer verifiziert mit dem **öffentlichen Schlüssel allein** — kein geteiltes Geheimnis verlässt das Deployment.
+3. **Externe Anker** (`worker/jobs/audit_anchor.py`, stündlicher Cron `anchor_audit_heads`): schreibt die Chain-Spitze plus Merkle-Tree-Size und Root-Hash auf ein separates Volume (`/data/audit-anchors/anchors.jsonl`), empfohlen auf WORM-fähigem Speicher (S3 Object Lock / Azure immutable blob). Rückwärts-Fälschung — selbst mit beiden Schlüsseln — ist als Mismatch gegen einen Anker erkennbar.
+4. **RFC 6962 Merkle-Transparency-Log** (Phase-B1): jede Chain wird als Merkle-Baum unter `GET /api/agents/{id}/audit/sth` (Signed Tree Head signiert mit demselben Ed25519-Schlüssel) und `GET /api/agents/{id}/audit/proof/{sequence}` (Inclusion-Proof) ausgesetzt. Ein Prüfer mit nur dem Ed25519 Public-Key, einem STH und einem Inclusion-Proof kann bestätigen, dass ein einzelnes Audit-Event zu einer bekannten historischen Wurzel committed wurde — ohne je die Datenbank oder die vollständige Chain zu berühren. Pure-Function Verifier: `nomos.core.merkle.verify_inclusion_proof`.
+
+Retention-Floor: `manifest.governance.audit_retention_days >= 180` (EU AI Act Art. 12 ≥6 Monate), durchgesetzt auf Manifest-Validator-Ebene und vom täglichen `audit_integrity_checkpoint`-Cron.
+
+### Audit-Chain-Integritaet (vor 0.2.0)
 
 Die Hash-Chain ist append-only. Der Hash jedes Eintrags haengt von allen vorherigen Eintraegen ab. Die Verifikation berechnet jeden Hash von Grund auf neu und prueft die Chain-Verkettung. Jede Manipulation ist erkennbar.
 
@@ -285,7 +305,9 @@ Alle API-Einstellungen werden ueber Umgebungsvariablen mit dem `NOMOS_`-Praefix 
 | `NOMOS_API_HOST` | `0.0.0.0` | API Bind-Adresse |
 | `NOMOS_API_PORT` | `8000` | API interner Port (gemappt auf 8060 via Docker) |
 | `NOMOS_API_TITLE` | `NomOS Fleet API` | API Titel |
-| `NOMOS_API_VERSION` | `0.1.0` | API Version |
+| `NOMOS_API_VERSION` | `0.2.0` | API Version |
+| `NOMOS_HASHCHAIN_HMAC_KEY` | — | HMAC-Anker des Audit-Trails (≥32 Bytes, fail-closed) |
+| `NOMOS_AUDIT_SIGNING_KEY` | — | Ed25519-Signatur-Seed des Audit-Trails (32 Byte hex, fail-closed) |
 | `NOMOS_CORS_ORIGINS` | `["http://localhost:3040"]` | Erlaubte CORS Origins |
 | `NOMOS_AGENTS_DIR` | `./data/agents` | Agent-Dateispeicher-Verzeichnis |
 | `NOMOS_DB_PASSWORD` | `nomos` | PostgreSQL Passwort |

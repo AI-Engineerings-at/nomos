@@ -106,6 +106,13 @@ services:
       - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
     volumes:
       - nomos-agents:/data/agents
+      # Phase-A2 (0.2.0): audit anchors live on a SEPARATE volume so
+      # an attacker with write access to the chain volume cannot
+      # silently rewrite both the chain and the durable anchors. In
+      # production, mount this on WORM-capable storage (S3 Object
+      # Lock / Azure immutable blob) — the named Docker volume is
+      # only a separation baseline.
+      - nomos-anchors:/data/audit-anchors
       - nomos-vault-init:/vault/init:ro
     depends_on:
       postgres:
@@ -141,6 +148,9 @@ services:
       - VAULT_SECRET_ID=${VAULT_SECRET_ID:-}
     volumes:
       - nomos-agents:/data/agents
+      # See nomos-api comment above — same separate anchors volume so
+      # the anchor cron can write where the API reads/verifies.
+      - nomos-anchors:/data/audit-anchors
       - nomos-vault-init:/vault/init:ro
     depends_on:
       postgres:
@@ -267,6 +277,12 @@ services:
 volumes:
   nomos-pgdata:
   nomos-agents:
+  # Separate audit-anchors volume (Phase-A2, 0.2.0). DO NOT collapse
+  # back into nomos-agents — the threat model assumes an attacker may
+  # gain write access to the chain volume, and the anchor file is
+  # what catches retroactive forgery. Operators should override this
+  # in docker-compose.override.yml to point at WORM-capable storage.
+  nomos-anchors:
   nomos-valkey:
   nomos-vault:
   nomos-vault-init:

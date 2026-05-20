@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/AI-Engineering-at/nomos/security/policy
+    about: Report security issues privately per SECURITY.md (security@ai-engineering.at).
+  - name: Commercial / Enterprise inquiries
+    url: https://ai-engineering.at
+    about: Pricing, support contracts, and 4+ agent licensing.

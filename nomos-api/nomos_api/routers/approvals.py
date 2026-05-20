@@ -5,14 +5,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import require_admin
 from nomos_api.database import get_db
+from nomos_api.models import Approval, User
 from nomos_api.schemas import (
     ApprovalListResponse,
     ApprovalRequestCreate,
     ApprovalResolveRequest,
     ApprovalResponse,
 )
-from nomos_api.models import Approval
 from nomos_api.services.approval import (
     create_approval,
     list_approvals,
@@ -68,8 +69,14 @@ async def approve(
     approval_id: str,
     request: ApprovalResolveRequest,
     db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
 ) -> ApprovalResponse:
-    result = await resolve_approval(db, approval_id, "approved", resolved_by=request.resolved_by)
+    """Approve a pending approval. Admin-only; `resolved_by` is set from the
+    authenticated admin's email, not from the request body (L035 audit A-C3).
+    """
+    # Body-supplied resolved_by ignored — caller cannot spoof who approved.
+    _ = request.resolved_by  # explicit: body field is no longer authoritative
+    result = await resolve_approval(db, approval_id, "approved", resolved_by=admin.email)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Approval {approval_id!r} not found")
     return _approval_to_response(result)
@@ -80,8 +87,12 @@ async def reject(
     approval_id: str,
     request: ApprovalResolveRequest,
     db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
 ) -> ApprovalResponse:
-    result = await resolve_approval(db, approval_id, "denied", resolved_by=request.resolved_by)
+    """Reject a pending approval. Admin-only; `resolved_by` from authenticated
+    admin's email, not request body (L035 audit A-C3)."""
+    _ = request.resolved_by
+    result = await resolve_approval(db, approval_id, "denied", resolved_by=admin.email)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Approval {approval_id!r} not found")
     return _approval_to_response(result)

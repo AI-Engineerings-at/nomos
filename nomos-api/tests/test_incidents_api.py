@@ -6,8 +6,8 @@ import re
 
 
 class TestCreateIncident:
-    async def test_create_incident_with_pii(self, client) -> None:
-        response = await client.post(
+    async def test_create_incident_with_pii(self, admin_client) -> None:
+        response = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "User max@example.com logged in",
@@ -21,8 +21,8 @@ class TestCreateIncident:
         assert data["status"] == "detected"
         assert data["agent_id"] == "test-agent"
 
-    async def test_create_incident_unknown_endpoint(self, client) -> None:
-        response = await client.post(
+    async def test_create_incident_unknown_endpoint(self, admin_client) -> None:
+        response = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "Agent sent data to https://evil.com/collect",
@@ -35,8 +35,8 @@ class TestCreateIncident:
         assert data["incident_type"] == "unknown_endpoint"
         assert data["severity"] == "critical"
 
-    async def test_no_incident_returns_204(self, client) -> None:
-        response = await client.post(
+    async def test_no_incident_returns_204(self, admin_client) -> None:
+        response = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "Normal operation completed",
@@ -45,8 +45,8 @@ class TestCreateIncident:
         )
         assert response.status_code == 204
 
-    async def test_incident_has_deadline(self, client) -> None:
-        response = await client.post(
+    async def test_incident_has_deadline(self, admin_client) -> None:
+        response = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "PII leak: max@test.com",
@@ -63,29 +63,29 @@ class TestCreateIncident:
 
 
 class TestListIncidents:
-    async def test_list_empty(self, client) -> None:
-        response = await client.get("/api/incidents")
+    async def test_list_empty(self, admin_client) -> None:
+        response = await admin_client.get("/api/incidents")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 0
         assert data["incidents"] == []
 
-    async def test_list_after_creation(self, client) -> None:
-        await client.post(
+    async def test_list_after_creation(self, admin_client) -> None:
+        await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "max@test.com in log",
                 "agent_id": "test-agent",
             },
         )
-        response = await client.get("/api/incidents")
+        response = await admin_client.get("/api/incidents")
         data = response.json()
         assert data["total"] == 1
 
 
 class TestUpdateIncident:
-    async def test_update_status_to_reported(self, client) -> None:
-        create_resp = await client.post(
+    async def test_update_status_to_reported(self, admin_client) -> None:
+        create_resp = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "max@test.com in log",
@@ -93,7 +93,7 @@ class TestUpdateIncident:
             },
         )
         incident_id = create_resp.json()["id"]
-        update_resp = await client.patch(
+        update_resp = await admin_client.patch(
             f"/api/incidents/{incident_id}",
             json={
                 "status": "reported",
@@ -102,8 +102,8 @@ class TestUpdateIncident:
         assert update_resp.status_code == 200
         assert update_resp.json()["status"] == "reported"
 
-    async def test_update_status_to_resolved(self, client) -> None:
-        create_resp = await client.post(
+    async def test_update_status_to_resolved(self, admin_client) -> None:
+        create_resp = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "max@test.com in log",
@@ -111,7 +111,7 @@ class TestUpdateIncident:
             },
         )
         incident_id = create_resp.json()["id"]
-        update_resp = await client.patch(
+        update_resp = await admin_client.patch(
             f"/api/incidents/{incident_id}",
             json={
                 "status": "resolved",
@@ -120,8 +120,8 @@ class TestUpdateIncident:
         assert update_resp.status_code == 200
         assert update_resp.json()["status"] == "resolved"
 
-    async def test_update_nonexistent_returns_404(self, client) -> None:
-        response = await client.patch(
+    async def test_update_nonexistent_returns_404(self, admin_client) -> None:
+        response = await admin_client.patch(
             "/api/incidents/9999",
             json={
                 "status": "reported",
@@ -129,8 +129,8 @@ class TestUpdateIncident:
         )
         assert response.status_code == 404
 
-    async def test_invalid_status_rejected(self, client) -> None:
-        create_resp = await client.post(
+    async def test_invalid_status_rejected(self, admin_client) -> None:
+        create_resp = await admin_client.post(
             "/api/incidents",
             json={
                 "log_entry": "max@test.com in log",
@@ -138,7 +138,7 @@ class TestUpdateIncident:
             },
         )
         incident_id = create_resp.json()["id"]
-        response = await client.patch(
+        response = await admin_client.patch(
             f"/api/incidents/{incident_id}",
             json={
                 "status": "invalid_status",

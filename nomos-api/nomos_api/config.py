@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_title: str = "NomOS Fleet API"
-    api_version: str = "0.1.0"
+    api_version: str = "0.2.1"
     cors_origins: list[str] = ["http://localhost:3040"]
     agents_dir: Path = Path("./data/agents")
     # Phase-A2: external anchor log path. ARQ cron writes one JSON line per

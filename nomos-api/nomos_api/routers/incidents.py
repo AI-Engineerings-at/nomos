@@ -5,7 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import require_admin
 from nomos_api.database import get_db
+from nomos_api.models import User
 from nomos_api.schemas import (
     IncidentCreateRequest,
     IncidentListResponse,
@@ -21,7 +23,10 @@ router = APIRouter(prefix="/api", tags=["incidents"])
 async def create_new_incident(
     request: IncidentCreateRequest,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> IncidentResponse | None:
+    """Create an incident. Admin-only: fake incidents would poison the
+    Art. 33/34 DSGVO reporting-deadline tracking (L035 audit A-C5)."""
     """Analyze a log entry and create an incident if detected."""
     record = await create_incident(
         db=db,
@@ -49,8 +54,9 @@ async def create_new_incident(
 @router.get("/incidents", response_model=IncidentListResponse)
 async def get_incidents(
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> IncidentListResponse:
-    """List all incidents."""
+    """List all incidents. Admin-only — cross-tenant disclosure."""
     records = await list_incidents(db)
     return IncidentListResponse(
         incidents=[
@@ -75,8 +81,9 @@ async def update_incident(
     incident_id: int,
     request: IncidentUpdateRequest,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> IncidentResponse:
-    """Update incident status (detected -> reported -> resolved)."""
+    """Update incident status (detected -> reported -> resolved). Admin-only."""
     record = await update_incident_status(db, incident_id, request.status)
     if record is None:
         raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")

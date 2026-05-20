@@ -12,7 +12,7 @@ docker compose up -d
 
 ## Architecture
 
-- **nomos-api**: Python 3.12 FastAPI (17 routers, 47+ endpoints)
+- **nomos-api**: Python 3.12 FastAPI (19 routers, 49+ endpoints incl. STH + inclusion-proof)
 - **nomos-console**: Next.js 15 / React 19 (20 pages)
 - **nomos-plugin**: TypeScript OpenClaw gateway plugin (11 hooks)
 - **Data**: PostgreSQL 16 + pgvector, Valkey (cache), HashiCorp Vault (secrets)

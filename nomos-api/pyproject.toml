@@ -1,6 +1,6 @@
 [project]
 name = "nomos-api"
-version = "0.2.0"
+version = "0.2.1"
 description = "NomOS Fleet API — Agent Lifecycle Management"
 requires-python = ">=3.11"
 license = {text = "Fair Source"}

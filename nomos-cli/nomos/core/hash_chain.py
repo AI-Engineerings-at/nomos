@@ -265,6 +265,14 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
        rewritten. Legacy entries written before HMAC anchoring (no ``hmac``
        field) are still accepted on the SHA-256 chain alone for backward
        compatibility.
+    5. (L038, 0.2.1) ``sequence`` is monotonically `i` from 0 — closes the
+       prefix-truncation gap exposed by audit A-#11. Without this check, an
+       attacker with both HMAC and Ed25519 keys (e.g. via Vault compromise)
+       can drop the first N entries, recompute hashes/HMACs/signatures, and
+       the chain still passes (1)-(4). Asserting sequence==i AND
+       entries[0].previous_hash==GENESIS makes the only viable rewrite the
+       FULL one — which an external WORM anchor (`audit-anchors.jsonl`)
+       then detects.
     """
     chain_file = storage_dir / CHAIN_FILENAME
     if not chain_file.exists():
@@ -284,6 +292,16 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
         except json.JSONDecodeError:
             errors.append(f"Entry {i}: corrupt JSON — cannot parse line")
             break
+
+        # L038 / audit A-#11: assert sequence==i. A prefix-truncation
+        # rewrite (drop first N entries, recompute everything) is undetectable
+        # without this check.
+        stored_seq = raw.get("sequence")
+        if stored_seq != i:
+            errors.append(
+                f"Entry {i}: sequence mismatch — expected sequence={i}, got {stored_seq!r} "
+                "(prefix-truncation attempt or non-monotonic chain)"
+            )
 
         stored_hash = raw.get("hash", "")
 
@@ -331,6 +349,17 @@ def verify_chain(storage_dir: Path) -> VerifyResult:
             errors.append(
                 f"Entry {i}: chain broken (expected previous={previous_hash[:16]}..., "
                 f"got={raw['previous_hash'][:16]}...)"
+            )
+
+        # L038 / audit A-#11: entry 0 MUST link to the genesis hash. The
+        # `previous_hash != previous_hash` check above also catches this
+        # (because previous_hash starts at GENESIS_HASH), but make the
+        # boundary case explicit so a future refactor cannot silently
+        # weaken it.
+        if i == 0 and raw["previous_hash"] != GENESIS_HASH:
+            errors.append(
+                f"Entry 0: previous_hash is not the genesis hash "
+                f"(expected={GENESIS_HASH[:16]}..., got={raw['previous_hash'][:16]}...)"
             )
 
         # Use recomputed hash as baseline — not the potentially tampered stored hash

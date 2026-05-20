@@ -86,8 +86,8 @@ code or compose) are:
 | `NOMOS_PLUGIN_API_KEY` | Plugin / service-to-service auth |
 | `NOMOS_GATEWAY_TOKEN` | Gateway ↔ API bidirectional auth |
 | `NOMOS_DB_PASSWORD` | PostgreSQL (compose guards with `:?`) |
-| `NOMOS_HASHCHAIN_HMAC_KEY` | Audit hash-chain HMAC (≥32 bytes, fail-closed). Vault path: `secrets/audit/hmac_key`. |
-| `NOMOS_AUDIT_SIGNING_KEY` | Audit hash-chain Ed25519 signing seed (exactly 64 hex chars = 32 bytes, fail-closed). Vault path: `secrets/audit-signing/private_key_hex`. The public key is derivable from this private seed and is what regulators / external auditors need to verify the chain. |
+| `NOMOS_HASHCHAIN_HMAC_KEY` | Audit hash-chain HMAC (≥32 bytes, fail-closed). Vault path: `nomos/secrets/audit` field `hashchain_hmac_key`. Provisioned by `vault/init-entrypoint.sh` on first init. |
+| `NOMOS_AUDIT_SIGNING_KEY` | Audit hash-chain Ed25519 signing seed (exactly 64 hex chars = 32 bytes, fail-closed). Vault path: `nomos/secrets/audit` field `audit_signing_key`. Provisioned by `vault/init-entrypoint.sh` on first init. The public key is derivable from this private seed and is what regulators / external auditors need to verify the chain. |
 | One LLM provider key | `NVIDIA_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` |
 
 ### Audit-key rotation procedure
@@ -98,9 +98,21 @@ entry's HMAC and signature are bound to the key in force at write time;
 must have access to the prior public key to verify the older signatures
 (keep an archive of retired public keys in your evidence vault).
 
-1. Generate a new 32-byte secret in Vault:
-   - HMAC: `vault kv put secret/nomos/audit/hmac_key value=$(openssl rand -hex 32)`
-   - Ed25519 seed: `vault kv put secret/nomos/audit-signing/private_key_hex value=$(openssl rand -hex 32)`
+1. Generate a new 32-byte secret in Vault (both fields live at the SAME
+   path `nomos/secrets/audit` as one KV-v2 record — see
+   `vault/init-entrypoint.sh` for the authoritative location):
+
+   ```bash
+   vault kv put nomos/secrets/audit \
+     hashchain_hmac_key="$(openssl rand -hex 32)" \
+     audit_signing_key="$(openssl rand -hex 32)"
+   ```
+
+   (NOTE: earlier 0.2.0 documentation listed three different Vault paths
+   for these keys — `secrets/audit/hmac_key`,
+   `secret/nomos/audit/hmac_key`, `secret/nomos/audit-signing/...`.
+   None of those existed. 0.2.1 reconciles to the single
+   `nomos/secrets/audit` path that the init-entrypoint actually writes.)
 2. Export the **OLD public key** for verifier archival (before swap):
    `python -c "from nomos.core.hash_chain import _signing_key; print(_signing_key().public_key().public_bytes_raw().hex())"`
    Store in your evidence vault tagged with the date.
@@ -211,6 +223,7 @@ Persistent state lives in named Docker volumes
 |---|---|---|
 | `nomos-pgdata` | PostgreSQL (agents, users, audit index, tasks, ...) | Critical |
 | `nomos-agents` | Agent files + audit hash chains (`/data/agents`) | Critical |
+| `nomos-anchors` | Audit chain external anchors (`/data/audit-anchors/anchors.jsonl`). MUST be on WORM-capable storage in production (S3 Object Lock / Azure immutable blob). Defeats the threat model if it shares the chain volume — separate `nomos-anchors` named volume since 0.2.0 (Phase-A2). | Critical (WORM in prod) |
 | `nomos-vault`, `nomos-vault-init` | Vault storage + init/unseal material | Critical |
 | `nomos-valkey` | Cache / rate-limit / ARQ state | Ephemeral |
 | `nomos-caddy-data`, `nomos-caddy-config` | TLS certs | Recreatable |

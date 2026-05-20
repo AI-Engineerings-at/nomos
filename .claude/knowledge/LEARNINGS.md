@@ -114,3 +114,28 @@ before-agent-start Hook prueft Compliance via API. Ohne API Key: 401 → Hook in
 
 ### L034 — Dual-Mode Proxy ist die Loesung
 Direct-LLM fuer Chat (~2s, zuverlaessig). Gateway Agent-Loop fuer agentic Workflows (Tools, Approval). Beides parallel, Fallback-Kette.
+
+---
+
+## Session 20.05 (Audit-Trail v2 + Post-Release-Audit)
+
+### L035 — "Auth auf State-Change Endpoints" muss **ALLE** state-change endpoints umfassen, nicht nur 3
+Beim Audit-Härtungs-PR #5 (Phase-A1 + Auth) wurden nur `routers/agents.py`, `routers/audit.py`, `routers/proxy.py` mit `check_agent_access` / `require_admin` versehen. **7 weitere state-change Router blieben offen**: `dsgvo.py`, `tasks.py`, `approvals.py`, `workspace.py`, `incidents.py`, `compliance.py` (gate), `budget.py` + `costs.py`. Jeder authentifizierte Tenant konnte fremde Agents manipulieren, fremde DSGVO-Löschungen triggern, fremde Approvals approven. **Mach es SO**: bei "AuthZ-Härtung" IMMER `grep -l 'router = APIRouter' nomos-api/nomos_api/routers/` durchsweepen + jede `POST|PATCH|DELETE`-Route gegen `check_agent_access`/`require_admin` prüfen. Audit-Findings darunter führen, nicht selektiv "die wichtigsten" härten.
+
+### L036 — Version-Bump bedeutet Code + Doku + UI-Strings — nicht nur `pyproject.toml`
+Bei 0.1.0 → 0.2.0 wurden `pyproject.toml` (api/cli) und `package.json` (console) gebumpt — aber NICHT `config.py:47` `api_version = "0.1.0"` (→ `/health` reportet falsch), NICHT `cli.py:64` `version_option(version="0.1.0")` (→ `nomos --version` falsch), NICHT die `console UI v0.1.0`-Strings in login.tsx + sidebar.tsx (→ User sieht falsche Version). **Mach es SO**: vor jedem Version-Bump `grep -rn "0\.1\.0" nomos-cli/ nomos-api/ nomos-console/` + jeden Treffer triagen. ODER zentralen Single-Source bauen (`__version__ = importlib.metadata.version("nomos-api")`).
+
+### L037 — Vault-Pfade in Doku müssen Code als Single-Source-of-Truth nutzen
+`vault/init-entrypoint.sh` schreibt zu `nomos/secrets/audit` (KV v2). Aber `docs/operations-runbook.md` listete **3 verschiedene Pfade**: `secrets/audit/hmac_key`, `secret/nomos/audit/hmac_key`, `secret/nomos/audit-signing/private_key_hex`. **Key-Rotation-Drill nach Doku schlägt silent fehl**. **Mach es SO**: Vault-Pfade aus dem Init-Script kopieren, nicht erfinden. Bei jedem Runbook-Update grep im Code nach dem Pfad.
+
+### L038 — `verify_chain` muss `sequence == i` UND Genesis-`previous_hash` explizit checken
+HMAC + Ed25519-Signatur verhindern Tampering pro Eintrag — **aber NICHT Prefix-Truncation** wenn der Angreifer die Schlüssel hat (z.B. via Vault-Compromise). Ein Angreifer löscht Einträge 0..N, schreibt HMACs+Sigs neu und die Chain verifiziert. Der einzige Schutz ist (a) `sequence[0] == 0` UND (b) `previous_hash[0] == "0"*64`. Bevor das gefixt ist, sind externe Anker **zwingend WORM** für non-repudiation. **Mach es SO**: jede append-only Chain MUSS Sequence-Continuity + Genesis-Boundary prüfen, nicht nur Per-Entry-Integrity.
+
+### L039 — Rekursive Algorithmen in öffentlichen API-Endpoints sind DoS-Vektoren
+`merkle._mth` + `_path` waren rekursiv mit List-Slicing. Bei 1M Einträgen: Python recursion limit (1000) Crash + O(n) memory pro recursion-Level. STH/Proof-Endpoints hatten **kein Rate-Limit**. Trivialer Auth-User-DoS. **Mach es SO**: jede Funktion die User-controlled `n` verarbeitet → iterativ implementieren ODER `n` cappen. JEDER neue Endpoint default-Rate-Limit aus `nomos-api/nomos_api/middleware/rate_limit.py` einhängen, keine Ausnahme.
+
+### L040 — Audit-Anker dürfen NICHT in die Chain schreiben die sie verankern
+`audit_anchor.py` schreibt `AUDIT_CHAIN_ANCHORED`-Marker IN die Chain die es soeben verankert hat. Folge: jeder Anker beschreibt einen `head_hash` der eine Sekunde später **bereits stale** ist (der neue Marker hat den head verschoben). Identisches Anti-Pattern bei `audit_integrity_checkpoint`. Externe Verifier sehen "Anker X, aktueller head Y" und müssen erst den Anker-Marker selbst suchen um den Unterschied zu erklären. **Mach es SO**: Anker/Checkpoint-Events in **separate** `anchors.jsonl` / `checkpoints.jsonl` schreiben, NICHT in die Agent-Event-Chain. Die Chain bleibt für Domain-Events. Forward-Marker in der Chain machen sie zu einem "moving target" — schlecht für Forensik.
+
+### L041 — Post-Release-Audit mit mehreren Agents findet was Pre-Release-Tests übersehen
+5-Agent-Audit-Pass (Security / QA / Architecture / Error-Handling / Ops) fand **102 Findings** nach einem als "v0.2.0 fertig" deklarierten Release: 17 Critical/Blocker, 32 High. Davon 7 Critical AuthZ-Lücken die in 17 Sessions Pre-Release-Tests durchrutschten. **Mach es SO**: vor JEDEM Tag-Push einen Multi-Agent-Audit-Pass laufen lassen (mind. nomos-security + nomos-qa + Explore-Error-Handling). 5-15 min Investment, spart Hotfix-Release. Tag dann mit ehrlichem Confidence-Level: "v0.2.0 — released; v0.2.0 + Audit-Pass = trustworthy".

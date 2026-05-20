@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import authorize_agent_action
 from nomos_api.database import get_db
 from nomos_api.models import Task
 from nomos_api.schemas import (
@@ -63,8 +64,12 @@ async def get_task_endpoint(
 @router.post("/tasks", response_model=TaskResponse, status_code=201)
 async def create_task_endpoint(
     request: TaskCreateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> TaskResponse:
+    """Create a task. Caller must own the target agent or be admin
+    (L035 audit A-C2 — was unguarded)."""
+    await authorize_agent_action(db=db, request=http_request, agent_id=request.agent_id, action="create_task")
     task = await create_task(
         db,
         agent_id=request.agent_id,
@@ -79,8 +84,14 @@ async def create_task_endpoint(
 async def update_task_status_endpoint(
     task_id: str,
     request: TaskUpdateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> TaskResponse:
+    """Update a task. Caller must own the task's agent or be admin."""
+    existing = await get_task(db, task_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
+    await authorize_agent_action(db=db, request=http_request, agent_id=existing.agent_id, action="update_task")
     try:
         task = await update_task_status(db, task_id, request.status)
     except ValueError as exc:

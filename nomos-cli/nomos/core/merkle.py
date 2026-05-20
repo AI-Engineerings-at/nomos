@@ -47,27 +47,52 @@ def _largest_power_of_two_less_than(n: int) -> int:
     return k
 
 
-def _mth(leaves: list[bytes]) -> bytes:
-    """RFC 6962 Merkle Tree Hash."""
-    if not leaves:
-        # Empty tree per RFC: SHA-256("") — but our usage forbids this
-        # (callers must check first). Return sentinel for clarity.
+def _mth_range(leaves: list[bytes], start: int, end: int) -> bytes:
+    """RFC 6962 Merkle Tree Hash over leaves[start:end].
+
+    Uses (start, end) indices instead of `leaves[start:end]` slicing so
+    each call is O(1) memory; total tree build is O(n) compute + O(log n)
+    stack depth. Audit A-#12 flagged the previous slice-based variant as
+    an O(n log n) memory amplification under user-supplied tree size.
+    """
+    n = end - start
+    if n == 0:
         return hashlib.sha256(b"").digest()
-    if len(leaves) == 1:
-        return leaves[0]
-    k = _largest_power_of_two_less_than(len(leaves))
-    return _hash_node(_mth(leaves[:k]), _mth(leaves[k:]))
+    if n == 1:
+        return leaves[start]
+    k = _largest_power_of_two_less_than(n)
+    return _hash_node(
+        _mth_range(leaves, start, start + k),
+        _mth_range(leaves, start + k, end),
+    )
 
 
-def _path(m: int, leaves: list[bytes]) -> list[bytes]:
-    """RFC 6962 inclusion-proof path for leaf index m in this subtree."""
-    n = len(leaves)
+def _mth(leaves: list[bytes]) -> bytes:
+    """RFC 6962 Merkle Tree Hash (top-level entry).
+
+    Empty tree returns SHA-256("") sentinel per RFC; callers branch on
+    `tree_size == 0` before signing it as a real STH root.
+    """
+    return _mth_range(leaves, 0, len(leaves))
+
+
+def _path_range(m: int, leaves: list[bytes], start: int, end: int) -> list[bytes]:
+    """RFC 6962 inclusion-proof path for leaf index m within leaves[start:end].
+
+    Index-based to match `_mth_range`'s O(log n) memory profile.
+    """
+    n = end - start
     if n == 1:
         return []
     k = _largest_power_of_two_less_than(n)
     if m < k:
-        return _path(m, leaves[:k]) + [_mth(leaves[k:])]
-    return _path(m - k, leaves[k:]) + [_mth(leaves[:k])]
+        return _path_range(m, leaves, start, start + k) + [_mth_range(leaves, start + k, end)]
+    return _path_range(m - k, leaves, start + k, end) + [_mth_range(leaves, start, start + k)]
+
+
+def _path(m: int, leaves: list[bytes]) -> list[bytes]:
+    """RFC 6962 inclusion-proof path (top-level entry)."""
+    return _path_range(m, leaves, 0, len(leaves))
 
 
 def _read_leaf_hashes(storage_dir: Path) -> list[bytes]:
@@ -181,21 +206,32 @@ def verify_inclusion_proof(
 
     ``leaf_data`` is the same input that was hashed into the leaf
     (i.e. the chain entry's content-hash hex bytes for our usage).
+
+    Audit B-F05 / L039: malformed inputs (non-hex sibling, non-hex root)
+    return ``False`` instead of raising — the function is part of the
+    regulator-facing verifier API and MUST never crash the caller on
+    corrupt-by-design input.
     """
     if leaf_index < 0 or leaf_index >= tree_size:
         return False
-    node = _hash_leaf(leaf_data)
-    fn = leaf_index
-    sn = tree_size - 1
-    for sibling_hex in audit_path_hex:
-        sibling = bytes.fromhex(sibling_hex)
-        if fn % 2 == 1 or fn == sn:
-            node = _hash_node(sibling, node)
-            while fn % 2 == 0 and sn > 0:
-                fn >>= 1
-                sn >>= 1
-        else:
-            node = _hash_node(node, sibling)
-        fn >>= 1
-        sn >>= 1
-    return node.hex() == root_hash_hex
+    if not isinstance(audit_path_hex, list):
+        return False
+    try:
+        node = _hash_leaf(leaf_data)
+        fn = leaf_index
+        sn = tree_size - 1
+        for sibling_hex in audit_path_hex:
+            sibling = bytes.fromhex(sibling_hex)
+            if fn % 2 == 1 or fn == sn:
+                node = _hash_node(sibling, node)
+                while fn % 2 == 0 and sn > 0:
+                    fn >>= 1
+                    sn >>= 1
+            else:
+                node = _hash_node(node, sibling)
+            fn >>= 1
+            sn >>= 1
+        return node.hex() == root_hash_hex
+    except (ValueError, TypeError):
+        # bytes.fromhex on non-hex / non-string input.
+        return False

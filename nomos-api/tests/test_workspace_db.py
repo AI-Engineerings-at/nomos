@@ -7,14 +7,15 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_workspace_get_unknown_agent(client):
-    """GET /api/workspace/{agent_id} for non-existent agent returns inactive workspace."""
+    """GET /api/workspace/{agent_id} for non-existent agent returns 404.
+
+    L035 / audit A-C4: this endpoint is now gated by `require_agent_actor`,
+    which loads the agent before serving. Unknown agent -> 404, regardless
+    of principal. Avoids the previous information-leak where any caller
+    could probe agent existence.
+    """
     resp = await client.get("/api/workspace/unknown-agent")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["agent_id"] == "unknown-agent"
-    assert data["workspace_id"] is None
-    assert data["mounted_collections"] == []
-    assert data["is_active"] is False
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio

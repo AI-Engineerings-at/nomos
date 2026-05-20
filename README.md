@@ -70,7 +70,7 @@ NomOS is a **Compliance Control Plane** that wraps [OpenClaw](https://openclaw.a
    +----------+----------+            +-------------+-------------+
    |    NomOS API        |            |   OpenClaw Gateway        |
    |   (FastAPI)         |            |   (headless, Plugin)      |
-   |   17 Routers        |            |   11 Runtime Hooks        |
+   |   19 Routers        |            |   11 Runtime Hooks        |
    |   47+ Endpoints     |            |   Compliance Gate         |
    +----------+----------+            +-------------+-------------+
               |                                     |

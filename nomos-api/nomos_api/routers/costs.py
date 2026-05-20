@@ -5,8 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nomos_api.auth.rbac import require_admin, require_agent_actor
 from nomos_api.database import get_db
-from nomos_api.models import Agent
+from nomos_api.models import Agent, User
 from nomos_api.schemas import CostOverviewResponse, CostResponse
 from nomos_api.services.budget import get_all_costs
 
@@ -16,8 +17,10 @@ router = APIRouter(prefix="/api", tags=["costs"])
 @router.get("/costs", response_model=CostOverviewResponse)
 async def get_costs(
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
 ) -> CostOverviewResponse:
-    """Return budget status for all agents."""
+    """Return budget status for all agents. Admin-only — cross-tenant
+    spend disclosure (L035 audit A-C7)."""
     costs = await get_all_costs(db)
     return CostOverviewResponse(
         costs=[CostResponse(**c) for c in costs],
@@ -29,8 +32,10 @@ async def get_costs(
 async def get_agent_cost(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
+    _actor: Agent = Depends(require_agent_actor),
 ) -> CostResponse:
-    """Return budget status for a single agent."""
+    """Return budget status for a single agent. Caller must own the agent
+    or be admin (L035 audit A-C7)."""
     agent = await db.get(Agent, agent_id)
     if agent is None:
         raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")

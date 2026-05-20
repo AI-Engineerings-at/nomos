@@ -106,7 +106,7 @@ Expected response (shape per `routers/health.py:71-87` —
 {
   "status": "healthy",
   "service": "NomOS Fleet API",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "vault": "healthy",
   "components": { "vault": "healthy", "postgres": "healthy",
                   "valkey": "healthy", "gateway": "online" }

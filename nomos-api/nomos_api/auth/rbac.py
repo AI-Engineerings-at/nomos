@@ -74,6 +74,67 @@ async def require_admin(
     return user
 
 
+async def authorize_agent_action(
+    *,
+    db: AsyncSession,
+    request: Request,
+    agent_id: str,
+    action: str,
+    allow_missing: bool = False,
+):
+    """Body-AuthZ analogue of require_agent_actor — used where agent_id
+    comes from the JSON body, not a path parameter.
+
+    Verifies that ``request.state.user`` (set by AuthMiddleware) is allowed
+    to perform *action* on *agent_id*. Returns the loaded ``Agent`` so the
+    caller can re-use it. Same semantics as :func:`require_agent_actor`:
+    service principal -> trusted; user principal -> must own the agent or
+    be admin.
+
+    Use this from any handler that takes ``agent_id`` inside a Pydantic
+    request body (tasks, workspace, budget, costs, compliance alias, ...).
+    Path-param endpoints should keep using :func:`require_agent_actor`.
+
+    ``allow_missing=True``: for endpoints where the existing fail-closed
+    contract is "unknown agent returns a restrictive payload, not 404"
+    (notably budget_check and budget_track — the OpenClaw plugin probes
+    these for agents it cannot pre-register). With this flag, an unknown
+    agent yields ``None`` instead of raising 404; the handler then runs
+    its own fail-closed branch. AuthZ for known agents still applies.
+
+    Raises 401/403 (and 404 unless ``allow_missing=True``) with the same
+    shape as :func:`require_agent_actor`.
+    """
+    from nomos_api.models import Agent
+
+    principal = getattr(request.state, "user", None)
+    if not principal:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    agent = await db.get(Agent, agent_id)
+    if agent is None:
+        if allow_missing:
+            return None
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id!r} not found")
+
+    role = principal.get("role")
+    if role == "service":
+        return agent
+
+    email = principal.get("email")
+    if email is None:
+        raise HTTPException(status_code=401, detail="Invalid principal")
+
+    class _P:
+        pass
+
+    actor = _P()
+    actor.role = role or "user"
+    actor.email = email
+    check_agent_access(actor, agent, action)
+    return agent
+
+
 async def require_agent_actor(
     agent_id: str,
     request: Request,

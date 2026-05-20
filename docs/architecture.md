@@ -1,6 +1,6 @@
 # NomOS Architecture
 
-> Last reconciled against source: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
+> Last reconciled against source: 2026-05-20 (0.3.0, Audit-Trail v2 Phase-A + B1; anchor/checkpoint sibling-file separation M1; hardened compose; lru_cache key resolution; SQL-batch approvals).
 > Citations point to the verifying file/line in this repository.
 
 ## Component Overview
@@ -495,7 +495,7 @@ No secret may appear as a default value in `config.py` or `docker-compose.yml`.
 | `NOMOS_API_HOST` | `0.0.0.0` | API bind address |
 | `NOMOS_API_PORT` | `8000` | API internal port (mapped to 8060 via Docker) |
 | `NOMOS_API_TITLE` | `NomOS Fleet API` | API title |
-| `NOMOS_API_VERSION` | `0.2.0` | API version |
+| `NOMOS_API_VERSION` | `0.3.0` | API version |
 | `NOMOS_CORS_ORIGINS` | `["http://localhost:3040"]` | Allowed CORS origins |
 | `NOMOS_AGENTS_DIR` | `/data/agents` | Agent file storage directory (compose) |
 | `NOMOS_VALKEY_URL` | `valkey://valkey:6379` | Valkey URL for rate limiting + ARQ (`docker-compose.yml:97,136`) |

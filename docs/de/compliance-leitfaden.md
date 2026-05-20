@@ -1,6 +1,6 @@
 # NomOS Compliance-Leitfaden
 
-> Stand: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1). Vollständig
+> Stand: 2026-05-20 (0.3.0, Audit-Trail v2 Phase-A + B1, plus M1 Anchor/Checkpoint Sibling-File-Trennung). Vollständig
 > identisch zu [compliance-guide.md](../compliance-guide.md) (EN). Bei
 > Drift ist die englische Fassung autoritativ.
 

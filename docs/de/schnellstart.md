@@ -85,7 +85,7 @@ Erwartete Antwort (Status `healthy` nur wenn PostgreSQL erreichbar; `degraded` w
 {
   "status": "healthy",
   "service": "NomOS Fleet API",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "vault": "ready",
   "components": {
     "vault": "ok",

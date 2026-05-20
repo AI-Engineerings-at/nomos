@@ -1,6 +1,6 @@
 # NomOS API Reference
 
-> Last reconciled against router source: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
+> Last reconciled against router source: 2026-05-20 (0.3.0, Audit-Trail v2 Phase-A + B1, plus M1 anchor/checkpoint sibling-file separation).
 
 Base URL: `http://localhost:8060`
 

@@ -1,7 +1,7 @@
 # NomOS Operations Runbook
 
 > Last reconciled against `docker-compose.yml` and router source:
-> 2026-05-20 (0.2.0 Audit-Trail v2 Phase-A + B1). All service names, ports,
+> 2026-05-20 (0.3.0 — Audit-Trail v2 Phase-A + B1 plus M1 anchor/checkpoint sibling-file separation, M3 container hardening, M2 performance quickwins). All service names, ports,
 > healthchecks and volumes below are taken from `docker-compose.yml`.
 
 This runbook covers bring-up, verification, secrets, backup and

@@ -1,6 +1,6 @@
 # NomOS Architektur
 
-> Stand: 2026-05-20 (0.2.0, Audit-Trail v2 Phase-A + B1).
+> Stand: 2026-05-20 (0.3.0, Audit-Trail v2 Phase-A + B1; M1 Anchor/Checkpoint-Trennung; M3 Hardening; M2 Performance-Quickwins).
 >
 > Diese DE-Architektur fokussiert sich auf Kern-Komponenten und das
 > Sicherheitsmodell. Vollständige Router-, Worker-, Monitoring- und
@@ -305,7 +305,7 @@ Alle API-Einstellungen werden ueber Umgebungsvariablen mit dem `NOMOS_`-Praefix 
 | `NOMOS_API_HOST` | `0.0.0.0` | API Bind-Adresse |
 | `NOMOS_API_PORT` | `8000` | API interner Port (gemappt auf 8060 via Docker) |
 | `NOMOS_API_TITLE` | `NomOS Fleet API` | API Titel |
-| `NOMOS_API_VERSION` | `0.2.0` | API Version |
+| `NOMOS_API_VERSION` | `0.3.0` | API Version |
 | `NOMOS_HASHCHAIN_HMAC_KEY` | — | HMAC-Anker des Audit-Trails (≥32 Bytes, fail-closed) |
 | `NOMOS_AUDIT_SIGNING_KEY` | — | Ed25519-Signatur-Seed des Audit-Trails (32 Byte hex, fail-closed) |
 | `NOMOS_CORS_ORIGINS` | `["http://localhost:3040"]` | Erlaubte CORS Origins |

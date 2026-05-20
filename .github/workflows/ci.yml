@@ -114,6 +114,8 @@ jobs:
       # CI must inject a clearly-non-production key so any code path that
       # touches hash_chain can run; production injects via Vault.
       NOMOS_HASHCHAIN_HMAC_KEY: ci-only-hmac-test-key-not-for-production-32+
+      # Phase-A1: Ed25519 audit-signing key (test-only seed, 32 bytes hex).
+      NOMOS_AUDIT_SIGNING_KEY: deadbeefcafebabe0123456789abcdef0123456789abcdef0123456789abcdef
       # Both auth secrets are hard-gated by K3 (>=32 chars, not a sentinel).
       NOMOS_JWT_SECRET: ci-only-jwt-test-secret-not-for-prod-32+chars
       NOMOS_PLUGIN_API_KEY: ci-only-plugin-test-api-key-not-for-prod-32+

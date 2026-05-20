@@ -12,6 +12,16 @@ dependencies = [
     "httpx>=0.27,<1",
     "pyyaml>=6.0,<7",
     "rich>=13.0,<15",
+    # Phase-A1: Ed25519 audit-trail signatures (non-repudiation per
+    # EU AI Act Art. 12 record-keeping). hash_chain.py imports
+    # cryptography.hazmat.primitives.asymmetric.ed25519.
+    "cryptography>=42.0,<46",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9",
+    "pytest-asyncio>=0.23,<1",
 ]
 
 [build-system]

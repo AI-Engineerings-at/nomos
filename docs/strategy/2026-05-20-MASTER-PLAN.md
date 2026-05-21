@@ -410,6 +410,10 @@ v0.4.0 ✓ (heute)
 
 ## 7. Offene Fragen + Empfehlungen (Entscheidungs-Matrix)
 
+> **Kanonischer Decision-Register ist `2026-05-21-decision-log.md`** —
+> dieser konsolidiert §7 + META-VISION §12 + WSK §9 in eine Liste mit
+> Status-Markern. §7 unten bleibt als Optionen-/Begründungs-Detail.
+
 | # | Frage | Optionen | Empfehlung | Wann entscheiden |
 |---|---|---|---|---|
 | 1 | **Atlas als NomOS-Pilot-Customer #0?** | A: ja (dogfood) · B: nein (parallel laufen lassen) | **A** — Bell-Labs-Selbst-Anwendung. Atlas-on-NomOS ist die ehrlichste Demo-Story für DACH-KMU. | Vor v0.7.0 (Juni) |

@@ -51,6 +51,35 @@ Governance" wird **gerade jetzt** besetzt.
 
 ---
 
+## 2b. Was sie können vs. was bei uns zusätzlich neu ist
+
+Konkrete Gegenüberstellung — pro Player das was er liefert, und das
+Delta das NomOS/der Quadrupel-Stack zusätzlich hat:
+
+| Konkurrenz | Was sie können | Was bei uns zusätzlich neu ist |
+|---|---|---|
+| **PwC Agent OS** | Enterprise-Orchestrierung + Governance, CrewAI-Kern, Skalierung | KMU-erschwinglich statt Enterprise-only; AGPL-OSS statt Beratungs-gebunden; regionale Wirkungslogik |
+| **USU KI-Plattform** | Trusted-AI, Quellenrückverfolgung, EU/on-prem, Compliance | agentische *gesellschaftliche* Infrastruktur statt klassische Unternehmensplattform; Empowerment-Bewegung statt Lizenz-Revenue |
+| **appliedAI Lighthouse** | Agent-Ops, Enablement, Evaluation in der Ops-Schicht | durchgehender Audit-Trail (Ed25519 + RFC-6962) + Annex-IV-Workflow statt reines Enablement |
+| **BReact OS** (AT) | On-Prem, DSGVO + NIS2 + EU-AI-Act, "100% data control" | Meta-Ebene: regulator-facing Inclusion-Proofs + WSK-Wertschöpfungs-Kopplung; AGPL statt Closed-kommerziell |
+| **PlanB Framework** | Orchestrierung + Integrity-Hub, Auditierbarkeit, "Autonomie mit Aufsicht" | KMU-Fokus statt generisch; Quadrupel-Stack-Kohärenz statt Punkt-Lösung |
+| **AIOS** | Agent-OS-Kern: Scheduling, Memory, Context, Tool-/Access-Mgmt | vollständiges Governance-/Compliance-Betriebsmodell, das AIOS bewusst NICHT hat |
+| **Agent Zero** | autonomer local-first Agent, persistent memory, transparent | regulierungsfeste Trust-Infrastruktur für Firmen statt persönlicher Agent |
+| **CrewAI** | Multi-Agent-Orchestrierung, Observability-Baustein | vollständige Vertrauensarchitektur statt Framework-Baustein |
+| **Microsoft Agent Governance Toolkit** | Runtime-Governance, Compliance-Grading, EU-AI-Act-Mapping (MIT) | AGPL (nicht schließbar); DACH-KMU-spezifisch (DE-Sprache, AT/DE-Recht); WSK-Kopplung |
+| **Asqav** | signiert jede Agent-Action → tamper-evident Audit-Trail (ML-DSA-65, MIT) | regulator-facing STH + Inclusion-Proofs (Einzel-Event-Beweis, Datenminimierung); Annex-IV-Workflow drüber; AGPL |
+| **FutureAGI** | self-hostable: enforcement + audit + registry + gateway (Apache 2.0) | regionale Verankerung (RUF + WSK) — nicht kopierbar; Empowerment- statt Geschäftsmodell |
+| **Dynatrace AI Governance** | Observability, Audit-Trails für produktive KI-Services | Compliance-*Engine* (Annex IV, Risk-Class) statt reines Monitoring |
+| **The Future Society / Bitkom** | Policy-Diskurs, Governance-Lücken-Nachweis (kein Produkt) | wir sind die *Implementierung* der Lücke die sie beschreiben |
+
+**Lesart:** Die linke Spalte beweist, dass das Feld existiert und
+gekauft wird — die rechte Spalte ist, was wir beweisen müssen. Bis
+März 2026 war die rechte Spalte "die Kombination". Seit April ist sie
+schmaler und konkreter: AGPL + DACH-KMU + WSK-Kopplung + regionale
+Verankerung (§4).
+
+---
+
 ## 3. Ändert das die Vision? — Ehrliche Antwort: zu 80% nein, zu 20% ja
 
 Joe's eigene Vermutung: *"das war schon Vision, nur nicht schön

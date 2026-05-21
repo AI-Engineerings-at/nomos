@@ -36,13 +36,20 @@ Diese 3 Regeln ueberschreiben ALLES. Keine Ausnahmen.
 - `04-pdca-zyklus.md` — Post-Phase Pruefung, Korrektur, Rescope
 
 ## Wo finde ich was
+
+**Kanonische Doku-Landkarte: `docs/INDEX.md`** — dort ist jeder Doc
+nach Tier (T0 Meta · T1 Strategie · T2 Architektur · T3 Betrieb ·
+T4 Wissen) klassifiziert. Wie wir arbeiten: `docs/OPERATING-MODEL.md`.
+
 | Thema | Pfad |
 |-------|------|
-| Design Spec | `docs/superpowers/specs/2026-03-24-nomos-v2-design.md` |
-| Master Plan | `docs/superpowers/plans/2026-03-24-nomos-v2-master-plan.md` |
+| Wie wir arbeiten | `docs/OPERATING-MODEL.md` |
+| Master Plan (aktuell) | `docs/strategy/2026-05-20-MASTER-PLAN.md` |
+| Entscheidungen | `docs/strategy/2026-05-21-decision-log.md` |
 | OpenClaw/NemoClaw Referenz | `docs/references/openclaw-nemoclaw-reference.md` |
-| Postmortem | `docs/reports/2026-03-25-session-postmortem.md` |
-| Sub-Plaene | `docs/superpowers/plans/2026-03-25-sub-*.md` |
+| Design Spec (v2, archiviert) | `docs/archive/2026-Q2/superpowers/specs/2026-03-24-nomos-v2-design.md` |
+| Postmortem (archiviert) | `docs/archive/2026-Q2/reports/2026-03-25-session-postmortem.md` |
+| Sub-Plaene (archiviert) | `docs/archive/2026-Q2/superpowers/plans/2026-03-25-sub-*.md` |
 
 ## Learnings
 28 Erkenntnisse dokumentiert in `.claude/knowledge/LEARNINGS.md` (L001-L028).

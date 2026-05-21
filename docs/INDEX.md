@@ -29,6 +29,7 @@
 | Dokument | Zweck |
 |---|---|
 | [`docs/OPERATING-MODEL.md`](OPERATING-MODEL.md) | **Wie wir arbeiten** — 7 Prinzipien, Arbeits-Kadenz. Kanonisch. |
+| [`docs/QUALITY-SYSTEM.md`](QUALITY-SYSTEM.md) | **Wie wir keinen Müll produzieren** — Definition of Done, Test-Architektur, CI-Stages, Eval-Framework, Lücken-Liste |
 | [`CLAUDE.md`](../CLAUDE.md) | Projekt-Info, Zeroth-Stack-Rolle |
 | [`.claude/CLAUDE.md`](../.claude/CLAUDE.md) | HARD RULES, Tech-Stack, Commit-Convention, aktiver Plan |
 | [`.claude/rules/01-06`](../.claude/rules/) | 6 spezifische Rules (Produkt-Standalone, Integration-First, Agent-Führung, PDCA, Refactor-Gate, Integration-Test-Pflicht) |

@@ -3,12 +3,17 @@
 > **Stand:** 2026-05-20, abends, nach 5 Releases an einem Tag
 > (v0.2.0/v0.2.1/v0.3.0/v0.4.0 + Strategy-Docs).
 >
+> **Amendment 2026-05-21:** §2.1 (Differenzierung), §7 #19
+> (Build-vs-Adopt Asqav), §8 R13 (OSS-Konkurrenz) ergänzt nach der
+> Competitive-Landscape-Recherche. Kein Vision-Rewrite — die
+> Roadmap (§4-6) bleibt unverändert. Substanz vor Story.
+>
 > **Geltungsbereich:** jetzt → November 2026. Hard Deadline:
 > **2026-08-02 EU AI Act Art. 12 Vollanwendung**.
 >
 > **Lesen vor allem anderen.** Wenn du nur ein Doc lesen kannst,
-> lies dies. Die anderen drei Strategy-Docs vom 2026-05-20 sind
-> die Tiefen-Anhänge zu diesem Plan.
+> lies dies. Die anderen Strategy-Docs (§13) sind die
+> Tiefen-Anhänge zu diesem Plan.
 
 ---
 
@@ -54,6 +59,37 @@ zu müssen.
    Agent-Fleet. Atlas wird der erste NomOS-Customer. Wenn unser
    Customer-Produkt nicht gut genug für uns ist, ist es nicht
    gut genug.
+
+### 2.1 Differenzierung — warum nicht Microsoft, Asqav, FutureAGI
+
+Seit April 2026 gibt es Open-Source-Konkurrenten direkt in unserem
+Schnittpunkt: **Microsoft Agent Governance Toolkit** (MIT),
+**Asqav** (MIT, tamper-evidenter Audit-Trail) und **FutureAGI**
+(Apache 2.0) — Details in `2026-05-21-competitive-landscape.md`.
+"Wir kombinieren alles" reicht damit als Differenzierung **nicht
+mehr**. Sechs *strukturelle* — nicht feature-basierte —
+Differenzierungen, in Reihenfolge der Verteidigungsstärke:
+
+1. **DACH-KMU-spezifisch** — DE-Sprache, AT/DE-Recht, regionale
+   Granularität. Die Konkurrenz ist US-generic.
+2. **AGPL statt MIT/Apache** — Microsoft + Asqav sind MIT, jeder
+   kann sie schließen und als Closed-SaaS verkaufen. AGPL
+   verhindert das strukturell.
+3. **WSK-Wertschöpfungs-Kopplung** — niemand sonst koppelt die
+   Compliance-Engine an eine Wertschöpfungskette mit Regionalem
+   Wirkungsflow + Goodhart-Schutz.
+4. **Empowerment-Bewegung statt Geschäftsmodell** — Beitrag statt
+   Pricing, Inverse-Pyramide.
+5. **Quadrupel-Stack-Kohärenz** — Atlas + NomOS + Zeroth + WSK als
+   ein System (viertes Element WSK:
+   `2026-05-21-nomos-wsk-integration.md`). Die Konkurrenz liefert
+   Punkt-Lösungen.
+6. **Bell-Labs Institution > Person** (= North-Star-Prinzip 2).
+
+**Kernsatz:** Unser nicht-kopierbarer Vorteil ist nicht der Code —
+den können Microsoft + Asqav auch. Es ist die *gelebte regionale
+Verankerung* (RUF-Pilot + WSK). Microsoft kann ein Toolkit
+releasen; Microsoft kann nicht die Bäckerin in Eisenstadt kennen.
 
 ---
 
@@ -394,6 +430,7 @@ v0.4.0 ✓ (heute)
 | 16 | **Penetration-Test — wer? wann? Budget?** | A: deutsche Mittelständler-Pentest-Firma · B: Cure53 / SecureLayer · C: Bug-Bounty | **A** — €5-15k, deutsche Firma für DACH-Sprach-Match, 1 Woche. Bug-Bounty erst nach Customer-Base. | v1.0.0 booking ab Juni |
 | 17 | **Pricing — pro Agent, pro Tenant, pro Doc?** | A: pro Agent (€20-50/Monat/Agent) · B: pro Tenant Flat (€500-2k) · C: Hybrid (Flat + per-Agent über X) | **C** — Flat €499/Monat bis 10 Agents, €19/Monat pro weiterer Agent, optional Annex-IV-PDF €99 pro Audit-Cycle | v0.8.0 als Beta-Pricing |
 | 18 | **Lineage Engine — wirklich deferred oder kommt das back?** | A: deferred bleiben (NomOS hat es absorbiert) · B: reaktivieren als separate Komponente | **A** — NomOS's Ed25519+Merkle ist eine vollwertige Lineage-Implementation. DEC-001..004 bleibt. | confirmed |
+| 19 | **Asqav adoptieren oder eigene Hash-Chain behalten?** | A: NomOS-Chain behalten + Asqav-Interop dokumentieren · B: Asqav-SDK adoptieren · C: rein eigene Chain, keine Interop | **A** — Chain ist fertig (745 Tests), AGPL-rein, RFC-6962-Standard. Die Differenzierung ist der Annex-IV-Workflow *darüber*, nicht die Krypto-Primitive. Interop = NomOS kann einen Asqav-Trail lesen, falls ein Customer ihn bereits nutzt. ADR-würdig — Joe ratifiziert. | v0.5.0 / Decision-Log |
 
 ---
 
@@ -413,6 +450,7 @@ v0.4.0 ✓ (heute)
 | R10 | **OpenClaw upstream breaking change** | Mittel | Hoch | Pin auf 2026.5.18 mit digest-pin, Plugin-Compat-Test in CI |
 | R11 | **Customer-Hardware nicht ausreicht (RPi5)** | Mittel | Mittel | Customer-SKU-Test mit Intel NUC + RPi5 vor v1.0 |
 | R12 | **DSB findet DPIA-Issues** | Mittel | Niedrig (zeitlich) | DPIA in v0.9 starten, nicht in v1.0 |
+| R13 | **OSS-Konkurrenz (Microsoft/Asqav/FutureAGI) besetzt die generische AI-Governance-Kategorie** und drückt NomOS in eine "auch-Tool"-Wahrnehmung | **Hoch** (seit April 2026 live) | Mittel (Differenzierung ist strukturell, nicht feature-basiert) | Nicht auf Feature-Parität konkurrieren. Differenzierung §2.1 scharf halten (AGPL + DACH-KMU + WSK). **Spur C** — regionale Verankerung via RUF-Pilot + WSK, nicht kopierbar. `competitive-landscape.md` halbjährlich refreshen. |
 
 ---
 
@@ -500,8 +538,11 @@ Falls Joe sofort weiter machen will:
 ## 13. Begleitdokumente
 
 - `docs/strategy/2026-05-20-big-picture.md` — Vision-Tiefendoc
+- `docs/strategy/2026-05-20-META-VISION.md` — Constitutional-OS Meta-Ebene
 - `docs/strategy/2026-05-20-v0.5.0-roadmap.md` — Gap-Liste Tiefendoc
 - `docs/strategy/2026-05-20-nomos-atlas-integration.md` — Bridge Contract-Spec
+- `docs/strategy/2026-05-21-nomos-wsk-integration.md` — WSK-Datenquellen-Integration
+- `docs/strategy/2026-05-21-competitive-landscape.md` — Konkurrenz-Map + Differenzierung
 - `Documents/STRATEGY-2026-Q2.md` — Cockpit-Variante
 - `CHANGELOG.md` — Was-bisher-shipped
 - `.claude/knowledge/LEARNINGS.md` — L001-L053

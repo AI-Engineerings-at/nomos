@@ -68,7 +68,7 @@ Delta das NomOS/der Quadrupel-Stack zusätzlich hat:
 | **CrewAI** | Multi-Agent-Orchestrierung, Observability-Baustein | vollständige Vertrauensarchitektur statt Framework-Baustein |
 | **Microsoft Agent Governance Toolkit** | Runtime-Governance, Compliance-Grading, EU-AI-Act-Mapping (MIT) | AGPL (nicht schließbar); DACH-KMU-spezifisch (DE-Sprache, AT/DE-Recht); WSK-Kopplung |
 | **Asqav** | signiert jede Agent-Action → tamper-evident Audit-Trail (ML-DSA-65, MIT) | regulator-facing STH + Inclusion-Proofs (Einzel-Event-Beweis, Datenminimierung); Annex-IV-Workflow drüber; AGPL |
-| **FutureAGI** | self-hostable: enforcement + audit + registry + gateway (Apache 2.0) | regionale Verankerung (RUF + WSK) — nicht kopierbar; Empowerment- statt Geschäftsmodell |
+| **FutureAGI** | self-hostable: enforcement + audit + registry + gateway (Apache 2.0) | regionale Verankerung (Pilot-Kandidat + WSK) — nicht kopierbar; Empowerment- statt Geschäftsmodell |
 | **Dynatrace AI Governance** | Observability, Audit-Trails für produktive KI-Services | Compliance-*Engine* (Annex IV, Risk-Class) statt reines Monitoring |
 | **The Future Society / Bitkom** | Policy-Diskurs, Governance-Lücken-Nachweis (kein Produkt) | wir sind die *Implementierung* der Lücke die sie beschreiben |
 
@@ -201,13 +201,13 @@ fügt zwei Spuren hinzu, die *parallel* laufen:
 |---|---|---|
 | **A — Code** | v0.5.0 W-Phase: Live-Eval, STH-Rate-Limit, B-F01/F02/F14, localhost-default-Fix | unverändert Pflicht — Substanz vor Story |
 | **B — Differenzierung** | Dieses Doc + scharfer Positionierungs-Satz; Build-vs-Adopt in Decision-Log | Microsoft/Asqav sind seit April live — wir müssen wissen wer wir NICHT sind |
-| **C — Sichtbarkeit (Joe-Art: Networking)** | RUF-Pilot + WSK-Regionaler-Wirkungsflow als gelebter Beweis | eine echte regionale KMU-Anwendung schlägt jedes Microsoft-Toolkit als Erzählung — und es ist genau Joe's "Networking statt Sales" |
+| **C — Sichtbarkeit (Joe-Art: Networking)** | Pilot-Kandidat + WSK-Regionaler-Wirkungsflow als gelebter Beweis | eine echte regionale KMU-Anwendung schlägt jedes Microsoft-Toolkit als Erzählung — und es ist genau Joe's "Networking statt Sales" |
 
 **Spur C ist der eigentliche strategische Hebel.** Microsoft kann
 ein Toolkit releasen. Microsoft kann *nicht* die Bäckerin in
 Eisenstadt kennen. Unser Asset gegen die OSS-Konkurrenz ist nicht
 besserer Code — es ist die **gelebte regionale Verankerung** (WSK +
-RUF). Das ist nicht kopierbar.
+Pilot-Kandidat). Das ist nicht kopierbar.
 
 ---
 
@@ -237,7 +237,7 @@ unserem Schnittpunkt — die Kombination ist nicht mehr leer, das
 Zeitfenster ist enger, "wir kombinieren alles" reicht als
 Differenzierung nicht mehr. Unser nicht-kopierbarer Vorteil ist
 nicht der Code, sondern die *gelebte regionale Verankerung* (WSK +
-RUF + Empowerment-Bewegung + AGPL) — und genau dort sollte der
+Pilot-Kandidat + Empowerment-Bewegung + AGPL) — und genau dort sollte der
 Fokus liegen, parallel zur unverändert-pflichtigen v0.5.0-Code-Arbeit.
 
 ---

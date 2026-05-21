@@ -95,7 +95,7 @@ Sechs Schichten von unten nach oben:
 ```
    Regulator (EU-Behörden, DSB)
             │
-   Customer-Community (DACH-KMU, RUF, taktical-apps Beta)
+   Customer-Community (DACH-KMU, Pilot-Kandidat)
             │
    Joe (Pseudonym + Steward der Institution)
             │
@@ -131,7 +131,7 @@ Nicht "v1.0 ship". Tiefer. In der Reihenfolge der Wichtigkeit:
 | **G3** | **Empowerment** — Mittelstand und Vulnerable empowern, NICHT als Sales-Markt | Tool kostenlos (AGPL), Mehrwert-basierte Beiträge, keine Wachstums-Story über Revenue |
 | **G4** | **Continuity** — Bell-Labs-Institution-überlebt-Person | Pseudonymität gehalten, Marken eingetragen, OSS-Community in der Lage Stack ohne Joe zu betreiben |
 | **G5** | **Compliance** — EU AI Act enforcement 2026-08-02 als Differenzierungs-Stärke | Wir sind die EINE Stack-Wahl in DACH die Regulator-Compliance default-on hat |
-| **G6** | **Self-Application** — wir essen unser eigenes Hundefutter | Atlas-Agents laufen unter NomOS-Compliance, RUF + taktical-apps validieren das Modell |
+| **G6** | **Self-Application** — wir essen unser eigenes Hundefutter | Atlas-Agents laufen unter NomOS-Compliance, der Pilot-Kandidat validiert das Modell |
 | **G7** | **Long-Term Vision** — DACH-Standard in 5 Jahren, EU-Standard in 20 | NSS + NomOS sind die Referenz-Implementation, der "Reinheitsgebot 1516" für AI |
 
 Goals **G1-G4 sind Identitäts-Goals** (was wir SIND). **G5-G7 sind
@@ -204,7 +204,7 @@ verwenden".
    Weg 5: MANIFESTO (Vision-Distribution)
    ───────────────────────────────────────
    Lena's Bücher ─► zugangsweg.at ─► Public Discourse ─►
-   Inverse-Pyramide-Reach ─► RUF + KMU ─► Empowerment-Loop
+   Inverse-Pyramide-Reach ─► Pilot-Kandidat + KMU ─► Empowerment-Loop
 ```
 
 **Die Wege sind nicht alternativ — sie laufen gleichzeitig.** Wer das
@@ -367,7 +367,7 @@ Ehrlichkeit über Negativ-Definition:
    2026-Q3:    NomOS v0.5..v1.0
                Atlas Phase 4 (Agent Intelligence)
                v0.7 Atlas-NomOS-Bridge
-               RUF + taktical-apps als Self-Application
+               Pilot-Kandidat als Self-Application
                Pentest community-getrieben
 
    2026-08-02: EU AI Act Art. 12 Vollanwendung
@@ -452,7 +452,7 @@ Senior nicht hilft, ist es kein Feature.** Tesco-These.
 > fünf Vernetzungs-Wege Information fliessen lassen (Top-Down, Bottom-Up,
 > Cross-Cut, Self-Improvement-Loop, Manifesto), mit dem Ziel, am
 > 2. August 2026 für DACH-KMU verfügbar zu sein als OSS-Stack (AGPL),
-> nicht als SaaS, ohne Funding-Abhängigkeit, mit RUF + taktical-apps
+> nicht als SaaS, ohne Funding-Abhängigkeit, mit dem Pilot-Kandidaten
 > als Self-Application-Anchor und Lena's Büchern als Public-Manifesto,
 > getragen von einer Logik die in 20 Jahren so selbstverständlich
 > ist wie HTTPS heute.
@@ -470,7 +470,7 @@ Senior nicht hilft, ist es kein Feature.** Tesco-These.
 | **DACH-Standardisierungs-Gremien** | "NSS + NomOS sind die EU-souveräne Antwort auf US-Big-Tech-AI-Stacks." |
 | **AI-Sicherheitsforschern** | "Asimov-Zeroth-Cascade operationalisiert als Audit-Chain mit Ed25519 + RFC 6962." |
 | **Bell-Labs-Historikern** | "Wir versuchen die Bell-Labs-Continuity-Logik in der AI-Ära neu zu instantiieren — Institution über Person." |
-| **Joe selbst** | "Du baust den Stack den du selbst brauchst, damit RUF + taktical-apps regulator-compliant laufen können, und gibst ihn dem Mittelstand kostenlos." |
+| **Joe selbst** | "Du baust den Stack den du selbst brauchst, damit der Pilot-Kandidat regulator-compliant laufen kann, und gibst ihn dem Mittelstand kostenlos." |
 | **Lena** | "Dein Buch ist das Manifest, NomOS ist der ausführbare Code dazu." |
 | **Anwalt** | "Wir brauchen Trademark-Schutz für 'NomOS' und 'A.T.L.A.S. CEO' vor dem Open-Source-Release." |
 | **DSB** | "Wir brauchen DPIA für NomOS selbst — kann erst nach erstem User-Mehrwert finanziert werden, Pay-after-Value-Modell." |
@@ -480,15 +480,22 @@ Senior nicht hilft, ist es kein Feature.** Tesco-These.
 
 ## 12. Was ich von Joe noch brauche um die Vision konkret zu machen
 
-Sechs offene Fragen die ich nicht raten will:
+> **Update 2026-05-21:** Diese 6 Fragen sind in den kanonischen
+> `2026-05-21-decision-log.md` überführt und teils beantwortet.
+> Hier nur noch als Vision-Kontext.
 
-1. **Lizenz-Final-Decision:** AGPL-3.0 + Trademark, oder anderes?
-   (siehe Master-Plan §7 Frage #6 + Revision-Diskussion)
-2. **RUF + taktical-apps** — darf ich die Namen im Strategy-Doc nennen oder bleibt das anonym?
-3. **Pricing-Modell konkret:** Pay-what-you-want? Mitglieds-Beitrag? Erfolgs-Beteiligung? Hybrid?
-4. **Atlas-Customer-Shipping:** soll Atlas wirklich auch shippable werden, oder bleibt es internal-only und nur NomOS geht raus?
-5. **Trademark-Anwalt buchen** — wann? Vor Open-Source-Release?
-6. **Pilot-Customer-#2..#5** — gibt es weitere bestehende Beziehungen außer RUF, oder ist RUF the only pilot?
+1. ✅ **Lizenz:** AGPL-3.0 + Trademark (Joe 2026-05-21).
+2. ✅ **Pilot-Kandidat-Namen:** anonym — Name aus Diskretionsgründen
+   in keinem Doc (Decision-Log N3).
+3. ✅ **Pricing:** kein Einheitsmodell — individuell pro Kunde
+   (Beitrag / Erfolg / Flat als Bausteine), Zahlen erst nach dem
+   Pilot (Decision-Log N9).
+4. 🔴 **Atlas-Customer-Shipping:** offen — Empfehlung internal-only
+   bis nach der Deadline (Decision-Log N4).
+5. 🔴 **Trademark-Anwalt buchen** — wann? Empfehlung: vor dem
+   OSS-Release (Decision-Log N2).
+6. 🔴 **Weitere Pilot-Kunden** — gibt es bestehende Beziehungen
+   außer dem Pilot-Kandidaten?
 
 Wenn diese sechs entschieden sind, ist die Vision **operationalisierbar**
 und ich kann die finale `MASTER-PLAN v2` schreiben die alle 18

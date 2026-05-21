@@ -282,11 +282,13 @@ WSK-seitig (für Joe / WSK-Session, nicht nomos):
 
 ## 9. Offene Fragen an Joe
 
-1. **Ist WSK-Pilot-0 = der RUF-Pilot?** WSK-CHANGELOG erwähnt
+1. **Ist WSK-Pilot-0 = der Pilot-Kandidat?** WSK-CHANGELOG erwähnt
    "Pilot-0-Frontend (Betriebs-Profile, HilfeCounter, Danke-Wall)".
-   In der letzten Session sagtest du Pilot-Firma = RUF mit
-   "taktical apps" in Beta. Sind das dieselben, oder zwei
-   verschiedene Piloten?
+   Joe (2026-05-21): noch nicht eindeutig — WSK-seitig zu prüfen.
+   Der Pilot-Kandidat ist ein Bestandskunde (E-Commerce + ERP von
+   Joe betreut); Ziel ist, dass NomOS dessen Betrieb später
+   auditiert/governt. Name aus Diskretionsgründen nicht
+   dokumentiert (Decision-Log N3).
 
 2. **Modell 2+3 bestätigt?** Gestaffelte Integration (Pattern-kompat
    → PyPI-Library → Audit-Sink → Annex-IV) — oder anderes Modell?

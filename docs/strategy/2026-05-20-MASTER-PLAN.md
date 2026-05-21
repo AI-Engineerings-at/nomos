@@ -88,7 +88,7 @@ Differenzierungen, in Reihenfolge der Verteidigungsstärke:
 
 **Kernsatz:** Unser nicht-kopierbarer Vorteil ist nicht der Code —
 den können Microsoft + Asqav auch. Es ist die *gelebte regionale
-Verankerung* (RUF-Pilot + WSK). Microsoft kann ein Toolkit
+Verankerung* (Pilot-Kandidat + WSK). Microsoft kann ein Toolkit
 releasen; Microsoft kann nicht die Bäckerin in Eisenstadt kennen.
 
 ---
@@ -454,7 +454,7 @@ v0.4.0 ✓ (heute)
 | R10 | **OpenClaw upstream breaking change** | Mittel | Hoch | Pin auf 2026.5.18 mit digest-pin, Plugin-Compat-Test in CI |
 | R11 | **Customer-Hardware nicht ausreicht (RPi5)** | Mittel | Mittel | Customer-SKU-Test mit Intel NUC + RPi5 vor v1.0 |
 | R12 | **DSB findet DPIA-Issues** | Mittel | Niedrig (zeitlich) | DPIA in v0.9 starten, nicht in v1.0 |
-| R13 | **OSS-Konkurrenz (Microsoft/Asqav/FutureAGI) besetzt die generische AI-Governance-Kategorie** und drückt NomOS in eine "auch-Tool"-Wahrnehmung | **Hoch** (seit April 2026 live) | Mittel (Differenzierung ist strukturell, nicht feature-basiert) | Nicht auf Feature-Parität konkurrieren. Differenzierung §2.1 scharf halten (AGPL + DACH-KMU + WSK). **Spur C** — regionale Verankerung via RUF-Pilot + WSK, nicht kopierbar. `competitive-landscape.md` halbjährlich refreshen. |
+| R13 | **OSS-Konkurrenz (Microsoft/Asqav/FutureAGI) besetzt die generische AI-Governance-Kategorie** und drückt NomOS in eine "auch-Tool"-Wahrnehmung | **Hoch** (seit April 2026 live) | Mittel (Differenzierung ist strukturell, nicht feature-basiert) | Nicht auf Feature-Parität konkurrieren. Differenzierung §2.1 scharf halten (AGPL + DACH-KMU + WSK). **Spur C** — regionale Verankerung via Pilot-Kandidat + WSK, nicht kopierbar. `competitive-landscape.md` halbjährlich refreshen. |
 
 ---
 

@@ -57,3 +57,5 @@ tsconfig.tsbuildinfo
 /tmp/
 scripts/g_verify.sh
 scripts/g_chat_diag.sh
+# Local Claude Code configuration (interne Doktrin/Workflows)
+.claude/

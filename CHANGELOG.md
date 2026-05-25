@@ -1,8 +1,65 @@
 # Changelog
 
-All notable changes to NomOS are documented here.
+All notable changes to aie-audit-chain are documented here.
 Versioning follows [SemVer](https://semver.org/) per component.
 Date format: ISO-8601.
+
+> Historical note: entries prior to 2026-05-24 refer to this project
+> by its previous name **NomOS**. See the `[Rename] — 2026-05-24`
+> entry below for the rename trail and DEC-020 rationale.
+
+---
+
+## [Rename] — 2026-05-24
+
+### Repo + public name: `NomOS` → `aie-audit-chain`
+
+The project was renamed from **NomOS** to **aie-audit-chain** as part
+of governance decision **DEC-020**. The wider "compliance control
+plane" scope of NomOS is being narrowed to its load-bearing
+audit-trail core; the remaining surface (fleet management, compliance
+gate, console UI, agent-gateway plugin) is being unbundled into
+sibling repos under the `AI-Engineering-at` GitHub org.
+
+This repo is now positioned as the third layer of the AIE audit-stack:
+
+| Layer | Repo | Role |
+|-------|------|------|
+| Crypto primitives | `aie-audit-primitives` | Shared Ed25519 / HMAC / Merkle building blocks |
+| Hash chain (PyPI) | `aie-hash-chain` | Reusable Python library for hash-chain entries |
+| **Audit chain (service)** | **`aie-audit-chain`** | **Deployable service + STH + inclusion proofs + retention + anchoring** |
+
+#### What changed in this commit
+
+- `README.md` — rewritten around the `aie-audit-chain` scope; explicit
+  rename note; pointer to sibling repos in the audit-stack.
+- `README.de.md` — DE-Version analog umgeschrieben mit
+  Umbenennungs-Hinweis.
+- `CHANGELOG.md` — this entry + header switched from "NomOS" to
+  "aie-audit-chain".
+- GitHub repo metadata — `description` set, `homepage` set to
+  `https://verify.ai-engineering.at`, topics set
+  (`hash-chain`, `audit-trail`, `ed25519`, `merkle`, `eu-ai-act`,
+  `compliance`).
+
+#### What did NOT change in this commit (deliberate, deferred)
+
+- Source-tree directory names (`nomos-api/`, `nomos-cli/`,
+  `nomos-console/`, `nomos-plugin/`) remain under their historical
+  names. Renaming the source trees requires coordinated import-path
+  changes, Docker-tag changes, CI updates, and a release cut; that
+  ships in a follow-up.
+- CLI binary `nomos` (from `nomos-cli/`) remains the installed name
+  during the transition.
+- Env-var prefixes (`NOMOS_*`) remain in place; will be migrated with
+  deprecation aliases in a follow-up.
+- Logo/branding assets under `docs/images/` remain unchanged for now.
+
+#### Cross-references
+
+- DEC-020 in the AIE governance registry (`ops/governance/DECISIONS.md`).
+- W14-A: rename of GitHub repo + PyPI prep (Tasks #202–#205).
+- W17-B: README + repo-metadata cut-over (this entry).
 
 ---
 

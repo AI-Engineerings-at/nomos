@@ -1,6 +1,33 @@
-# NomOS
+# aie-audit-chain
 
-> Das agentenbasierte Framework, das EU AI Act Compliance durchsetzt — nicht durch Empfehlung, sondern durch Design.
+> Server-seitiger Hash-Chain-Audit-Trail fuer EU-AI-Act-Konformitaet.
+> Teil des AIE-Audit-Stacks: `aie-audit-primitives` + `aie-hash-chain` + **`aie-audit-chain`**.
+
+## Was ist aie-audit-chain?
+
+aie-audit-chain ist die **server-seitige Audit-Trail-Komponente** des
+AIE-Audit-Stacks. Sie zeichnet jedes compliance-relevante Ereignis
+(Agent-Aktion, Gate-Entscheidung, PII-Redaktion, Budget-Verletzung,
+Vorfall) in eine manipulationssichere Hash-Chain mit
+Ed25519-Signatur pro Eintrag und einem RFC-6962-Merkle-Transparency-
+Log.
+
+Sie wird als deploybarer Dienst ausgeliefert (FastAPI auf Python 3.12,
+PostgreSQL, Valkey, HashiCorp Vault) und stellt Verifikations-Endpoints
+bereit, die jede dritte Partei ohne Datenbank-Zugriff aufrufen kann.
+
+### Umbenennungs-Hinweis (2026-05-24, DEC-020)
+
+Das Repo hiess vorher `nomos` / `NomOS`. Der ehemals breitere
+"Compliance-Control-Plane"-Scope (`nomos-api`, `nomos-cli`,
+`nomos-console`, `nomos-plugin`) wurde auf den tragenden Audit-Trail-
+Kern zugeschnitten. Die uebrigen Flaechen — Fleet-Verwaltung,
+Compliance-Gate, Console-UI, OpenClaw-Plugin — werden in eigene Repos
+entbuendelt und ggf. als `aie-*`-Geschwister wieder aufgenommen. Bis
+dahin tragen die Quellbaeume `nomos-api/`, `nomos-cli/`,
+`nomos-console/`, `nomos-plugin/` weiter die historischen Namen; der
+oeffentliche Name des Liefer-Artefakts ist **aie-audit-chain**.
+Siehe [CHANGELOG](CHANGELOG.md) 2026-05-24 fuer den vollen Trail.
 
 ## Schnellstart
 
@@ -8,7 +35,7 @@
 ```bash
 cd nomos-api
 docker compose up -d
-# API auf http://localhost:8060, PostgreSQL + Redis inklusive
+# API auf http://localhost:8060, PostgreSQL + Valkey inklusive
 ```
 
 **CLI:**
@@ -24,66 +51,38 @@ nomos gate --agent-dir ./data/agents/mani-ruf
 nomos verify --agent-dir ./data/agents/mani-ruf
 ```
 
-## Was ist NomOS?
+> Das CLI-Binary heisst waehrend der Umbenennungsphase weiterhin
+> `nomos`. Spaeter wird es `aie-audit` heissen.
 
-NomOS bildet jede Anforderung des EU AI Act auf eine durchsetzbare Software-Kontrolle ab. Es generiert die Compliance-Dokumente die Regulierer erwarten, blockiert Deployment bis diese Dokumente existieren, und fuehrt einen kryptographisch verifizierbaren Audit-Trail. Gebaut fuer Organisationen, die AI Agents betreiben und Compliance nachweisen muessen.
+## Audit-Trail v2 — Schluesseleigenschaften
 
-## Features
+| Eigenschaft | Was sie tut | Rechtsgrundlage |
+|-------------|-------------|-----------------|
+| Hash-Chain | SHA-256 + jedem Eintrag haengt der Hash des Vorgaengers an; jede Manipulation invalidiert die Kette ab dort | Art. 12 EU AI Act |
+| HMAC-SHA256 | Pro-Eintrag-HMAC, fail-closed, erkennt Integritaetsbruch ohne Schluessel-Offenlegung | Art. 12 EU AI Act |
+| Ed25519 | Pro-Eintrag-Signatur, fail-closed; Dritte koennen mit Public Key allein verifizieren | Art. 12 EU AI Act |
+| RFC-6962 Merkle Log | Signed Tree Head (STH) + Inclusion-Proof-Endpoints, O(log n) Verifikation, kein DB-Zugriff noetig | Art. 12 EU AI Act |
+| Externes Anchoring | Stuendlicher Anchor-Head + taeglicher Integritaets-Checkpoint via ARQ-Worker | Art. 12 EU AI Act |
+| Retention-Floor | 180 Tage Mindestaufbewahrung | Art. 12 EU AI Act |
 
-| Feature | Was es tut | Rechtsgrundlage |
-|---------|-----------|-----------------|
-| `nomos hire` | Erstellt compliant AI Agent aus Name + Rolle + Firma | Art. 26 EU AI Act (Betreiberpflichten) |
-| Compliance Gate | Generiert 5 Pflichtdokumente (DPIA, Art. 30, Art. 50, Art. 14, Art. 12) | Art. 35 DSGVO, Art. 30 DSGVO, Art. 50/14/12 EU AI Act |
-| Blocking Gate | Agent kann ohne unterschriebene Compliance-Docs nicht deployt werden | Art. 9 EU AI Act (Risikomanagement) |
-| Hash Chain Audit | SHA-256 manipulationssicherer Trail, kryptographisch verifizierbar | Art. 12 EU AI Act (Aufzeichnungspflicht) |
-| `nomos verify` | Vollstaendige Compliance-Pruefung: Schema + Docs + Hash + Chain | Art. 11 EU AI Act (Technische Dokumentation) |
-| Fleet API | REST-Endpoints fuer Agent-Verwaltung und Compliance-Status | Art. 13 EU AI Act (Transparenz) |
-| Dashboard | Visuelle Fleet-Verwaltung mit Agent-Detail und Audit-Trail | Art. 14 EU AI Act (Menschliche Aufsicht) |
+Siehe [CHANGELOG](CHANGELOG.md) 0.2.0 fuer den v2-Schwenk und den
+[Hardening-Plan 2026-05-20](docs/hardening-2026-05-20/PLAN.md) fuer die
+A1-A6 + B1 Roadmap (alle ausgeliefert).
 
-## Architektur
+## Quell-Layout
 
 ```
-nomos/
-├── nomos-cli        Python CLI — 5 Befehle, 6 Kernmodule, 83 Tests
-├── nomos-api        FastAPI — 7 REST-Endpoints, Docker Compose (API + PostgreSQL + Redis), 14 Tests
-├── nomos-console    Next.js 15 — Fleet-Uebersicht, Agent-Detail, Compliance-Check, Audit-Trail
-├── nomos-plugin     TypeScript — OpenClaw Gateway-Plugin mit /nomos Befehlen
-├── schemas/         YAML Schema-Templates fuer Agent-Manifeste
-└── templates/       Agent-Rollen-Templates (external-secretary, etc.)
+aie-audit-chain/
+├── nomos-cli        Python CLI — Befehle, Kernmodule, Tests
+├── nomos-api        FastAPI — REST-Endpoints, Docker-Compose
+├── nomos-console    Next.js 15 — Fleet-Uebersicht, Audit-Trail
+├── nomos-plugin     TypeScript — Agent-Gateway-Plugin
+├── schemas/         YAML-Schema-Templates fuer Agent-Manifeste
+└── templates/       Agent-Rollen-Templates
 ```
 
-**Datenfluss:**
-```
-nomos hire → Manifest + Hash → nomos gate → 5 Compliance-Docs → nomos verify → PASS/FAIL
-                                   ↓
-                            Audit-Trail (SHA-256 Hash-Chain)
-                                   ↓
-                         Fleet API → Dashboard
-```
-
-## CLI
-
-```bash
-# Neuen Agent erstellen
-nomos hire --name "Mani Ruf" --role external-secretary \
-  --company "Acme GmbH" --email mani@acme.at \
-  --output-dir ./data/agents/mani-ruf
-
-# Pflicht-Compliance-Dokumente generieren
-nomos gate --agent-dir ./data/agents/mani-ruf
-
-# Vollstaendige Compliance pruefen (Schema + Docs + Hash + Chain)
-nomos verify --agent-dir ./data/agents/mani-ruf
-
-# Alle Agents auflisten
-nomos fleet --agents-dir ./data/agents
-
-# Audit-Trail anzeigen
-nomos audit --agent-dir ./data/agents/mani-ruf
-
-# Audit-Chain-Integritaet verifizieren
-nomos audit --agent-dir ./data/agents/mani-ruf --verify
-```
+> Die `nomos-*`-Verzeichnisnamen sind historisch und werden in einem
+> Folge-Schnitt umbenannt. Siehe Umbenennungs-Hinweis oben.
 
 ## API
 
@@ -97,11 +96,26 @@ Basis-URL: `http://localhost:8060`
 | `GET` | `/api/fleet/{agent_id}` | Agent-Details abrufen |
 | `GET` | `/api/agents/{agent_id}/compliance` | Agent-Compliance pruefen |
 | `GET` | `/api/agents/{agent_id}/audit` | Agent Audit-Trail abrufen |
+| `GET` | `/api/agents/{agent_id}/audit/sth` | Signed Tree Head |
+| `GET` | `/api/agents/{agent_id}/audit/proof/{n}` | Inclusion-Proof fuer Eintrag n |
 | `GET` | `/api/audit/verify/{agent_id}` | Audit-Chain-Integritaet verifizieren |
+
+## Oeffentliche Verifikation
+
+Eine dritte Partei (Regulator, Auditor, Kunde) kann einen einzelnen
+Audit-Eintrag ohne Datenbank-Zugriff verifizieren:
+
+1. Aktuellen Signed Tree Head holen: `GET /api/agents/{id}/audit/sth`
+2. Inclusion-Proof fuer Eintrag `n` holen: `GET /api/agents/{id}/audit/proof/{n}`
+3. Proof gegen STH mit dem veroeffentlichten Ed25519-Public-Key
+   verifizieren.
+
+Ein Referenz-Verifier und eine Endnutzer-Verify-Seite laufen auf
+**https://verify.ai-engineering.at**.
 
 ## Installation
 
-**CLI (Python 3.11+):**
+**CLI (Python 3.12+):**
 ```bash
 cd nomos-cli
 pip install -e .
@@ -114,44 +128,39 @@ cd nomos-api
 docker compose up -d
 ```
 
-Das startet drei Services:
-- **nomos-api** auf Port 8060 (FastAPI)
+Das startet die Services:
+- **API** auf Port 8060 (FastAPI)
 - **PostgreSQL 16** mit pgvector
-- **Redis 8**
+- **Valkey** (Cache)
+- **HashiCorp Vault** (Secrets)
 
 ## Preise
 
-| Plan | Preis | Agents | Funktionen |
-|------|-------|--------|------------|
-| Free | EUR 0 | Bis zu 3 | Kern-Compliance, Community-Support |
-| Starter | EUR 49/Monat | Bis zu 10 | Prioritaets-Support, erweitertes Audit |
-| Business | EUR 149/Monat | Bis zu 50 | SSO, benutzerdefinierte Policies, SLA |
-| Enterprise | EUR 29/Agent/Monat | Unbegrenzt | Dedizierter Support, On-Prem, individuelle Integrationen |
+| Plan | Agents | Preis |
+|------|--------|-------|
+| Free | Bis zu 3 | Alle Features enthalten |
+| Commercial | 4+ | [Kontakt](https://ai-engineering.at) |
+
+Fair-Core-Lizenz (FCL) — voller Funktionsumfang auf jeder Stufe. Kein
+Feature-Gating.
 
 ## Dokumentation
 
 | Dokument | Beschreibung |
 |----------|-------------|
 | [Schnellstart](docs/de/schnellstart.md) | In 5 Minuten starten |
-| [API-Referenz](docs/de/api-referenz.md) | Vollstaendige REST API Dokumentation |
-| [CLI-Referenz](docs/de/cli-referenz.md) | Alle 5 CLI-Befehle mit Flags und Beispielen |
-| [Architektur](docs/de/architektur.md) | System-Design, Datenfluss, Datenbank-Schema, Sicherheitsmodell |
-| [Compliance-Leitfaden](docs/de/compliance-leitfaden.md) | EU AI Act + DSGVO Abdeckung |
+| [API-Referenz](docs/de/api-referenz.md) | Vollstaendige REST API |
+| [CLI-Referenz](docs/de/cli-referenz.md) | Alle CLI-Befehle |
+| [Architektur](docs/de/architektur.md) | System-Design, Datenfluss, Sicherheit |
+| [Compliance-Leitfaden](docs/de/compliance-leitfaden.md) | EU AI Act + DSGVO |
 
-**English:**
-
-| Document | Description |
-|----------|-------------|
-| [Quickstart](docs/quickstart.md) | Get running in 5 minutes |
-| [API Reference](docs/api-reference.md) | Complete REST API documentation |
-| [CLI Reference](docs/cli-reference.md) | All 5 CLI commands with flags and examples |
-| [Architecture](docs/architecture.md) | System design, data flow, database schema, security model |
-| [Compliance Guide](docs/compliance-guide.md) | EU AI Act + DSGVO coverage |
+**English:** see [README.md](README.md).
 
 ## Lizenz
 
 Fair Source License v1.0 — kostenlos fuer bis zu 3 AI Agents.
-Kommerzielle Lizenz erforderlich ab 4+. Siehe [LICENSE](LICENSE) fuer Details.
+Kommerzielle Lizenz erforderlich ab 4+. Siehe [LICENSE](LICENSE) fuer
+Details.
 
 ## Entwickelt von
 

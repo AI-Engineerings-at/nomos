@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - run: uv tool install ruff
@@ -62,7 +62,7 @@ jobs:
         working-directory: nomos-cli
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
@@ -136,7 +136,7 @@ jobs:
       NOMOS_DEV_MODE: "true"
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev

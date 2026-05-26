@@ -389,7 +389,7 @@ jobs:
       # Trivy filesystem scan: catches CVEs in the source tree
       # (npm + pip lockfiles) before they ever land in an image.
       - name: Trivy fs scan (HIGH+CRITICAL, SARIF)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -419,7 +419,7 @@ jobs:
 
       # Trivy image scan: CRITICAL is a blocker; HIGH is SARIF-only.
       - name: Trivy image scan (CRITICAL blocks, HIGH SARIF-only)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: nomos-nomos-api:latest
@@ -440,7 +440,7 @@ jobs:
       # Final blocking gate: separate, predictable Trivy run that
       # ONLY fails on CRITICAL (no SARIF, no noise).
       - name: Trivy CRITICAL gate (blocking)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: nomos-nomos-api:latest

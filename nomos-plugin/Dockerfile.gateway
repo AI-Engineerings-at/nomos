@@ -2,7 +2,7 @@
 # (GitHub releases/latest = v2026.5.18, ghcr tag 2026.5.18 manifest verified 200).
 # Never use :latest here — this image is load-bearing runtime.
 # Plugin API/entrypoint last fully validated at v2026.3.28; revalidate golden path on bump.
-FROM ghcr.io/openclaw/openclaw:2026.5.18
+FROM ghcr.io/openclaw/openclaw:2026.5.22
 
 # Copy plugin with correct permissions (avoids Windows bind-mount mode=777 issue)
 COPY --chown=node:node openclaw.plugin.json /home/node/.openclaw/extensions/nomos/

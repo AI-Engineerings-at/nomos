@@ -201,7 +201,6 @@ jobs:
     name: Test Console (vitest)
     runs-on: ubuntu-latest
     needs: lint-typescript
-    if: hashFiles('nomos-console/package.json') != ''
     defaults:
       run:
         working-directory: nomos-console

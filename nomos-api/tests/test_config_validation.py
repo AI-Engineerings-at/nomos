@@ -189,10 +189,17 @@ class TestK3DatabaseUrlNoCleartextCreds:
     """K3: database_url default must not embed working cleartext creds."""
 
     def test_database_url_default_has_no_working_creds(self):
-        s = Settings(dev_mode=True)
+        # The shipped class default (model_fields), independent of any
+        # NOMOS_DATABASE_URL env override. CI injects a real Postgres DSN
+        # (postgresql+asyncpg://nomos:nomos@...) so the live test DB works;
+        # that runtime value must NOT be what this K3 regression inspects.
+        # The security property under test is that the *default that ships
+        # in code* embeds no working cleartext credentials and fails closed.
+        # Mirrors test_class_default_jwt_secret_is_vault_pending_sentinel.
+        default_url = Settings.model_fields["database_url"].default
         # No 'nomos:nomos@' working credential pair in the default.
-        assert "nomos:nomos@" not in s.database_url
-        assert s.database_url == _DATABASE_URL_PLACEHOLDER
+        assert "nomos:nomos@" not in default_url
+        assert default_url == _DATABASE_URL_PLACEHOLDER
 
     def test_placeholder_fails_closed_invalid_host(self):
         """The placeholder points at a non-resolvable host, failing closed."""

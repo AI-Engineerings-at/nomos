@@ -181,14 +181,12 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
-      - run: npx vitest run --coverage --reporter=junit --outputFile=../test-results/plugin.xml
-      - name: Coverage to step summary
-        if: always()
-        run: |
-          echo "### nomos-plugin coverage" >> $GITHUB_STEP_SUMMARY
-          [ -f coverage/coverage-summary.json ] \
-            && node -e "const c=require('./coverage/coverage-summary.json').total; console.log('lines',c.lines.pct,'branches',c.branches.pct,'funcs',c.functions.pct)" \
-            >> $GITHUB_STEP_SUMMARY || true
+      # JS coverage (@vitest/coverage-v8) is deferred: its lockfile must be
+      # regenerated on a Linux host so `npm ci` stays in sync, which is out
+      # of scope for this PR (see revert commits on this branch). Tests still
+      # run in full — only the coverage reporter is omitted until the dep is
+      # reintroduced with a CI-host-generated lock.
+      - run: npx vitest run --reporter=junit --outputFile=../test-results/plugin.xml
       - name: Upload test results
         uses: actions/upload-artifact@v7
         if: always()
@@ -210,14 +208,12 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
-      - run: npx vitest run --coverage --reporter=junit --outputFile=../test-results/console.xml
-      - name: Coverage to step summary
-        if: always()
-        run: |
-          echo "### nomos-console coverage" >> $GITHUB_STEP_SUMMARY
-          [ -f coverage/coverage-summary.json ] \
-            && node -e "const c=require('./coverage/coverage-summary.json').total; console.log('lines',c.lines.pct,'branches',c.branches.pct,'funcs',c.functions.pct)" \
-            >> $GITHUB_STEP_SUMMARY || true
+      # JS coverage (@vitest/coverage-v8) is deferred: its lockfile must be
+      # regenerated on a Linux host so `npm ci` stays in sync, which is out
+      # of scope for this PR (see revert commits on this branch). Tests still
+      # run in full — only the coverage reporter is omitted until the dep is
+      # reintroduced with a CI-host-generated lock.
+      - run: npx vitest run --reporter=junit --outputFile=../test-results/console.xml
       - name: Upload test results
         uses: actions/upload-artifact@v7
         if: always()
